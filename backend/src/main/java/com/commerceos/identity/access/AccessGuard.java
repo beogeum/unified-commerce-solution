@@ -54,9 +54,42 @@ public class AccessGuard {
         }
     }
 
-    /** 현재 요청 사용자의 범위. 한 요청 안에서는 한 번만 계산한다. */
+    private record JobScope(UUID memberId, ResolvedScope scope) {
+    }
+
+    private static final ThreadLocal<JobScope> JOB_SCOPE = new ThreadLocal<>();
+
+    /**
+     * 백그라운드 작업이 요청한 사용자의 권한·범위로 도메인 서비스를 호출할 때 쓴다(예: 일괄 가져오기 실행).
+     * 권한·범위는 실행 시점에 다시 읽으므로 요청 이후 권한이 줄었으면 그만큼만 할 수 있다.
+     */
+    public <T> T runAs(CurrentActor actor, java.util.function.Supplier<T> work) {
+        var previousAuth = SecurityContextHolder.getContext().getAuthentication();
+        Runnable restoreTenant = com.commerceos.shared.db.TenantContext.captureRestorer();
+        JobScope previousScope = JOB_SCOPE.get();
+        SecurityContextHolder.getContext().setAuthentication(
+                org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated(actor, null, java.util.List.of()));
+        com.commerceos.shared.db.TenantContext.setWorkspace(actor.workspaceId());
+        JOB_SCOPE.remove();
+        try {
+            return work.get();
+        } finally {
+            SecurityContextHolder.getContext().setAuthentication(previousAuth);
+            restoreTenant.run();
+            if (previousScope == null) {
+                JOB_SCOPE.remove();
+            } else {
+                JOB_SCOPE.set(previousScope);
+            }
+        }
+    }
+
+    /** 현재 요청 사용자의 범위. 한 요청(또는 runAs 실행) 안에서는 한 번만 계산한다. */
     public ResolvedScope scope() {
         RequestAttributes attrs = RequestContextHolder.getRequestAttributes();
+        if (attrs == null && JOB_SCOPE.get() != null && JOB_SCOPE.get().memberId().equals(actor().memberId())) {
+            return JOB_SCOPE.get().scope();
+        }
         if (attrs != null) {
             Object cached = attrs.getAttribute(SCOPE_ATTR, RequestAttributes.SCOPE_REQUEST);
             if (cached instanceof ResolvedScope s) {
@@ -67,12 +100,15 @@ public class AccessGuard {
         ResolvedScope s = scopes.resolve(a.workspaceId(), a.memberId());
         if (attrs != null) {
             attrs.setAttribute(SCOPE_ATTR, s, RequestAttributes.SCOPE_REQUEST);
+        } else {
+            JOB_SCOPE.set(new JobScope(a.memberId(), s));
         }
         return s;
     }
 
     /** 요청 중 범위가 바뀐 경우(접근정책 변경 직후 등) 캐시를 비운다. */
     public void invalidateScope() {
+        JOB_SCOPE.remove();
         RequestAttributes attrs = RequestContextHolder.getRequestAttributes();
         if (attrs != null) {
             attrs.removeAttribute(SCOPE_ATTR, RequestAttributes.SCOPE_REQUEST);

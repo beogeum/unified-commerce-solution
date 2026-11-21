@@ -117,7 +117,7 @@ test.describe.serial("Foundation", () => {
     expect(noCsrf.status()).toBe(403);
   });
 
-  test("상품/MD: 상품·SKU·사업자 정책·채널상품·BOM·GWP (M2 C1~C5)", async ({ page }) => {
+  test("상품/MD: 상품·SKU·사업자 정책·채널상품·BOM·GWP·일괄 가져오기 (M2 C1~C6)", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");
     await page.getByRole("link", { name: "브랜드·카테고리" }).click();
@@ -255,6 +255,20 @@ test.describe.serial("Foundation", () => {
     await pv.getByLabel(/행사 번호/).fill(`NAVER-${RUN}`);
     await page.getByRole("button", { name: "판정" }).click();
     await expect(pv.getByRole("region", { name: "판정 결과" })).toContainText("채널이 이미 같은 사은품을 지급");
+    await pv.getByRole("button", { name: "닫기" }).click();
+
+    // C6: CSV 가져오기 → 미리보기(정상 1·오류 1) → 확인 후 실행 → 완료
+    await page.goto("/imports");
+    const csv = `\uFEFF상품코드*,상품명*,SKU 코드*,중량(g)\r\nCLF${RUN},클렌징폼,CLF-150-${RUN},150\r\nDUP${RUN},중복,AMP-30-${RUN},10\r\n`;
+    await page.getByLabel("가져올 파일").setInputFiles({ name: "신규상품.csv", mimeType: "text/csv", buffer: Buffer.from(csv, "utf8") });
+    const panel = page.getByRole("region", { name: /미리보기 — 신규상품.csv/ });
+    await expect(panel).toContainText("정상 1행");
+    await expect(panel).toContainText("오류 1행");
+    await expect(panel).toContainText("SKU 코드가 이미 있습니다");
+    await panel.getByRole("button", { name: "정상·경고 1행 실행" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "1행 실행" }).click();
+    await expect(panel).toContainText("완료", { timeout: 30_000 });
+    await expect(panel).toContainText("성공 1 · 실패 0");
   });
 
   test("관리자: 최저판매가 승인 → 반영(C2, 자기 요청 아님)", async ({ page }) => {

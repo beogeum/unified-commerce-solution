@@ -130,3 +130,26 @@
 | `POST /gwp-campaigns/preview` | `{business_entity_id, channel_account_id, ordered_at?, lines[{sku_id,quantity,amount}], channel_gifts[{channel_campaign_ref?, gift_sku_id?}]}` → `{awards[], skipped[{reason}], hold_order}` |
 
 판정 순서: 상태·사업자·기간·대상 계정 → 조건(제외 SKU 금액 빼고) → 채널 사은품 중복(같은 행사 번호 또는 같은 사은품 SKU면 `CHANNEL_GIFT_DUPLICATE`, `ALLOW_BOTH` 일 때만 함께 지급) → 우선순위 높은 순으로 중복 그룹·정책(`STACK_GROUP`, `STACK_POLICY`) → 선착순(`LIMIT_EXHAUSTED`) → 사은품 재고(대체/보류/없이 진행). 같은 주문의 여러 캠페인이 같은 사은품 재고를 두 번 쓰지 않는다. 사은품은 운영 중인 재고관리 증정품·샘플·일반 SKU 만(`GWP_GIFT_INVALID`).
+
+# 일괄 가져오기 (M2 C6, 공통 `operations.imports`)
+
+흐름: `POST /files`(multipart, `purpose=GENERIC_IMPORT`) → `POST /imports` 미리보기 → `POST /imports/{id}/execute` 확인 후 비동기 실행 → 행별 결과.
+
+| 메서드·경로 | 비고 |
+|---|---|
+| `GET /imports/templates` | 유형별 필드(라벨·필수·별칭) |
+| `GET /imports/templates/{type}/file` | 양식 CSV(UTF-8 BOM, 머리글 + 예시 1행) |
+| `POST /imports` | `{file_id, import_type, sheet_name?, column_mapping?{머리글: 필드키}}` → 배치(정상·경고·오류 행 수). 필수 컬럼 없음 `IMPORT_COLUMNS_MISSING`(`details.missing`, `headers`) |
+| `GET /imports`, `GET /imports/{id}` | 본인 배치 또는 유형 권한 보유자. `ETag` |
+| `GET /imports/{id}/rows?status=OK|WARNING|ERROR|APPLIED|FAILED|SKIPPED` | 행 번호 = 엑셀에서 보이는 번호 |
+| `GET /imports/{id}/problem-rows` | 오류·경고·실행 실패 행을 원래 컬럼 + 상태·사유로(CSV, 수식 주입 방지) |
+| `POST /imports/{id}/execute` | `If-Match` + `{confirm_rows}` = 미리보기의 정상+경고 행 수. 다르면 `IMPORT_CONFIRMATION_MISMATCH`. 202, 오류 행은 `SKIPPED` |
+| `POST /imports/{id}/cancel` | 실행 전만 |
+
+| 유형 | 권한 | 주요 규칙 |
+|---|---|---|
+| `PRODUCT_SKU` v1 | `catalog.manage` + `file.upload` | 새 상품은 초안으로, 같은 상품코드 행들의 옵션 값을 모아 한 번에 생성. 기존 SKU 코드·파일 안 중복·옵션 조합 중복·없는 브랜드/카테고리·유형 제약 = 오류. 바코드 중복·중량 미입력·'세트' 이름의 일반 유형·기존 상품명 불일치 = 경고 |
+| `CHANNEL_LISTING` v1 | `catalog.manage` + `file.upload` | 판매채널 코드 + 판매계정 외부키 + 판매단위 키로 판매계정을 찾음. 없거나 수정 범위 밖은 같은 메시지(존재 비노출). 다른 SKU 연결 이력이 있으면 오류(화면에서 확인 후 재연결) |
+
+- 읽기: xlsx(첫 시트 또는 지정 시트, 숫자 셀은 지수 표기 없이 — 13자리 바코드 보호, 수식은 계산값) · CSV(UTF-8/BOM 우선, 아니면 CP949). 10MB·5,000행 제한, 구형 .xls 미지원.
+- 실행: 요청자 권한을 **실행 시점에 다시 읽어**(권한이 없어졌으면 배치 `FAILED`) 기존 도메인 서비스를 호출 — 화면 등록과 같은 검증·감사·Outbox. 행마다 '적용 + 결과 기록'을 한 트랜잭션으로 처리하고, 재실행되면 결과가 `PENDING` 인 행만 다시 처리(중복 적용 없음).

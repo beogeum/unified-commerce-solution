@@ -149,6 +149,7 @@ M0 설계 정리 ─▶ M1 Foundation ─▶ M2 Catalog ─▶ M3 Inventory ─�
 ### 12.4 M2 — Catalog/SKU/BOM/GWP
 - **착수 게이트:** OQ-019(브랜드), CHG-001 승인.
 - **C1 완료(2026-11-21)**: `V7`, `/brands`·`/categories`·`/products`·`/skus`(docs/api/catalog-api.md), 상품·SKU·브랜드 화면, CatalogTest 9개 + E2E 1개.
+- **C6 완료(2026-11-21)**: `V12`, 일괄 가져오기(`/imports`: xlsx·CSV, 컬럼 매핑, 미리보기, 문제 행, 확인 후 비동기 실행, 재실행 멱등) — 상품·SKU / 채널상품 유형, 일괄 작업 화면, ImportTest 4개 + E2E 단계. **M2 완료**: 테스트 T04·T12(계산부)·T13, BOM 순환 거부, 매핑 충돌 모두 통과.
 - **C5 완료(2026-11-21)**: `V11`, GWP 캠페인(`/gwp-campaigns`)·판정 엔진(GwpEvaluator)·미리보기, 운영 중 변경 제한, GWP 화면, GwpEvaluatorTest 4개(T13) + GwpTest 3개 + E2E 단계.
 - **C4 완료(2026-11-21)**: `V10`, BOM 버전·적용기간·순환 금지·게시 불변(`/boms`), 시각 기준 버전 해석, 구성품 원가 합, 가상묶음 판매가능 계산(BundleAvailability, T12 계산부), 묶음·세트 화면, BomTest 4개 + BundleAvailabilityTest 3개 + E2E 단계.
 - **C3 완료(2026-11-21)**: `V9`, 채널상품·매핑 이력(`/channel-listings`), 연결 제안·재연결 확인·외부 ID 변경·미연결 업무함, 채널상품·연결 화면, ChannelListingTest 6개 + E2E 단계.

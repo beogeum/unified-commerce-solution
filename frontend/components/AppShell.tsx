@@ -34,7 +34,7 @@ function Nav() {
               return <span key={it.label} aria-disabled="true" style={{ display: "flex", alignItems: "center", gap: 6, minHeight: 36, padding: "0 12px", fontSize: 14, color: "#8A9099" }}>
                 {it.label}<span className="chip c-mute" style={{ marginLeft: "auto", height: 18 }}>{it.soon} 예정</span></span>;
             }
-            const on = it.href === "/" ? path === "/" : path.startsWith(it.href) || (it.href === "/products" && (path.startsWith("/skus") || path.startsWith("/channel-listings") || path.startsWith("/boms") || path.startsWith("/gwp")));
+            const on = it.href === "/" ? path === "/" : path.startsWith(it.href) || (it.href === "/products" && (path.startsWith("/skus") || path.startsWith("/channel-listings") || path.startsWith("/boms") || path.startsWith("/gwp") || path.startsWith("/imports")));
             return <Link key={it.href} href={it.href} aria-current={on ? "page" : undefined}>{it.label}</Link>;
           })}
         </div>

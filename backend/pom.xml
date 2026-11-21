@@ -56,6 +56,12 @@
       <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <!-- 엑셀(xlsx) 일괄 가져오기(M2 C6). 압축 폭탄 방지 기본값(ZipSecureFile) 유지, 파일 10MB·5,000행 제한 -->
+    <dependency>
+      <groupId>org.apache.poi</groupId>
+      <artifactId>poi-ooxml</artifactId>
+      <version>5.4.1</version>
+    </dependency>
 
     <!-- test -->
     <dependency>

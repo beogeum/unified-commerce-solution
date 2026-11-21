@@ -53,6 +53,18 @@ public final class TenantContext {
         }
     }
 
+    /** 지금 문맥을 기억했다가 되돌리는 함수(다른 문맥으로 잠시 바꿀 때). */
+    public static Runnable captureRestorer() {
+        State previous = CURRENT.get();
+        return () -> {
+            if (previous == null) {
+                CURRENT.remove();
+            } else {
+                CURRENT.set(previous);
+            }
+        };
+    }
+
     public static void asSystem(Runnable work) {
         asSystem(() -> {
             work.run();
