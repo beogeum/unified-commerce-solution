@@ -103,6 +103,24 @@ public class SearchService {
                             rs.getString("connector_code"), Db.uuid(rs, "be_id"), rs.getString("be_name"),
                             Db.uuid(rs, "channel_account_id"), null)).list());
         }
+        if (a.has(Perm.CATALOG_READ)) {
+            // 상품·SKU 는 운영그룹 공통 마스터(CONF-004) — 사업자 범위와 무관하게 조회 권한만 본다
+            hits.addAll(jdbc.sql("""
+                    select s.id, s.sku_code, p.name from sku s join product p on p.workspace_id = s.workspace_id and p.id = s.product_id
+                     where s.workspace_id = :ws and s.status <> 'ARCHIVED'
+                       and (lower(s.sku_code) = lower(:q) or s.barcode = :q or s.sku_code ilike :q || '%' or p.name ilike '%' || :q || '%')
+                     order by s.sku_code limit :limit
+                    """).param("ws", a.workspaceId()).param("q", term).param("limit", limit)
+                    .query((rs, i) -> new Hit("SKU", Db.uuid(rs, "id"), rs.getString("sku_code"), rs.getString("name"), null, null, null, null))
+                    .list());
+            hits.addAll(jdbc.sql("""
+                    select id, name, product_code from product
+                     where workspace_id = :ws and status <> 'ARCHIVED' and (name ilike '%' || :q || '%' or lower(product_code) = lower(:q))
+                     order by name limit :limit
+                    """).param("ws", a.workspaceId()).param("q", term).param("limit", limit)
+                    .query((rs, i) -> new Hit("PRODUCT", Db.uuid(rs, "id"), rs.getString("name"), rs.getString("product_code"), null, null, null, null))
+                    .list());
+        }
         return hits;
     }
 }

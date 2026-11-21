@@ -72,7 +72,7 @@ test.describe.serial("Foundation", () => {
       await fs.getByLabel(NAMES.a).check();
     }
     await drawer.getByRole("button", { name: "접근 범위 저장" }).click();
-    await expect(drawer.getByRole("status")).toContainText("접근 범위를 저장했습니다");
+    await expect(drawer.getByText("접근 범위를 저장했습니다")).toBeVisible();
   });
 
   test("제한 사용자: 화면·직접 조회·검색·내보내기가 모두 A 사업자로 제한된다", async ({ page }) => {
@@ -106,6 +106,56 @@ test.describe.serial("Foundation", () => {
     // 변경 요청은 CSRF 헤더 없이는 거부
     const noCsrf = await page.request.post("/bff/api/business-entities", { data: {} });
     expect(noCsrf.status()).toBe(403);
+  });
+
+  test("상품/MD: 상품·옵션·SKU 등록과 게시 조건(M2 C1)", async ({ page }) => {
+    await login(page, RESTRICTED.email, RESTRICTED.password);
+    await expectOnHome(page, "한상품");
+    await page.getByRole("link", { name: "브랜드·카테고리" }).click();
+    await page.getByLabel("새 브랜드 이름").fill(`루미에르 ${RUN}`);
+    await page.getByRole("button", { name: "브랜드 추가" }).click();
+    await expect(page.getByRole("cell", { name: `루미에르 ${RUN}` })).toBeVisible();
+    await page.getByLabel("새 카테고리 이름").fill(`스킨케어 ${RUN}`);
+    await page.getByRole("button", { name: "카테고리 추가" }).click();
+    await expect(page.getByRole("cell", { name: `스킨케어 ${RUN}` })).toBeVisible();
+
+    await page.getByRole("link", { name: "상품", exact: true }).click();
+    await page.getByRole("button", { name: "상품 등록" }).click();
+    const dlg = page.getByRole("dialog", { name: "상품 등록" });
+    await dlg.getByLabel("상품코드").fill(`AMP${RUN}`);
+    await dlg.getByLabel("상품명").fill("비타 앰플");
+    await dlg.getByLabel("브랜드").selectOption({ label: `루미에르 ${RUN}` });
+    await dlg.getByLabel("카테고리").selectOption({ label: `스킨케어 ${RUN}` });
+    await dlg.getByLabel("과세유형").selectOption({ label: "과세" });
+    await dlg.getByLabel(/옵션/).fill("용량: 30ml, 50ml");
+    await page.getByRole("button", { name: "초안으로 등록" }).click();
+    await expect(page.getByRole("heading", { name: /비타 앰플/ })).toBeVisible();
+
+    // SKU 없이 게시 → 빠진 항목 안내
+    await page.getByRole("button", { name: "판매중으로 게시" }).click();
+    await expect(page.locator("main").getByRole("alert")).toContainText("판매 가능한 SKU");
+
+    for (const [code, size] of [[`AMP-30-${RUN}`, "30ml"], [`AMP-50-${RUN}`, "50ml"], [`AMP-DUP-${RUN}`, "30ml"]] as const) {
+      await page.getByRole("button", { name: "SKU 추가" }).click();
+      const s = page.getByRole("dialog", { name: "SKU 추가" });
+      await s.getByLabel("SKU 코드").fill(code);
+      await s.getByLabel("용량").selectOption({ label: size });
+      await s.getByRole("button", { name: "추가", exact: true }).click();
+      if (code.startsWith("AMP-DUP")) {
+        await expect(s.getByRole("alert")).toContainText("옵션 조합");
+        await s.getByRole("button", { name: "닫기" }).click();
+      } else {
+        await expect(page.getByRole("cell", { name: code })).toBeVisible();
+      }
+    }
+    await page.getByRole("button", { name: "판매중으로 게시" }).click();
+    await expect(page.getByRole("heading", { name: /비타 앰플/ })).toContainText("판매중");
+    await expect(page.getByText("판매중으로 게시 처리했습니다.")).toBeVisible();
+
+    // SKU 목록·검색
+    await page.goto("/skus");
+    await page.getByLabel("검색").fill(`AMP-30-${RUN}`);
+    await expect(page.getByRole("cell", { name: `AMP-30-${RUN}` })).toBeVisible();
   });
 
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {

@@ -40,7 +40,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class ExportService implements JobHandler {
     public static final String TYPE = "EXPORT";
-    static final Set<String> TYPES = Set.of("BUSINESS_ENTITIES", "CHANNEL_ACCOUNTS");
+    static final Set<String> TYPES = Set.of("BUSINESS_ENTITIES", "CHANNEL_ACCOUNTS", "SKUS");
 
     private final JdbcClient jdbc;
     private final AccessGuard guard;
@@ -76,7 +76,7 @@ public class ExportService implements JobHandler {
         guard.requirePermission(Perm.EXPORT_CREATE);
         CurrentActor a = guard.actor();
         if (!TYPES.contains(String.valueOf(exportType))) {
-            throw Errors.validation("export_type", "export_type 은 BUSINESS_ENTITIES 또는 CHANNEL_ACCOUNTS 여야 합니다.");
+            throw Errors.validation("export_type", "export_type 은 BUSINESS_ENTITIES, CHANNEL_ACCOUNTS, SKUS 중 하나여야 합니다.");
         }
         requireReadPermission(a.permissions(), exportType);
         Set<UUID> bes = guard.businessEntityFilter(AccessKind.EXPORT, businessEntityIds);
@@ -128,6 +128,18 @@ public class ExportService implements JobHandler {
                     .query((rs, i) -> List.of(rs.getString("id"), rs.getString("display_name"), rs.getString("legal_name"),
                             rs.getString("legal_type"), rs.getString("business_registration_no"), rs.getString("tax_type"), rs.getString("status")))
                     .list());
+        } else if ("SKUS".equals(type)) {
+            // 운영그룹 공통 마스터. 원가·가격 같은 사업자별 민감 정보는 포함하지 않는다(C2 에서 별도 권한)
+            rows.add(List.of("SKU ID", "SKU 코드", "상품코드", "상품명", "SKU명", "유형", "판매가능", "구매가능", "재고관리", "바코드", "상태"));
+            rows.addAll(jdbc.sql("""
+                    select s.*, p.product_code, p.name as product_name from sku s join product p on p.workspace_id = s.workspace_id and p.id = s.product_id
+                     where s.workspace_id = :ws order by s.sku_code
+                    """).param("ws", ws)
+                    .query((rs, i) -> List.of(rs.getString("id"), rs.getString("sku_code"), rs.getString("product_code"), rs.getString("product_name"),
+                            String.valueOf(rs.getString("name") == null ? "" : rs.getString("name")), rs.getString("sku_type"),
+                            rs.getBoolean("sellable") ? "Y" : "N", rs.getBoolean("purchasable") ? "Y" : "N", rs.getBoolean("inventory_managed") ? "Y" : "N",
+                            String.valueOf(rs.getString("barcode") == null ? "" : rs.getString("barcode")), rs.getString("status")))
+                    .list());
         } else {
             rows.add(List.of("판매계정ID", "사업자ID", "사업자", "판매채널", "계정명", "외부계정ID", "상태"));
             rows.addAll(jdbc.sql("""
@@ -158,7 +170,11 @@ public class ExportService implements JobHandler {
     }
 
     private static void requireReadPermission(Set<String> perms, String type) {
-        String needed = "BUSINESS_ENTITIES".equals(type) ? Perm.BUSINESS_ENTITY_READ : Perm.CHANNEL_ACCOUNT_READ;
+        String needed = switch (type) {
+            case "BUSINESS_ENTITIES" -> Perm.BUSINESS_ENTITY_READ;
+            case "SKUS" -> Perm.CATALOG_READ;
+            default -> Perm.CHANNEL_ACCOUNT_READ;
+        };
         if (!perms.contains(needed)) {
             throw Errors.permissionDenied(needed);
         }

@@ -6,13 +6,14 @@ import { SessionProvider, useSession, Me } from "@/lib/session";
 type Item = { href?: string; label: string; perm?: string; soon?: string };
 const MENU: { head?: string; items: Item[] }[] = [
   { items: [{ href: "/", label: "홈" }, { href: "/work-queue", label: "업무함", perm: "work_item.read" }] },
-  { head: "판매·주문", items: [{ label: "상품", soon: "M2" }, { label: "주문", soon: "M4" }, { label: "CS", soon: "M4" }] },
+  { head: "판매·주문", items: [{ href: "/products", label: "상품", perm: "catalog.read" }, { label: "주문", soon: "M4" }, { label: "CS", soon: "M4" }] },
   { head: "재고·물류", items: [{ label: "재고", soon: "M3" }, { label: "물류·3PL", soon: "M3" }, { label: "발주·매입", soon: "M3" }] },
   { head: "재무", items: [{ label: "정산", soon: "M5" }, { label: "비용·원가", soon: "M5" }, { label: "손익", soon: "M5" }] },
   { head: "관리", items: [
     { href: "/integrations", label: "연동 관리", perm: "integration.read" },
     { href: "/settings/business-entities", label: "사업자 관리", perm: "business_entity.read" },
     { href: "/settings/channel-accounts", label: "판매계정", perm: "channel_account.read" },
+    { href: "/settings/brands", label: "브랜드·카테고리", perm: "catalog.read" },
     { href: "/settings/users", label: "사용자·권한", perm: "member.read" },
   ] },
 ];
@@ -32,7 +33,7 @@ function Nav() {
               return <span key={it.label} aria-disabled="true" style={{ display: "flex", alignItems: "center", gap: 6, minHeight: 36, padding: "0 12px", fontSize: 14, color: "#8A9099" }}>
                 {it.label}<span className="chip c-mute" style={{ marginLeft: "auto", height: 18 }}>{it.soon} 예정</span></span>;
             }
-            const on = it.href === "/" ? path === "/" : path.startsWith(it.href);
+            const on = it.href === "/" ? path === "/" : path.startsWith(it.href) || (it.href === "/products" && path.startsWith("/skus"));
             return <Link key={it.href} href={it.href} aria-current={on ? "page" : undefined}>{it.label}</Link>;
           })}
         </div>
