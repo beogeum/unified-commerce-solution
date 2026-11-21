@@ -66,6 +66,11 @@ test.describe.serial("Foundation", () => {
       { "idempotency-key": `e2e-${RUN}` });
     expect(res.status()).toBe(201);
 
+    // A 사업자의 판매계정(C3 채널상품용)
+    const acc = await bff(page.request).post("/channel-accounts", { business_entity_id: ids.a, sales_channel_code: "NAVER_SMARTSTORE",
+      display_name: `A 공식스토어 ${RUN}`, external_account_key: `naver-${RUN}` }, { "idempotency-key": `acc-${RUN}` });
+    expect(acc.status()).toBe(201);
+
     // 사용자·권한 화면에서 조회·내보내기 범위를 A 사업자로 제한
     await page.getByRole("link", { name: "사용자·권한" }).click();
     await page.getByRole("cell", { name: /한상품/ }).click();
@@ -178,6 +183,22 @@ test.describe.serial("Foundation", () => {
     await expect(card).toContainText("33,000원");
     await expect(card).toContainText("공급가 30,000");
     await expect(card).toContainText("29,700원 승인 대기");
+    await drawer.getByRole("button", { name: "닫기" }).click();
+
+    // C3: 채널상품 등록 → 외부 SKU 코드로 제안 → 연결 → 미연결 목록에서 사라짐
+    await page.goto("/channel-listings");
+    await page.getByRole("button", { name: "채널상품 등록" }).click();
+    const reg = page.getByRole("dialog", { name: "채널상품 등록" });
+    await reg.getByLabel("외부 상품ID").fill(`9921${RUN}`);
+    await reg.getByLabel("외부 옵션ID(없으면 비움)").fill("2289101");
+    await reg.getByLabel("채널 상품명").fill("비타 앰플 30ml");
+    await reg.getByLabel(/외부 SKU 코드/).fill(`AMP-30-${RUN}`);
+    await page.getByRole("button", { name: "등록", exact: true }).click();
+    const ld = page.getByRole("dialog", { name: "비타 앰플 30ml" });
+    await ld.getByRole("button", { name: `AMP-30-${RUN} 연결` }).first().click();
+    await expect(ld.getByText(`AMP-30-${RUN}에 연결했습니다.`)).toBeVisible();
+    await ld.getByRole("button", { name: "닫기" }).click();
+    await expect(page.getByText("미연결 채널상품이 없습니다.")).toBeVisible();
   });
 
   test("관리자: 최저판매가 승인 → 반영(C2, 자기 요청 아님)", async ({ page }) => {

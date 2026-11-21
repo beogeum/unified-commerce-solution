@@ -27,9 +27,9 @@ export function Drawer({ title, onClose, children, footer }: { title: string; on
 }
 
 /** 민감·파괴 작업 확인. impact 에 영향도 미리보기를 넣는다(CLAUDE.md). */
-export function ConfirmModal({ title, impact, confirmLabel, danger, busy, onConfirm, onClose }: {
+export function ConfirmModal({ title, impact, confirmLabel, danger, busy, onConfirm, onClose, children, confirmDisabled }: {
   title: string; impact: [string, string][]; confirmLabel: string; danger?: boolean; busy?: boolean;
-  onConfirm: () => void; onClose: () => void;
+  onConfirm: () => void; onClose: () => void; children?: ReactNode; confirmDisabled?: boolean;
 }) {
   const id = useId();
   useEscape(onClose);
@@ -38,10 +38,10 @@ export function ConfirmModal({ title, impact, confirmLabel, danger, busy, onConf
       <div className="overlay" onClick={onClose} />
       <div className="modal" role="alertdialog" aria-modal="true" aria-labelledby={id}>
         <header><h2 id={id}>{title}</h2></header>
-        <div className="body">{impact.map(([k, v]) => <div className="kv" key={k}><span>{k}</span><span>{v}</span></div>)}</div>
+        <div className="body">{impact.map(([k, v]) => <div className="kv" key={k}><span>{k}</span><span>{v}</span></div>)}{children}</div>
         <footer>
           <button className="btn" type="button" onClick={onClose}>취소</button>
-          <button className={`btn ${danger ? "dan" : "pri"}`} type="button" onClick={onConfirm} disabled={busy}>{busy ? "처리 중…" : confirmLabel}</button>
+          <button className={`btn ${danger ? "dan" : "pri"}`} type="button" onClick={onConfirm} disabled={busy || confirmDisabled}>{busy ? "처리 중…" : confirmLabel}</button>
         </footer>
       </div>
     </>

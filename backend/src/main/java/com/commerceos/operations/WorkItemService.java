@@ -82,6 +82,15 @@ public class WorkItemService {
                 .query(UUID.class).single();
     }
 
+    /** 원인이 사라지면 시스템이 열린 업무를 닫는다(예: 미연결 채널상품을 모두 연결). 호출자 트랜잭션 안에서 실행. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public int resolveByKey(UUID workspaceId, String dedupeKey) {
+        return jdbc.sql("""
+                update work_item set status = 'DONE', resolved_at = now(), updated_at = now(), version = version + 1
+                 where workspace_id = :ws and dedupe_key = :key and status in ('OPEN', 'IN_PROGRESS', 'ON_HOLD')
+                """).param("ws", workspaceId).param("key", dedupeKey).update();
+    }
+
     public List<WorkItemView> list(PageQuery page, List<String> businessEntityIds, String status, String itemType) {
         guard.requirePermission(Perm.WORK_ITEM_READ);
         CurrentActor a = guard.actor();

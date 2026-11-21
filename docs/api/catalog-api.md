@@ -72,3 +72,21 @@
 | `GET /approvals/{id}` | 요청자 또는 `approval.decide` | |
 | `POST /approvals/{id}/decision` | `approval.decide` + 대상 사업자 WRITE | `{decision: APPROVE/REJECT, note}`. 본인 요청 → `SELF_APPROVAL_FORBIDDEN`(DB CHECK 도 강제), 처리된 요청 → `APPROVAL_NOT_PENDING`, 요청 이후 대상이 바뀜 → 요청을 `CANCELLED` 로 닫고 409 `APPROVAL_STALE` |
 | `POST /approvals/{id}/cancel` | 요청자 | 대기 중일 때만 |
+
+# 채널상품·매핑 (M2 C3)
+
+채널상품 식별은 **판매단위 + 외부상품ID + 외부옵션ID**(옵션 없으면 빈 문자열). 같은 번호라도 판매계정·판매단위가 다르면 다른 채널상품이다. 권한은 `catalog.read`/`catalog.manage` + 판매계정·사업자 범위(READ/WRITE). 범위 밖은 404, 범위 밖 판매계정 필터는 403.
+
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `GET /channel-listings?mapping=UNMAPPED|MAPPED|REMAPPED&channel_account_id=&sales_unit_id=&business_entity_id=&q=` | `catalog.read` | `REMAPPED` = 이력상 서로 다른 SKU 가 2개 이상 |
+| `POST /channel-listings` | `catalog.manage` | 직접 등록(`source=MANUAL`). 중복 → 409 `CHANNEL_LISTING_DUPLICATE`(`details.existing_id`) |
+| `GET /channel-listings/{id}` | `catalog.read` | `{listing, history[], previous_listing_id}` |
+| `GET /channel-listings/{id}/suggestions` | `catalog.read` | 바코드·외부 SKU 코드 일치 = `HIGH`, 상품명 단어 = `LOW`. `enabled_for_business` 포함 |
+| `POST /channel-listings/{id}/mapping` | `catalog.manage` | `{sku_id, quantity?, match_basis?, reason?, confirm_remap?}`. 같은 연결은 멱등. 이력에 다른 SKU 가 있으면 409 `MAPPING_REMAP_CONFIRMATION_REQUIRED`(`details.previous_sku_codes`) → `confirm_remap:true` + `reason` 필수. 판매 불가·중지 SKU → `SKU_NOT_MAPPABLE`. 응답 `warnings[]`(`SKU_NOT_ENABLED_FOR_BUSINESS`) |
+| `DELETE /channel-listings/{id}/mapping?reason=` | `catalog.manage` | 열린 매핑을 닫는다(이력 보존) |
+| `POST /channel-listings/{id}/external-id-change` | `catalog.manage` | `{external_product_id, external_option_id, reason}`. 새 채널상품 생성, 기존은 `REPLACED`, 매핑을 `ID_CHANGE` 로 이관 |
+
+- 매핑 이력은 수정·삭제 불가(열린 매핑 닫기만 허용, DB 트리거), 같은 채널상품의 매핑 기간은 겹칠 수 없다(DB 배제 제약), 열린 매핑은 하나(부분 유일 인덱스).
+- `ChannelListingService.resolve(판매단위, 외부상품ID, 외부옵션ID, 시각)`: 그 시각에 유효했던 SKU·수량. M4 주문 수집이 사용한다.
+- 미연결 채널상품은 판매단위별 업무(`CHANNEL_LISTING_UNMAPPED`) 1건으로 모이고 등록될 때마다 발생 횟수가 늘며, 모두 연결되면 자동으로 완료된다. 연결 해제로 다시 생기면 새로 열린다.
