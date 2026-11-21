@@ -140,7 +140,7 @@ M0 설계 정리 ─▶ M1 Foundation ─▶ M2 Catalog ─▶ M3 Inventory ─�
 | F4 | 감사로그(append-only, DB 트리거로 수정·삭제 거부), 멱등키, Outbox+디스패처(at-least-once, 소비자 중복 제거), 비동기 작업(lease/재시도/백오프) | `V3` | `GET /audit-logs`, `GET /jobs/{id}` | Outbox 롤백 시 미발행, 중복 전달 1회 적용, 작업 재시도/lease 회수, 멱등 재생/충돌/동시 중복 | 이번 구현 |
 | F5 | 연동 연결·자격증명(암호화, 응답 비노출)·지원 기능(기본 UNVERIFIED)·커넥터 SPI(docs/06 §6)·모의 커넥터·상태 점검 작업·업무함 기본(묶음/발생횟수) | `V4` | `/integrations/connections`, `/integrations/capabilities`, `/integrations/{id}/sync-jobs`, `/work-items` | T21-F(인증 만료 격리), T39-F(미지원/미검증 기능 서버 거부), 자격증명 비노출 | 이번 구현 |
 | F6 | 파일 업로드·원본 보존(SHA-256), 내보내기(범위 재평가·CSV 수식 주입 방지·만료), 통합검색 기본, 저장된 보기 | `V5` | `/files`, `/exports`, `/search`, `/saved-views` | T23-F 내보내기 제외, 다운로드 감사, 중복 파일 경고 | 이번 구현 |
-| F7 | 프론트엔드 기반: Next.js 셸, 로그인, 헤더 사업자 필터, 공통 Table/Filter/Drawer/Modal/Empty·Loading·Error·권한없음, 설정(사업자/판매계정/사용자·권한/연동) 화면 | — | F1~F6 사용 | Playwright E2E: 제한 사용자 화면/검색/내보내기 일관성 | 다음 PR |
+| F7 | **완료(2026-11-21)** 프론트엔드 기반: Next.js 16 셸, 로그인·2단계 인증(등록·확인·복구 코드), BFF(httpOnly 쿠키·CSRF 헤더), 헤더 사업자 필터, 공통 Table/Drawer/ConfirmModal/Empty·Loading·Error·권한없음, 사업자·판매계정·사용자·권한(접근 범위 편집, 2단계 인증 초기화)·연동·업무함 화면, 내보내기 | — | F1~F6, F9 사용 | Playwright E2E 4개(`scripts/e2e.sh`): 관리자 2단계 인증 등록, 사업자 등록·검증 오류, 제한 사용자 화면·직접 조회·검색·내보내기 일관성, 로그아웃 보호 | 완료 |
 | F8 | **완료(2026-11-21)** PostgreSQL RLS 방어 계층(연결 단위 `app.workspace_id` 설정, 비소유 DB 역할 `commerce_app`, 기본 거부, 시스템 작업 명시 우회) | `V6` | — | RLS 우회 시도·정책 누락·역할 초기화 테스트 | 완료 |
 | F9 | **완료(2026-11-21)** 인증 강화(DLG-011~014: 비밀번호 정책, 비활동 만료, 비밀번호 변경 시 세션 폐기, 관리자 TOTP 2단계 인증·복구 코드·관리자 초기화), 인증정보 만료 14일 전 업무함 경고. 감사로그 파티셔닝은 월 단위 파티션으로 운영 데이터가 1천만 행에 가까워질 때 적용(M7 운영 준비로 이동) | — | — | — | 다음 PR |
 
