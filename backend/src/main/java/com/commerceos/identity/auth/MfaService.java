@@ -7,6 +7,7 @@ import com.commerceos.platform.audit.AuditService;
 import com.commerceos.shared.crypto.SecretCipher;
 import com.commerceos.shared.crypto.Totp;
 import com.commerceos.shared.db.Db;
+import com.commerceos.shared.db.TenantContext;
 import com.commerceos.shared.error.Errors;
 import com.commerceos.shared.id.Ids;
 import java.net.URLEncoder;
@@ -186,7 +187,8 @@ public class MfaService {
         if (!a.has("access.manage")) {
             throw Errors.permissionDenied("access.manage");
         }
-        tx.executeWithoutResult(s -> {
+        // 다른 운영그룹 소속 여부 확인·전체 세션 폐기를 위해 시스템 문맥(F8). 권한은 위에서 이미 확인했다.
+        TenantContext.asSystem(() -> tx.executeWithoutResult(s -> {
             int inWorkspace = jdbc.sql("select count(*) from workspace_member where workspace_id = :ws and user_id = :u")
                     .param("ws", a.workspaceId()).param("u", userId).query(Integer.class).single();
             if (inWorkspace == 0) {
@@ -207,7 +209,7 @@ public class MfaService {
             audit.record(AuditEntry.builder(a.workspaceId(), "MFA_RESET", "USER", userId)
                     .actor(ActorType.USER, a.memberId(), a.displayName())
                     .metadata(Map.of("had_totp", removed > 0, "revoked_sessions", revoked)).build());
-        });
+        }));
     }
 
     private void markVerified(CurrentActor a) {
@@ -217,7 +219,7 @@ public class MfaService {
 
     /** 실패 기록은 별도 트랜잭션. 잠금에 걸리면 이 사용자의 세션을 모두 폐기한다. */
     private void fail(CurrentActor a) {
-        tx.executeWithoutResult(s -> {
+        TenantContext.asSystem(() -> tx.executeWithoutResult(s -> {
             int failures = jdbc.sql("update user_account set failed_login_count = failed_login_count + 1 where id = :u returning failed_login_count")
                     .param("u", a.userId()).query(Integer.class).single();
             boolean locked = failures >= maxFailures;
@@ -229,7 +231,7 @@ public class MfaService {
             audit.record(AuditEntry.builder(a.workspaceId(), locked ? "LOGIN_LOCKED" : "MFA_FAILED", "USER", a.userId())
                     .actor(ActorType.USER, a.memberId(), a.displayName()).outcome("DENIED")
                     .metadata(Map.of("failed_count", failures)).build());
-        });
+        }));
         throw Errors.unprocessable("MFA_CODE_INVALID", "인증 코드가 맞지 않습니다. 앱에 표시된 최신 코드를 입력하세요.");
     }
 

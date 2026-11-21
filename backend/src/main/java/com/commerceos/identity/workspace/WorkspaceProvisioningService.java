@@ -15,7 +15,6 @@ import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 운영그룹 개설(시스템 작업). 테넌트 API 로는 노출하지 않는다 — 운영그룹 관리자라도 다른 그룹을 만들거나 볼 수 없다(docs/08 §1).
@@ -26,18 +25,25 @@ public class WorkspaceProvisioningService {
     private final JdbcClient jdbc;
     private final PasswordEncoder encoder;
     private final AuditService audit;
+    private final org.springframework.transaction.support.TransactionTemplate tx;
 
-    public WorkspaceProvisioningService(JdbcClient jdbc, PasswordEncoder encoder, AuditService audit) {
+    public WorkspaceProvisioningService(JdbcClient jdbc, PasswordEncoder encoder, AuditService audit,
+                                        org.springframework.transaction.PlatformTransactionManager tm) {
         this.jdbc = jdbc;
         this.encoder = encoder;
         this.audit = audit;
+        this.tx = new org.springframework.transaction.support.TransactionTemplate(tm);
     }
 
     public record Provisioned(UUID workspaceId, UUID ownerUserId, UUID ownerMemberId) {
     }
 
-    @Transactional
+    /** 운영그룹 경계를 넘는 시스템 작업이므로 RLS 우회 문맥에서 실행한다(F8). */
     public Provisioned provision(String code, String name, String ownerEmail, String ownerName, String ownerPassword) {
+        return com.commerceos.shared.db.TenantContext.asSystem(() -> tx.execute(s -> doProvision(code, name, ownerEmail, ownerName, ownerPassword)));
+    }
+
+    private Provisioned doProvision(String code, String name, String ownerEmail, String ownerName, String ownerPassword) {
         if (jdbc.sql("select count(*) from workspace where code = :c").param("c", code).query(Integer.class).single() > 0) {
             throw Errors.conflict("WORKSPACE_CODE_TAKEN", "이미 사용 중인 운영그룹 코드입니다.");
         }

@@ -33,7 +33,12 @@ public class OutboxDispatcher {
     }
 
     /** 대기 이벤트를 최대 max 건 전달하고 전달한 건수를 돌려준다. */
+    /** 작업자는 모든 운영그룹의 이벤트를 처리하므로 RLS 우회 문맥에서 실행한다(F8). */
     public int dispatchPending(int max) {
+        return com.commerceos.shared.db.TenantContext.asSystem(() -> dispatchPendingInternal(max));
+    }
+
+    private int dispatchPendingInternal(int max) {
         int n = 0;
         while (n < max) {
             Optional<OutboxEvent> claimed;

@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import com.commerceos.shared.db.TenantContext;
 import com.commerceos.shared.error.ErrorResponse;
 import com.commerceos.shared.web.RequestIdFilter;
 import org.springframework.http.MediaType;
@@ -46,7 +47,10 @@ public class BearerTokenFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String header = request.getHeader("Authorization");
         if (header != null && header.regionMatches(true, 0, "Bearer ", 0, 7)) {
-            Optional<CurrentActor> actor = sessions.authenticate(header.substring(7).trim());
+            String token = header.substring(7).trim();
+            // 토큰 확인은 운영그룹을 모르는 상태에서 하므로 시스템 문맥, 확인 뒤에는 그 운영그룹 문맥(F8)
+            Optional<CurrentActor> actor = TenantContext.asSystem(() -> sessions.authenticate(token));
+            actor.ifPresent(a -> TenantContext.setWorkspace(a.workspaceId()));
             if (actor.isPresent() && !MfaPolicy.satisfied(actor.get().mfaStatus()) && !allowedBeforeMfa(request)) {
                 boolean enroll = MfaPolicy.ENROLLMENT_REQUIRED.equals(actor.get().mfaStatus());
                 response.setStatus(403);
@@ -65,6 +69,7 @@ public class BearerTokenFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
         } finally {
             SecurityContextHolder.clearContext();
+            TenantContext.clear();
         }
     }
 }

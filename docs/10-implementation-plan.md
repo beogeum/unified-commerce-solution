@@ -141,7 +141,7 @@ M0 설계 정리 ─▶ M1 Foundation ─▶ M2 Catalog ─▶ M3 Inventory ─�
 | F5 | 연동 연결·자격증명(암호화, 응답 비노출)·지원 기능(기본 UNVERIFIED)·커넥터 SPI(docs/06 §6)·모의 커넥터·상태 점검 작업·업무함 기본(묶음/발생횟수) | `V4` | `/integrations/connections`, `/integrations/capabilities`, `/integrations/{id}/sync-jobs`, `/work-items` | T21-F(인증 만료 격리), T39-F(미지원/미검증 기능 서버 거부), 자격증명 비노출 | 이번 구현 |
 | F6 | 파일 업로드·원본 보존(SHA-256), 내보내기(범위 재평가·CSV 수식 주입 방지·만료), 통합검색 기본, 저장된 보기 | `V5` | `/files`, `/exports`, `/search`, `/saved-views` | T23-F 내보내기 제외, 다운로드 감사, 중복 파일 경고 | 이번 구현 |
 | F7 | 프론트엔드 기반: Next.js 셸, 로그인, 헤더 사업자 필터, 공통 Table/Filter/Drawer/Modal/Empty·Loading·Error·권한없음, 설정(사업자/판매계정/사용자·권한/연동) 화면 | — | F1~F6 사용 | Playwright E2E: 제한 사용자 화면/검색/내보내기 일관성 | 다음 PR |
-| F8 | PostgreSQL RLS 방어 계층(`SET LOCAL app.workspace_id`, 비소유 DB 역할) | `V6` | — | RLS 우회 시도 테스트 | 다음 PR(ADR-0002 검토) |
+| F8 | **완료(2026-11-21)** PostgreSQL RLS 방어 계층(연결 단위 `app.workspace_id` 설정, 비소유 DB 역할 `commerce_app`, 기본 거부, 시스템 작업 명시 우회) | `V6` | — | RLS 우회 시도·정책 누락·역할 초기화 테스트 | 완료 |
 | F9 | **완료(2026-11-21)** 인증 강화(DLG-011~014: 비밀번호 정책, 비활동 만료, 비밀번호 변경 시 세션 폐기, 관리자 TOTP 2단계 인증·복구 코드·관리자 초기화), 인증정보 만료 14일 전 업무함 경고. 감사로그 파티셔닝은 월 단위 파티션으로 운영 데이터가 1천만 행에 가까워질 때 적용(M7 운영 준비로 이동) | — | — | — | 다음 PR |
 
 **M1 완료 게이트:** F0~F9 + UI E2E 통과. OQ-023(인증 방식)·OQ-026(권한 매트릭스)은 2026-11-21 위임 결정(DLG-010~015, DLG-020)으로 확정.

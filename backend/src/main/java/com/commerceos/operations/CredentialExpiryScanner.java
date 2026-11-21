@@ -14,7 +14,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+import com.commerceos.shared.db.TenantContext;
 
 /**
  * 연동 인증정보 만료 사전 경고(F9). 만료 예정일 N일(기본 14일) 전부터 업무함에 1건 올린다.
@@ -28,9 +30,11 @@ public class CredentialExpiryScanner {
     private final WorkItemService workItems;
     private final Clock clock;
     private final Duration lead;
+    private final TransactionTemplate tx;
 
-    public CredentialExpiryScanner(JdbcClient jdbc, WorkItemService workItems, Clock clock,
+    public CredentialExpiryScanner(JdbcClient jdbc, WorkItemService workItems, Clock clock, PlatformTransactionManager tm,
                                    @Value("${commerce.integration.credential-expiry-warning:P14D}") Duration lead) {
+        this.tx = new TransactionTemplate(tm);
         this.jdbc = jdbc;
         this.workItems = workItems;
         this.clock = clock;
@@ -45,9 +49,12 @@ public class CredentialExpiryScanner {
         scan();
     }
 
-    /** @return 새로 만든 업무 수 */
-    @Transactional
+    /** @return 새로 만든 업무 수. 모든 운영그룹을 훑는 시스템 작업이므로 RLS 우회 문맥(F8). */
     public int scan() {
+        return TenantContext.asSystem(() -> tx.execute(s -> doScan()));
+    }
+
+    private int doScan() {
         Instant now = clock.instant();
         List<Due> due = jdbc.sql("""
                 select c.workspace_id, c.id, coalesce(ca.business_entity_id, sa.business_entity_id) as business_entity_id,

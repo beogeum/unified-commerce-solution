@@ -6,6 +6,7 @@ import com.commerceos.platform.audit.ActorType;
 import com.commerceos.platform.audit.AuditEntry;
 import com.commerceos.platform.audit.AuditService;
 import com.commerceos.shared.db.Db;
+import com.commerceos.shared.db.TenantContext;
 import com.commerceos.shared.error.Errors;
 import com.commerceos.shared.id.Ids;
 import java.time.Clock;
@@ -75,6 +76,11 @@ public class SessionService {
 
     /** 실패 횟수 기록이 롤백되지 않도록 트랜잭션을 직접 나눈다. */
     public LoginResult login(String workspaceCode, String email, String password, String clientIp, String userAgent) {
+        // 로그인 전에는 운영그룹 문맥이 없으므로 시스템 문맥으로 조회한다(F8)
+        return TenantContext.asSystem(() -> doLogin(workspaceCode, email, password, clientIp, userAgent));
+    }
+
+    private LoginResult doLogin(String workspaceCode, String email, String password, String clientIp, String userAgent) {
         Instant now = clock.instant();
         Optional<UserRow> user = jdbc.sql("""
                 select id, password_hash, status, failed_login_count, locked_until, display_name from user_account where email = :e
@@ -193,6 +199,11 @@ public class SessionService {
      * 현재 비밀번호가 틀리면 로그인 실패와 같이 잠금 횟수에 포함한다.
      */
     public void changePassword(CurrentActor a, String currentPassword, String newPassword) {
+        // 이 사용자의 다른 운영그룹 세션까지 폐기해야 하므로 시스템 문맥(F8)
+        TenantContext.asSystem(() -> doChangePassword(a, currentPassword, newPassword));
+    }
+
+    private void doChangePassword(CurrentActor a, String currentPassword, String newPassword) {
         UserRow u = jdbc.sql("""
                 select id, password_hash, status, failed_login_count, locked_until, display_name from user_account where id = :id
                 """).param("id", a.userId())

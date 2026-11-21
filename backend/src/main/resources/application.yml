@@ -46,6 +46,10 @@ commerce:
     # DLG-014: 이 역할 보유자는 TOTP 2단계 인증 등록 필수. 미완료 세션은 10분 안에 인증해야 한다.
     mfa-required-roles: SUPER_ADMIN,OPS_ADMIN
     mfa-pending-ttl: PT10M
+  db:
+    # F8: 앱 SQL 은 비소유 역할 + RLS 문맥으로 실행. DB 로그인 사용자는 마이그레이션(테이블 소유자)용이며 commerce_app 멤버여야 한다.
+    app-role: commerce_app
+    rls-enabled: true
   idempotency:
     retention: PT24H
   jobs:

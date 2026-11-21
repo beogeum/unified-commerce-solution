@@ -4,6 +4,7 @@ import com.commerceos.integration.mock.MockScenarioControl;
 import com.commerceos.platform.job.JobWorker;
 import com.commerceos.platform.outbox.OutboxDispatcher;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
@@ -24,7 +25,9 @@ public abstract class IntegrationTest {
     protected MockMvc mvc;
     @Autowired
     protected ObjectMapper mapper;
+    /** 검증용 원본 연결(RLS 미적용). 애플리케이션 경로는 MockMvc 로 호출해 RLS 를 거친다. */
     @Autowired
+    @Qualifier("rawJdbc")
     protected JdbcClient jdbc;
     @Autowired
     protected OutboxDispatcher outbox;

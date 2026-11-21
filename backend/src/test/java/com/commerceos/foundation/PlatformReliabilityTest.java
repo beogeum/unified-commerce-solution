@@ -7,6 +7,7 @@ import com.commerceos.platform.outbox.OutboxEvent;
 import com.commerceos.platform.outbox.OutboxPublisher;
 import com.commerceos.platform.outbox.OutboxSubscriber;
 import com.commerceos.support.Api;
+import com.commerceos.shared.db.TenantContext;
 import com.commerceos.support.Fixtures;
 import com.commerceos.support.IntegrationTest;
 import java.util.ArrayList;
@@ -30,6 +31,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 /** 멱등성·동시 수정·Outbox·감사로그·DB 격리 제약 (docs/02 §3, docs/03 §7-1/10, docs/08 §7). */
 @Import(PlatformReliabilityTest.CountingSubscriberConfig.class)
 class PlatformReliabilityTest extends IntegrationTest {
+    @org.junit.jupiter.api.AfterEach
+    void clearTenant() {
+        TenantContext.clear();
+    }
+
     @Autowired
     OutboxPublisher publisher;
     @Autowired
@@ -92,6 +98,7 @@ class PlatformReliabilityTest extends IntegrationTest {
     @Test
     void outbox_writtenOnlyOnCommit_andRedeliveryAppliedOnce() {
         Fixtures.Ws ws = fx.workspace();
+        TenantContext.setWorkspace(ws.id()); // 요청 처리 중인 것처럼 운영그룹 문맥을 준다(F8 RLS)
         UUID aggregate = UUID.randomUUID();
         TransactionTemplate tx = new TransactionTemplate(tm);
         assertThatThrownBy(() -> tx.executeWithoutResult(s -> {
@@ -114,6 +121,7 @@ class PlatformReliabilityTest extends IntegrationTest {
     @Test
     void failingSubscriber_rollsBackAndRetriesWithBackoff() {
         Fixtures.Ws ws = fx.workspace();
+        TenantContext.setWorkspace(ws.id()); // 요청 처리 중인 것처럼 운영그룹 문맥을 준다(F8 RLS)
         UUID aggregate = UUID.randomUUID();
         UUID eventId = new TransactionTemplate(tm).execute(s -> publisher.publish(ws.id(), null, "TEST", aggregate, "TestFailing", Map.of()));
         drainAsync();

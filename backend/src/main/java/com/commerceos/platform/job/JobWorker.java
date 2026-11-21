@@ -43,7 +43,12 @@ public class JobWorker {
     }
 
     /** 실행 가능한 작업을 최대 max 건 처리. */
+    /** 작업자는 모든 운영그룹의 작업을 처리하므로 RLS 우회 문맥에서 실행한다(F8). */
     public int runPending(int max) {
+        return com.commerceos.shared.db.TenantContext.asSystem(() -> runPendingInternal(max));
+    }
+
+    private int runPendingInternal(int max) {
         int n = 0;
         while (n < max) {
             Optional<Job> claimed = tx.execute(s -> claim());
