@@ -18,8 +18,24 @@ function base32Decode(s: string): Buffer {
 }
 
 /** RFC 6238 — 테스트에서 OTP 앱 대신 코드 계산. offset 으로 다음 30초 구간 코드를 만든다(재사용 방지 회피). */
+export function currentStep(): number {
+  return Math.floor(Date.now() / 1000 / 30);
+}
+
+/** 재사용 방지(직전 사용 구간보다 큰 구간만 허용, 허용 창 ±1)를 지키며 다음 코드를 만든다. 필요하면 다음 구간까지 기다린다. */
+export async function nextTotp(secret: string, lastStep: number): Promise<{ code: string; step: number }> {
+  while (lastStep + 1 > currentStep() + 1) {
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  const step = Math.max(currentStep(), lastStep + 1);
+  return { code: totpAt(secret, step), step };
+}
+
 export function totp(secret: string, offset = 0): string {
-  const step = Math.floor(Date.now() / 1000 / 30) + offset;
+  return totpAt(secret, currentStep() + offset);
+}
+
+export function totpAt(secret: string, step: number): string {
   const msg = Buffer.alloc(8);
   msg.writeBigUInt64BE(BigInt(step));
   const h = createHmac("sha1", base32Decode(secret)).update(msg).digest();

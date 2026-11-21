@@ -149,6 +149,7 @@ M0 설계 정리 ─▶ M1 Foundation ─▶ M2 Catalog ─▶ M3 Inventory ─�
 ### 12.4 M2 — Catalog/SKU/BOM/GWP
 - **착수 게이트:** OQ-019(브랜드), CHG-001 승인.
 - **C1 완료(2026-11-21)**: `V7`, `/brands`·`/categories`·`/products`·`/skus`(docs/api/catalog-api.md), 상품·SKU·브랜드 화면, CatalogTest 9개 + E2E 1개.
+- **C2 완료(2026-11-21)**: `V8`, 사업자 SKU 정책·원가 이력·공통 승인(`/business-entities/{id}/sku-policies`, `/sku-costs`, `/approvals`), SKU별 사업자 정책 화면·승인함, BusinessSkuPolicyTest 5개(T04 포함) + E2E 1개.
 - PR: C1 상품·옵션·SKU(유형·독립 속성·운영그룹 내 코드 유일) → C2 사업자별 SKU 정책(원가 스냅샷·가격·재고정책) → C3 채널상품 매핑(판매단위+외부키+유효기간, 매핑 이력·신뢰도, 미매핑 업무함) → C4 BOM(DAG 검사, 버전·적용기간) → C5 GWP 캠페인(조건·중복그룹·품절/반품 정책) → C6 Excel 가져오기(미리보기·오류행).
 - 테스트: T04, T12(가용수량 계산부), T13, BOM 순환 거부, 매핑 충돌.
 

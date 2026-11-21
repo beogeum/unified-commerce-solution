@@ -27,6 +27,9 @@ public final class Perm {
     public static final String PII_READ = "pii.read";
     public static final String CATALOG_READ = "catalog.read";
     public static final String CATALOG_MANAGE = "catalog.manage";
+    public static final String COST_READ = "cost.read";
+    public static final String COST_MANAGE = "cost.manage";
+    public static final String APPROVAL_DECIDE = "approval.decide";
 
     private Perm() {
     }

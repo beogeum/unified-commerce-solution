@@ -6,6 +6,7 @@ import { Chip } from "@/components/Chip";
 import { DataTable } from "@/components/DataTable";
 import { ConfirmModal, Drawer } from "@/components/Overlay";
 import { ProductStatusChip } from "@/components/ProductStatus";
+import { SkuPolicyDrawer } from "@/components/SkuPolicyDrawer";
 import { Empty, ErrorState, Loading } from "@/components/States";
 import { api, ApiError, newIdempotencyKey } from "@/lib/api";
 import { Brand, Category, MISSING_KO, PRODUCT_TAX, ProductDetail, SKU_TYPE, Sku, TYPE_DEFAULTS, Warning } from "@/lib/catalog";
@@ -30,6 +31,7 @@ export default function ProductDetailPage() {
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [addingSku, setAddingSku] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
+  const [policySku, setPolicySku] = useState<Sku | null>(null);
   const manage = can("catalog.manage") && data?.product.status !== "ARCHIVED";
 
   if (loading && !data) return <Loading />;
@@ -117,7 +119,7 @@ export default function ProductDetailPage() {
 
       <section aria-labelledby="sku-h" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div className="page-head"><h2 id="sku-h">SKU</h2>{manage && <button className="btn pri" type="button" onClick={() => setAddingSku(true)}>SKU 추가</button>}</div>
-        <DataTable caption="이 상품의 SKU" rows={data.skus} rowKey={(r) => r.id}
+        <DataTable caption="이 상품의 SKU" rows={data.skus} rowKey={(r) => r.id} onRowClick={setPolicySku}
           empty={<Empty title="SKU 가 없습니다." hint="재고·원가는 SKU 단위로 관리합니다. 판매할 단위마다 SKU 를 추가하세요." />}
           columns={[
             { key: "code", header: "SKU 코드", render: (r) => <span className="mono">{r.sku_code}</span> },
@@ -129,6 +131,7 @@ export default function ProductDetailPage() {
           ]} />
       </section>
 
+      {policySku && <SkuPolicyDrawer skuId={policySku.id} skuCode={policySku.sku_code} onClose={() => setPolicySku(null)} />}
       {addingSku && <AddSku productId={id} options={data.options} onClose={() => setAddingSku(false)}
         onCreated={(w) => { setAddingSku(false); reload(); setMsg(w.length ? { kind: "err", text: w.map((x) => x.message).join(" ") } : { kind: "ok", text: "SKU 를 추가했습니다." }); }} />}
       {confirm && <ConfirmModal title={confirm === "ARCHIVED" ? "상품을 보관할까요?" : "상품을 판매중지할까요?"} danger={confirm === "ARCHIVED"}
@@ -161,7 +164,7 @@ function SkuStatus({ sku, canManage, onChanged, onError }: { sku: Sku; canManage
   };
   const label = sku.status === "ACTIVE" ? "운영" : sku.status === "INACTIVE" ? "중지" : "보관";
   return (
-    <span className="row-gap" style={{ alignItems: "center" }}>
+    <span className="row-gap" style={{ alignItems: "center" }} onClick={(e) => e.stopPropagation()}>
       <Chip kind={sku.status === "ACTIVE" ? "ok" : "mute"}>{label}</Chip>
       {canManage && sku.status !== "ARCHIVED" && <button className="btn" type="button" onClick={toggle}>{sku.status === "ACTIVE" ? "중지" : "운영"}</button>}
     </span>

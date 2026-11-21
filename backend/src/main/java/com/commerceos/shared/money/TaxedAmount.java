@@ -37,6 +37,25 @@ public record TaxedAmount(Money gross, Money supply, Money vat, TaxType taxType,
         return new TaxedAmount(gross, supplyMoney, gross.minus(supplyMoney), taxType, VatInclusion.INCLUDED);
     }
 
+    /**
+     * DLG-030 국내 판매가 표기 관행: 부가세 = 포함금액 ÷ 11 의 원 미만 절사, 공급가 = 포함금액 − 부가세.
+     * (공급가를 반올림하는 {@link #fromGross} 와 경계값에서 결과가 다르다. 예: 105원 → 공급가 96·부가세 9)
+     */
+    public static TaxedAmount fromGrossKrwVatFloor(Money gross, TaxType taxType) {
+        if (!"KRW".equals(gross.currency().getCurrencyCode())) {
+            throw new IllegalArgumentException("KRW only (DLG-031)");
+        }
+        if (taxType != TaxType.TAXABLE) {
+            return new TaxedAmount(gross, gross, Money.zero(gross.currency()), taxType, VatInclusion.INCLUDED);
+        }
+        if (gross.amount().stripTrailingZeros().scale() > 0) {
+            throw new IllegalArgumentException("KRW amount must be whole won");
+        }
+        BigDecimal vat = gross.amount().divide(BigDecimal.valueOf(11), 0, java.math.RoundingMode.FLOOR);
+        Money vatMoney = new Money(vat, gross.currency());
+        return new TaxedAmount(gross, gross.minus(vatMoney), vatMoney, taxType, VatInclusion.INCLUDED);
+    }
+
     public static TaxedAmount fromSupply(Money supply, TaxType taxType, BigDecimal vatRate, RoundingMode mode) {
         if (taxType != TaxType.TAXABLE) {
             return new TaxedAmount(supply, supply, Money.zero(supply.currency()), taxType, VatInclusion.EXCLUDED);

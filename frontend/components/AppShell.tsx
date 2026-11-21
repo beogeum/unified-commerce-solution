@@ -10,6 +10,7 @@ const MENU: { head?: string; items: Item[] }[] = [
   { head: "재고·물류", items: [{ label: "재고", soon: "M3" }, { label: "물류·3PL", soon: "M3" }, { label: "발주·매입", soon: "M3" }] },
   { head: "재무", items: [{ label: "정산", soon: "M5" }, { label: "비용·원가", soon: "M5" }, { label: "손익", soon: "M5" }] },
   { head: "관리", items: [
+    { href: "/approvals", label: "승인" },
     { href: "/integrations", label: "연동 관리", perm: "integration.read" },
     { href: "/settings/business-entities", label: "사업자 관리", perm: "business_entity.read" },
     { href: "/settings/channel-accounts", label: "판매계정", perm: "channel_account.read" },

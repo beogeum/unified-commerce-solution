@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { bff, expectOnHome, fakeBrn, login, totp } from "./helpers";
+import { bff, currentStep, expectOnHome, fakeBrn, login, nextTotp, totp } from "./helpers";
 
 /**
  * M1 완료 게이트 E2E(docs/10 F7): 관리자 2단계 인증 등록 → 사업자 등록 → 제한 사용자 범위 설정 →
@@ -11,6 +11,7 @@ const RUN = Date.now().toString(36);
 const NAMES = { a: `A 코스메틱 ${RUN}`, b: `B 리빙 ${RUN}` };
 
 let secret = "";
+let lastStep = 0;
 let ids: { a?: string; b?: string } = {};
 
 test.describe.serial("Foundation", () => {
@@ -24,6 +25,7 @@ test.describe.serial("Foundation", () => {
     await page.getByRole("button", { name: "등록 완료" }).click();
     await expect(page.locator("main").getByRole("alert")).toContainText("인증 코드가 맞지 않습니다");
 
+    lastStep = currentStep();
     await page.getByLabel("앱에 표시된 6자리 코드").fill(totp(secret));
     await page.getByRole("button", { name: "등록 완료" }).click();
     await expect(page.getByTestId("recovery-codes").locator("span")).toHaveCount(10);
@@ -33,7 +35,9 @@ test.describe.serial("Foundation", () => {
 
   test("관리자: 사업자 등록(검증 오류 표시 포함)", async ({ page }) => {
     await login(page, ADMIN.email, ADMIN.password);
-    await page.getByLabel("인증 코드").fill(totp(secret, 1));
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
     await page.getByRole("button", { name: "확인" }).click();
     await expectOnHome(page, "최고관리자");
 
@@ -156,6 +160,43 @@ test.describe.serial("Foundation", () => {
     await page.goto("/skus");
     await page.getByLabel("검색").fill(`AMP-30-${RUN}`);
     await expect(page.getByRole("cell", { name: `AMP-30-${RUN}` })).toBeVisible();
+
+    // C2: 사업자별 정책 — A 만 보이고, 최저판매가는 승인 대기
+    await page.getByRole("cell", { name: `AMP-30-${RUN}` }).click();
+    await expect(page.getByRole("heading", { name: /비타 앰플/ })).toBeVisible();
+    await page.getByRole("cell", { name: `AMP-30-${RUN}` }).click();
+    const drawer = page.getByRole("dialog", { name: /사업자별 정책/ });
+    await expect(drawer.getByRole("region", { name: `${NAMES.a} 정책` })).toBeVisible();
+    await expect(drawer.getByRole("region", { name: `${NAMES.b} 정책` })).toHaveCount(0);
+    await drawer.getByRole("region", { name: `${NAMES.a} 정책` }).getByRole("button", { name: "편집" }).click();
+    const form = drawer.getByRole("form", { name: `${NAMES.a} 정책 편집` });
+    await form.getByLabel(/기준 판매가/).fill("33000");
+    await form.getByLabel(/^최저판매가\(원\)/).fill("29700");
+    await form.getByLabel("최저판매가 변경 사유").fill("최저가 보호");
+    await form.getByRole("button", { name: "저장" }).click();
+    const card = drawer.getByRole("region", { name: `${NAMES.a} 정책` });
+    await expect(card).toContainText("33,000원");
+    await expect(card).toContainText("공급가 30,000");
+    await expect(card).toContainText("29,700원 승인 대기");
+  });
+
+  test("관리자: 최저판매가 승인 → 반영(C2, 자기 요청 아님)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    await page.getByRole("link", { name: "승인" }).click();
+    const row = page.getByRole("row", { name: /최저판매가 변경/ }).filter({ hasText: `AMP-30-${RUN}` });
+    await row.getByRole("button", { name: "승인" }).click();
+    const modal = page.getByRole("alertdialog");
+    await expect(modal).toContainText("없음 → 29,700원");
+    await modal.getByRole("button", { name: "승인" }).click();
+    await expect(page.getByText("승인해 반영했습니다.")).toBeVisible();
+    const skus = await (await bff(page.request).get(`/skus?q=AMP-30-${RUN}`)).json();
+    const policy = await (await bff(page.request).get(`/business-entities/${ids.a}/sku-policies/${skus.data[0].id}`)).json();
+    expect(policy.data.min_price).toBe("29700");
   });
 
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {

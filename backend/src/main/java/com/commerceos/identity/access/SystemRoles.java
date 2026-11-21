@@ -27,7 +27,7 @@ public final class SystemRoles {
         t.put(SUPER_ADMIN, new Template(SUPER_ADMIN, "최고관리자", new TreeSet<>(allPermissions)));
         t.put("OPS_ADMIN", tpl("OPS_ADMIN", "운영관리자", "member.read", "business_entity.manage", "channel_account.manage",
                 "logistics_account.manage", "integration.manage", "integration.sync", "work_item.update", "audit.read",
-                "export.create", "file.upload", "file.read", "order.update", "catalog.manage"));
+                "export.create", "file.upload", "file.read", "order.update", "catalog.manage", "approval.decide"));
         t.put("MD", tpl("MD", "상품/MD", "export.create", "file.upload", "file.read", "cost.read", "catalog.manage"));
         t.put("ORDER_MANAGER", tpl("ORDER_MANAGER", "주문담당", "order.update", "work_item.update", "file.upload", "file.read",
                 "export.create", "pii.read"));
@@ -37,7 +37,7 @@ public final class SystemRoles {
         t.put("WAREHOUSE_WORKER", new Template("WAREHOUSE_WORKER", "창고작업자",
                 new TreeSet<>(Set.of("business_entity.read", "logistics_account.read", "order.read", "work_item.read", "catalog.read"))));
         t.put("FINANCE", tpl("FINANCE", "정산/재무", "bank_account.read", "bank_account.manage", "settlement.read", "cost.read",
-                "profit.read", "period.close", "export.create", "file.upload", "file.read", "audit.read"));
+                "profit.read", "period.close", "export.create", "file.upload", "file.read", "audit.read", "cost.manage"));
         t.put("ANALYST", tpl("ANALYST", "분석읽기전용", "cost.read", "profit.read", "settlement.read", "export.create"));
         t.put("VIEWER", tpl("VIEWER", "일반읽기전용"));
         t.put("INTEGRATION_ADMIN", tpl("INTEGRATION_ADMIN", "연동관리자", "integration.manage", "integration.credential.manage",

@@ -10,6 +10,8 @@
 | `member.read` | 사용자 목록 조회 | ● | ● |  |  |  |  |  |  |  |  |  |
 | `catalog.read` | 상품·SKU 조회 | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● |
 | `catalog.manage` | 상품·SKU·브랜드 등록·변경 | ● | ● | ● |  |  |  |  |  |  |  |  |
+| `cost.manage` ★ | 원가 등록 | ● |  |  |  |  |  |  | ● |  |  |  |
+| `approval.decide` ★ | 승인 요청 승인·반려 | ● | ● |  |  |  |  |  |  |  |  |  |
 | `channel_account.read` | 판매계정·판매단위 조회 | ● | ● | ● | ● | ● | ● |  | ● | ● | ● | ● |
 | `channel_account.manage` | 판매계정·판매단위 등록·변경 | ● | ● |  |  |  |  |  |  |  |  | ● |
 | `channel_account.reassign` ★ | 판매계정 사업자 귀속 변경 | ● |  |  |  |  |  |  |  |  |  |  |

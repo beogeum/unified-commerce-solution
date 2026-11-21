@@ -45,3 +45,30 @@
 - 옵션이 있는 상품의 SKU 는 옵션마다 값 하나(완전한 조합). 빠지면 `SKU_OPTION_INCOMPLETE`(`details.missing_options`), 다른 상품 값·같은 옵션 두 값이면 `SKU_OPTION_INVALID`.
 - 같은 조합의 SKU 는 하나(보관 SKU 제외) → 409 `SKU_OPTION_COMBINATION_DUPLICATE`. DB 부분 유일 인덱스로 동시 요청도 보장.
 - 바코드 중복은 **경고**(`warnings[].code = BARCODE_DUPLICATE`, 같은 바코드의 SKU 코드 목록)이며 저장은 된다.
+
+# 사업자 SKU 정책·원가 (M2 C2)
+
+금액은 **KRW 원 단위 정수**이고 JSON 에서는 **문자열**로 주고받는다(입력은 숫자·문자열 모두 허용, 소수점 있으면 422). 가격은 부가세 포함, 원가는 공급가(부가세 제외)다. 사업자 READ 범위 밖이면 404, 변경은 WRITE 범위.
+
+| 영역 | 메서드·경로 | 권한 | 비고 |
+|---|---|---|---|
+| 정책 | `GET /business-entities/{id}/sku-policies?q=` | `catalog.read` | 설정된 SKU 만 |
+| | `GET /business-entities/{id}/sku-policies/{skuId}` | `catalog.read` | 미설정이면 `configured:false` 와 SKU 기본값. `ETag` |
+| | `PUT /business-entities/{id}/sku-policies/{skuId}` | `catalog.manage` + WRITE | 없으면 생성(If-Match 생략), 있으면 `If-Match` 필수. `{sell_enabled, purchase_enabled, base_price, min_price, safety_stock, note, min_price_reason}` |
+| | `GET /skus/{skuId}/business-policies` | `catalog.read` | 조회 범위 안 활성 사업자별 정책(T04 비교) |
+| 원가 | `GET /business-entities/{id}/sku-costs/{skuId}` | `cost.read` + READ | 이력(최신순), `current` 표시 |
+| | `POST /business-entities/{id}/sku-costs/{skuId}` | `cost.manage` + WRITE | `{unit_cost, effective_from?, reason}`. 과거 시점 → `COST_BACKDATE_FORBIDDEN`, 가상묶음·서비스·디지털 → `SKU_COST_NOT_APPLICABLE` |
+
+- 응답의 `base_price_supply`·`base_price_vat` 는 DLG-030(부가세 = 포함금액 ÷ 11 원 미만 절사)으로 계산한 값. 상품 과세유형이 없으면 null.
+- `cost.read` 가 없으면 `cost_visible:false`, `current_cost:null`.
+- 판매 불가 SKU 의 `sell_enabled:true` → `SKU_NOT_SELLABLE`. 기준 판매가 < 최저판매가 → `PRICE_BELOW_MIN_PRICE`(DB CHECK 도 강제).
+- **최저판매가 변경은 즉시 반영되지 않고 승인 요청**(`SKU_MIN_PRICE_CHANGE`)이 된다. 응답 `pending_min_price` 에 요청 ID. 같은 대상의 대기 요청이 있으면 `APPROVAL_ALREADY_PENDING`.
+
+# 승인 (공통)
+
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `GET /approvals?status=&mine=` | 로그인 | `approval.decide` 가 없으면 본인 요청만. 범위 밖 사업자 요청 제외 |
+| `GET /approvals/{id}` | 요청자 또는 `approval.decide` | |
+| `POST /approvals/{id}/decision` | `approval.decide` + 대상 사업자 WRITE | `{decision: APPROVE/REJECT, note}`. 본인 요청 → `SELF_APPROVAL_FORBIDDEN`(DB CHECK 도 강제), 처리된 요청 → `APPROVAL_NOT_PENDING`, 요청 이후 대상이 바뀜 → 요청을 `CANCELLED` 로 닫고 409 `APPROVAL_STALE` |
+| `POST /approvals/{id}/cancel` | 요청자 | 대기 중일 때만 |
