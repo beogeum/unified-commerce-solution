@@ -1,0 +1,18 @@
+commerce:
+  workers:
+    enabled: false
+  integration:
+    mock-connectors-enabled: true
+  files:
+    local-root: ${java.io.tmpdir}/commerce-os-test-files
+  crypto:
+    # 테스트 전용 키(실제 데이터에 사용 금지)
+    active-key-id: test1
+    keys:
+      test1: AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+    hmac-key: dGVzdC1obWFjLWtleS1kby1ub3QtdXNlLWluLXByb2Q=
+  auth:
+    max-failed-logins: 3
+logging:
+  level:
+    com.commerceos: INFO
