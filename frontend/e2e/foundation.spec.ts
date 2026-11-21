@@ -199,6 +199,29 @@ test.describe.serial("Foundation", () => {
     await expect(ld.getByText(`AMP-30-${RUN}에 연결했습니다.`)).toBeVisible();
     await ld.getByRole("button", { name: "닫기" }).click();
     await expect(page.getByText("미연결 채널상품이 없습니다.")).toBeVisible();
+
+    // C4: 가상묶음 SKU 의 판매묶음 BOM 초안 → 구성품 → 게시
+    const setProduct = await (await bff(page.request).post("/products", { product_code: `SET${RUN}`, name: "앰플 듀오 세트" },
+      { "idempotency-key": `setp-${RUN}` })).json();
+    expect((await bff(page.request).post("/skus", { product_id: setProduct.data.product.id, sku_code: `SET-DUO-${RUN}`, sku_type: "BUNDLE" },
+      { "idempotency-key": `sets-${RUN}` })).status()).toBe(201);
+    await page.goto("/boms");
+    await page.getByRole("button", { name: "BOM 초안 만들기" }).click();
+    const bd = page.getByRole("dialog", { name: "BOM 초안 만들기" });
+    await bd.getByLabel(/상위 SKU/).fill(`SET-DUO-${RUN}`);
+    await bd.getByRole("button", { name: new RegExp(`SET-DUO-${RUN}`) }).click();
+    for (const code of [`AMP-30-${RUN}`, `AMP-50-${RUN}`]) {
+      await bd.getByLabel("구성품 추가").fill(code);
+      await bd.getByRole("button", { name: new RegExp(code) }).click();
+    }
+    await bd.getByLabel(`AMP-50-${RUN} 수량`).fill("2");
+    await page.getByRole("button", { name: "초안 저장" }).click();
+    const bomDrawer = page.getByRole("dialog", { name: new RegExp(`SET-DUO-${RUN}`) });
+    await bomDrawer.getByRole("button", { name: "게시" }).click();
+    await expect(page.getByRole("alertdialog")).toContainText(`AMP-30-${RUN}×1 + AMP-50-${RUN}×2`);
+    await page.getByRole("alertdialog").getByRole("button", { name: "게시" }).click();
+    await expect(bomDrawer.getByText("게시했습니다.")).toBeVisible();
+    await expect(bomDrawer.getByRole("button", { name: "종료" })).toBeVisible(); // 게시 상태에서만 보이는 동작
   });
 
   test("관리자: 최저판매가 승인 → 반영(C2, 자기 요청 아님)", async ({ page }) => {

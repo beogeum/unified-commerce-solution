@@ -90,3 +90,29 @@
 - 매핑 이력은 수정·삭제 불가(열린 매핑 닫기만 허용, DB 트리거), 같은 채널상품의 매핑 기간은 겹칠 수 없다(DB 배제 제약), 열린 매핑은 하나(부분 유일 인덱스).
 - `ChannelListingService.resolve(판매단위, 외부상품ID, 외부옵션ID, 시각)`: 그 시각에 유효했던 SKU·수량. M4 주문 수집이 사용한다.
 - 미연결 채널상품은 판매단위별 업무(`CHANNEL_LISTING_UNMAPPED`) 1건으로 모이고 등록될 때마다 발생 횟수가 늘며, 모두 연결되면 자동으로 완료된다. 연결 해제로 다시 생기면 새로 열린다.
+
+# BOM (M2 C4)
+
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `GET /boms?parent_sku_id=&bom_type=&status=&packaging_profile_code=` | `catalog.read` | |
+| `POST /boms` | `catalog.manage` | 초안 생성. `{bom_type, parent_sku_id | packaging_profile_code, components:[{sku_id, quantity}], split_shipment_allowed?, note?}`. 버전 자동(대상·유형별 +1) |
+| `GET /boms/{id}` | `catalog.read` | `ETag` = `version_lock` |
+| `PUT /boms/{id}/components` | `catalog.manage` | 초안만. `If-Match` |
+| `POST /boms/{id}/publish` | `catalog.manage` | `{valid_from?}`(기본 지금, 과거 불가 `BOM_BACKDATE_FORBIDDEN`). 열린 이전 게시 버전을 새 시작 시각에 닫음. 기간 겹침 `BOM_PERIOD_OVERLAP` |
+| `POST /boms/{id}/retire` | `catalog.manage` | `{reason}`. 지금 시각으로 종료 |
+| `DELETE /boms/{id}` | `catalog.manage` | 초안만 |
+| `GET /skus/{skuId}/boms/effective?bom_type=&at=` | `catalog.read` | 그 시각의 게시 버전(M4 주문 스냅샷용). 없으면 404 |
+| `GET /boms/{id}/cost?business_entity_id=` | `cost.read` + READ | 구성품 현재 원가 × 수량. 원가 없는 구성품이 있으면 `total_cost:null` + `missing_cost_sku_codes` |
+
+| 유형 | 상위 | 허용 구성품 |
+|---|---|---|
+| `SALES_BUNDLE` 판매묶음(가상) | 가상묶음 | 일반·실물세트·증정품·샘플·가상묶음·서비스·디지털 |
+| `PROMOTION` 프로모션 | 가상묶음 | 일반·실물세트·증정품·샘플·가상묶음 |
+| `ASSEMBLY` 조립 | 실물세트 | 일반·증정품·샘플·부자재·실물세트 |
+| `MANUFACTURING` 제조 | 일반·실물세트 | 일반·부자재 |
+| `PACKAGING` 포장 | 포장 프로필 코드 | 부자재 |
+
+- 자기참조 `BOM_SELF_REFERENCE`, 순환 `BOM_CYCLE`(`details.cycle` 경로). 순환은 모든 버전(초안 포함, 포장 제외)의 구성 관계로 판단하고 운영그룹 단위 잠금으로 동시 요청을 직렬화한다.
+- 게시본은 구성·대상·버전·시작 시각을 바꿀 수 없다(DB 트리거). 같은 대상·유형의 게시 버전 기간은 겹칠 수 없다(DB 배제 제약).
+- 가상묶음 판매가능 수량은 `BundleAvailability`(분할출고 불가: 거점별 MIN(floor(부품 가용÷소요량)) 합, 허용: 허용 거점 합계 기준)로 계산하며 M3 재고에서 값을 넣는다.
