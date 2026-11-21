@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>상품 품질 점검 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+.kpi{padding:12px;display:flex;flex-direction:column;gap:4px}
+.kpi b{font-size:20px}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a class="on" href="Products.dc.html" aria-current="page">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>전체 사업자 (3)</option></select></label>
+      <label class="ctx" style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px">통합검색<input class="inp" type="search" placeholder="상품명, SKU  ( / )"></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">한상품</span><span class="ctx">상품/MD</span></div>
+    </header>
+    <nav class="sub2" aria-label="상품 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="Products.dc.html">상품마스터</a><a href="Skus.dc.html">SKU</a><a href="Bundles.dc.html">묶음·세트</a><a href="Gwp.dc.html">GWP·증정</a><a href="ChannelListings.dc.html">채널상품·연결</a><a href="PricePolicy.dc.html">가격·판매정책</a><a class="on" href="QualityCheck.dc.html" aria-current="page">품질 점검</a><a href="BulkJobs.dc.html">일괄 작업</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box; max-width: 1280px; width: 100%">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div><h1 style="margin: 0; font-size: 24px">상품 품질 점검</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">게시·채널 등록 전에 빠진 정보와 충돌을 찾습니다. 채널별 필수 속성은 판매계정의 지원 기능이 확인된 채널만 검사합니다. · <span class="chip c-mute">M2 시안 · 예시 데이터</span></p></div>
+        <button class="btn" type="button">다시 점검</button>
+      </div>
+      <section aria-label="점검 요약" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px">
+        <div class="card kpi"><span class="ctx">게시 불가</span><b style="color: #A11A1A">5</b><span class="ctx">필수 정보 누락</span></div>
+        <div class="card kpi"><span class="ctx">채널 등록 불가</span><b style="color: #8A4300">7</b><span class="ctx">채널 필수 속성</span></div>
+        <div class="card kpi"><span class="ctx">바코드 중복 경고</span><b>2</b></div>
+        <div class="card kpi"><span class="ctx">원가 미등록</span><b>3</b><span class="ctx">손익 계산 불가</span></div>
+        <div class="card kpi"><span class="ctx">통과</span><b style="color: #1D6A3A">197</b></div>
+      </section>
+      <div class="card" style="overflow-x: auto">
+        <table>
+          <thead><tr><th scope="col">심각도</th><th scope="col">상품 · SKU</th><th scope="col">사업자</th><th scope="col">점검 항목</th><th scope="col">내용</th><th scope="col">영향</th><th scope="col"><span class="ctx">조치</span></th></tr></thead>
+          <tbody>
+            <tr><td><span class="chip c-err">게시 불가</span></td><td>그래놀라 500g · GRN-500</td><td>C 푸드</td><td>LOT·유통기한</td><td>식품 카테고리인데 유통기한 관리가 꺼져 있음</td><td class="ctx">FEFO 출고 불가</td><td><a class="btn" href="Skus.dc.html">SKU 편집</a></td></tr>
+            <tr><td><span class="chip c-err">게시 불가</span></td><td>클렌징폼 300ml · CLF-300</td><td>A 코스메틱</td><td>바코드·GTIN</td><td>바코드 없음 — WMS 스캔 검수 불가</td><td class="ctx">자체 WMS 출고 차단</td><td><a class="btn" href="Skus.dc.html">바코드 연결</a></td></tr>
+            <tr><td><span class="chip c-warn">채널 등록 불가</span></td><td>비타 앰플 30ml · AMP-30</td><td>A 코스메틱</td><td>쿠팡 고시정보</td><td>사용기한·제조국 2개 항목 미입력</td><td class="ctx">쿠팡 상품 등록·수정 실패</td><td><a class="btn" href="Products.dc.html">상품 편집</a></td></tr>
+            <tr><td><span class="chip c-warn">경고</span></td><td>러그 그레이 160 · RUG-GR-160</td><td>B 리빙</td><td>바코드 중복</td><td>같은 바코드가 RUG-GR-200에도 등록됨</td><td class="ctx">스캔 시 SKU 혼동 위험</td><td><button class="btn" type="button">비교</button></td></tr>
+            <tr><td><span class="chip c-warn">경고</span></td><td>러그 그레이 200 · RUG-GR-200</td><td>B 리빙</td><td>원가</td><td>B 리빙 원가 미등록(신규 SKU)</td><td class="ctx">이 SKU 손익 '계산 불가'</td><td><a class="btn" href="ProductCost.dc.html">원가 등록</a></td></tr>
+            <tr><td><span class="chip c-mute">정보</span></td><td>연말 선물세트 · GIFT-BOX</td><td>A 코스메틱</td><td>중량·규격</td><td>중량 0g — 배송비 예상 계산 부정확</td><td class="ctx">예상 물류비 오차</td><td><a class="btn" href="Skus.dc.html">SKU 편집</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ctx" style="margin: 0">점검 규칙: 게시 필수(브랜드·상품명·카테고리·과세유형), SKU 코드 유일, 바코드 중복, 단위·중량 0 이상, 카테고리별 LOT·유통기한, 채널 필수 속성, 사업자별 원가 등록.</p>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

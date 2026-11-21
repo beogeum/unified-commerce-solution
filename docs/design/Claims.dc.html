@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>반품·검수 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.sel td{background:#F2F6FE}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff;box-sizing:border-box}
+.dec{display:grid;grid-template-columns:1fr 72px 1fr;gap:8px;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px solid #EEF0F3}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a class="on" href="Orders.dc.html" aria-current="page">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>전체 사업자 (3)</option><option>A 코스메틱</option></select></label>
+      <label class="ctx" style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px">통합검색<input class="inp" type="search" placeholder="클레임번호, 주문번호, 회수 송장  ( / )"></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">박물류</span><span class="ctx">물류관리자</span></div>
+    </header>
+    <nav class="sub2" aria-label="주문 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="Orders.dc.html">전체 주문</a><a href="Shipments.dc.html">배송관리</a><a href="OrderHolds.dc.html">주문 보류</a><a href="Claims.dc.html">취소</a><a href="Exchange.dc.html">교환</a><a class="on" href="Claims.dc.html" aria-current="page">반품</a><a href="ManualOrder.dc.html">수동·B2B 주문</a><a href="WorkQueue.dc.html">수집·처리 오류</a>
+    </nav>
+
+    <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+      <main style="flex: 999 1 560px; min-width: 0; padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+        <div><h1 style="margin: 0; font-size: 24px">반품</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">고객 회수·환불과 물류 검수를 따로 진행합니다. 검수가 끝나기 전에는 판매가능 재고로 돌리지 않습니다. · <span class="chip c-mute">M4 시안 · 예시 데이터</span></p></div>
+        <div class="card" style="overflow-x: auto">
+          <table>
+            <thead><tr><th scope="col">클레임 · 주문</th><th scope="col">사업자 · 판매계정</th><th scope="col">상품 · 수량</th><th scope="col">클레임</th><th scope="col">회수</th><th scope="col">검수</th><th scope="col">환불</th><th scope="col" class="num">환불 예정</th></tr></thead>
+            <tbody>
+              <tr class="sel"><td><div><b>R-2611-0057</b></div><div class="ctx">O-26111500812</div></td><td><div>A 코스메틱</div><div class="ctx">쿠팡 · A 코스메틱</div></td><td>클렌징폼 150ml ×2 · 파우치 ×1</td><td><span class="chip c-info">처리중</span></td><td><span class="chip c-ok">도착</span></td><td><span class="chip c-warn">검수대기</span></td><td><span class="chip c-info">요청됨</span></td><td class="num">37,800</td></tr>
+              <tr><td><div><b>R-2611-0042</b></div><div class="ctx">O-26110800177</div></td><td><div>A 코스메틱</div><div class="ctx">네이버 · A 공식스토어</div></td><td>앰플 30ml ×1</td><td><span class="chip c-ok">완료</span></td><td><span class="chip c-ok">도착</span></td><td><span class="chip c-ok">정상 1</span></td><td><span class="chip c-ok">확정</span></td><td class="num">29,700</td></tr>
+              <tr><td><div><b>R-2611-0049</b></div><div class="ctx">O-26111900152</div></td><td><div>C 푸드</div><div class="ctx">쿠팡 로켓그로스</div></td><td>그래놀라 500g ×1</td><td><span class="chip c-info">처리중</span></td><td><span class="chip c-mute">플랫폼 회수</span></td><td><span class="chip c-mute">미확정 — 검수 API 없음</span></td><td><span class="chip c-ok">확정(채널)</span></td><td class="num">8,900</td></tr>
+              <tr><td><div><b>미확인 반품 U-0007</b></div><div class="ctx">원주문 없음</div></td><td><div>C 푸드</div><div class="ctx">화성 자체 WMS 입고</div></td><td>SKU 불일치 ×3</td><td><span class="chip c-mute">—</span></td><td><span class="chip c-ok">도착</span></td><td><span class="chip c-err">확인 필요</span></td><td><span class="chip c-mute">해당 없음</span></td><td class="num">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="ctx" style="margin: 0">원주문이 없거나 다른 상품이 들어온 반품은 업무함으로 보내고, 판매가능 재고를 자동으로 늘리지 않습니다.</p>
+      </main>
+
+      <aside aria-labelledby="ins-h" style="flex: 1 1 380px; max-width: 460px; background: #fff; border-left: 1px solid #E3E6EA; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; justify-content: space-between; gap: 8px"><div><h2 id="ins-h" style="margin: 0; font-size: 18px">R-2611-0057 검수</h2><p class="ctx" style="margin: 4px 0 0">파스토 용인 반품 입고 11-20 · 클렌징폼 150ml (CLF-150)</p></div><button class="btn" type="button" aria-label="닫기 (Esc)" style="min-width: 36px; padding: 0">×</button></div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap">
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 4px">요청 수량<input class="inp" type="number" value="2" readonly style="width: 90px"></label>
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 4px">실수령 수량<input class="inp" type="number" value="2" style="width: 90px"></label>
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 4px">LOT<input class="inp" type="text" value="2609-B" style="width: 110px"></label>
+        </div>
+        <section aria-label="수량별 판정">
+          <h3 style="margin: 0 0 6px; font-size: 13px; color: #59616C">수량별 판정 (합계 = 실수령 2)</h3>
+          <div class="dec"><span>정상 → 판매가능 복귀</span><input class="inp" type="number" value="1" aria-label="정상 수량"><span class="ctx">재고 +1 · 원가 환입</span></div>
+          <div class="dec"><span>재포장 → 재포장 후 복귀</span><input class="inp" type="number" value="0" aria-label="재포장 수량"><span class="ctx">재포장비 별도</span></div>
+          <div class="dec"><span>파손 → 불용</span><input class="inp" type="number" value="1" aria-label="파손 수량"><span class="ctx">평가 정책 대기</span></div>
+          <div class="dec"><span>불량 · 만료 · 반송 · 폐기대기</span><input class="inp" type="number" value="0" aria-label="기타 수량"><span class="ctx">—</span></div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px; padding-top: 6px"><span>판정 합계</span><b style="color: #1D6A3A">2 / 2 일치</b></div>
+        </section>
+        <label class="ctx" style="display: flex; flex-direction: column; gap: 4px">파손 사유<select class="inp"><option>포장 파손(PACKAGE_DAMAGED)</option><option>내용물 손상</option></select></label>
+        <div style="border: 1px dashed #CDD2D9; border-radius: 8px; padding: 14px; text-align: center; font-size: 13px; color: #59616C">검수 사진 첨부 (2장)</div>
+        <label style="display: flex; gap: 8px; align-items: center; font-size: 13px"><input type="checkbox" checked>GWP 미니 파우치 1개 회수됨 → 정상 재고</label>
+        <p class="ctx" style="margin: 0; line-height: 1.6">검수 결과는 환불과 별개로 저장됩니다. 환불은 채널 확정 후 매출조정 원장에, 파손분 손실은 재고평가 원장에 따로 기록되어 같은 금액이 두 번 반영되지 않습니다.</p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn pri" type="button">검수 확정</button><button class="btn" type="button">임시저장</button></div>
+      </aside>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

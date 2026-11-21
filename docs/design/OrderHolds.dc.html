@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>주문 보류 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+.tab{min-height:36px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#59616C;cursor:pointer}
+.tab.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+.ctx{font-size:12px;color:#59616C}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a class="on" href="Orders.dc.html" aria-current="page">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>전체 사업자 (3)</option></select></label>
+      <label class="ctx" style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px">통합검색<input class="inp" type="search" placeholder="주문번호, 상품  ( / )"></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">이주문</span><span class="ctx">주문담당</span></div>
+    </header>
+    <nav class="sub2" aria-label="주문 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="Orders.dc.html">전체 주문</a><a href="Shipments.dc.html">배송관리</a><a class="on" href="OrderHolds.dc.html" aria-current="page">주문 보류</a><a href="Claims.dc.html">취소</a><a href="Exchange.dc.html">교환</a><a href="Claims.dc.html">반품</a><a href="ManualOrder.dc.html">수동·B2B 주문</a><a href="WorkQueue.dc.html">수집·처리 오류</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div><h1 style="margin: 0; font-size: 24px">주문 보류</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">보류 중이어도 출고 마감·SLA 경고는 계속 표시됩니다. 해제 조건이 충족되면 자동 해제되는 보류와 사람이 풀어야 하는 보류를 구분합니다. · <span class="chip c-mute">M4 시안 · 예시 데이터</span></p></div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">선택 보류 해제 (가능 2 · 불가 1)</button><button class="btn" type="button">담당 지정</button></div>
+      </div>
+      <div role="tablist" aria-label="보류 사유" style="display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #E3E6EA">
+        <button class="tab on" role="tab" type="button" aria-selected="true">전체 19</button><button class="tab" role="tab" type="button" aria-selected="false">재고 6</button><button class="tab" role="tab" type="button" aria-selected="false">상품 미연결 12</button><button class="tab" role="tab" type="button" aria-selected="false">주소 1</button><button class="tab" role="tab" type="button" aria-selected="false">고객·결제 0</button><button class="tab" role="tab" type="button" aria-selected="false">GWP 0</button><button class="tab" role="tab" type="button" aria-selected="false">물류 0</button><button class="tab" role="tab" type="button" aria-selected="false">관리자 0</button>
+      </div>
+      <div class="card" style="overflow-x: auto">
+        <table>
+          <thead><tr><th scope="col"><span class="ctx">선택</span></th><th scope="col">주문 · 사업자 · 계정</th><th scope="col">보류 사유</th><th scope="col">보류자 · 발생</th><th scope="col">해제 조건</th><th scope="col">기한</th><th scope="col">출고 마감</th><th scope="col">담당</th></tr></thead>
+          <tbody>
+            <tr><td><input type="checkbox" checked aria-label="선택"></td><td><div><a href="Orders.dc.html">O-26112100298</a></div><div class="ctx">A 코스메틱 · 쿠팡</div></td><td><span class="chip c-warn">상품 미연결</span></td><td class="ctx">시스템 · 09:47</td><td>외부 옵션 연결 시 자동 해제</td><td>—</td><td><span class="chip c-warn">16:00 · 2시간 남음</span></td><td>이주문</td></tr>
+            <tr><td><input type="checkbox" checked aria-label="선택"></td><td><div>O-26112100377</div><div class="ctx">B 리빙 · 카페24 기본몰</div></td><td><span class="chip c-warn">재고</span></td><td class="ctx">시스템 · 11:15</td><td>RUG-GR-160 판매 제한 해제 시(품고 재고 반영 확인)</td><td>11-22</td><td><span class="chip c-ok">내일 12:00</span></td><td>박물류</td></tr>
+            <tr><td><input type="checkbox" checked aria-label="선택"></td><td><div>O-26112100391</div><div class="ctx">A 코스메틱 · 네이버</div></td><td><span class="chip c-err">주소</span></td><td class="ctx">시스템 · 12:30</td><td>우편번호·상세주소 확인 — 사람이 해제</td><td>오늘 18:00</td><td><span class="chip c-err">16:00 · 2시간 남음</span></td><td>미배정</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ctx" style="margin: 0">주소 보류는 자동 해제되지 않아 선택 해제에서 빠집니다. 보류·해제 모두 보류자·사유·시각이 이력에 남습니다.</p>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

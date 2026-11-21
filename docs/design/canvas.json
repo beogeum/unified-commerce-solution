@@ -1,0 +1,836 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-11-21T14:10:00+09:00"
+ },
+ "title": "커머스 운영 OS 화면 시안",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 1200,
+   "title": "홈",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "WorkQueue.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 1200,
+   "title": "업무함",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Orders.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 1200,
+   "title": "주문 > 전체 주문",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Inventory.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 1440,
+   "h": 1200,
+   "title": "재고 > 통합재고",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Profit.dc.html": {
+   "x": 6080,
+   "y": 0,
+   "w": 1440,
+   "h": 1200,
+   "title": "손익 > 주문별",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "CostLedger.dc.html": {
+   "x": 7600,
+   "y": 0,
+   "w": 1440,
+   "h": 1400,
+   "title": "비용·원가 > 비용 현황",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ChannelAccounts.dc.html": {
+   "x": 0,
+   "y": 1620,
+   "w": 1440,
+   "h": 1200,
+   "title": "설정 > 판매계정",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "AccessPolicy.dc.html": {
+   "x": 1520,
+   "y": 1620,
+   "w": 1440,
+   "h": 1200,
+   "title": "설정 > 사용자·권한",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Integrations.dc.html": {
+   "x": 3040,
+   "y": 1620,
+   "w": 1440,
+   "h": 1200,
+   "title": "연동 관리 > 지원 기능",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "BusinessEntities.dc.html": {
+   "x": 4560,
+   "y": 1620,
+   "w": 1440,
+   "h": 1200,
+   "title": "설정 > 사업자 관리",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "AuditLog.dc.html": {
+   "x": 6080,
+   "y": 1620,
+   "w": 1440,
+   "h": 1200,
+   "title": "설정 > 변경이력",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Products.dc.html": {
+   "x": 0,
+   "y": 3240,
+   "w": 1440,
+   "h": 1200,
+   "title": "상품 > 상품마스터",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Skus.dc.html": {
+   "x": 1520,
+   "y": 3240,
+   "w": 1440,
+   "h": 1200,
+   "title": "상품 > SKU",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Bundles.dc.html": {
+   "x": 3040,
+   "y": 3240,
+   "w": 1440,
+   "h": 1200,
+   "title": "상품 > 묶음·세트",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Gwp.dc.html": {
+   "x": 4560,
+   "y": 3240,
+   "w": 1440,
+   "h": 1200,
+   "title": "상품 > GWP·증정",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ChannelListings.dc.html": {
+   "x": 6080,
+   "y": 3240,
+   "w": 1440,
+   "h": 1200,
+   "title": "상품 > 채널상품·연결",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Shipments.dc.html": {
+   "x": 0,
+   "y": 4860,
+   "w": 1440,
+   "h": 1200,
+   "title": "주문 > 배송관리",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Claims.dc.html": {
+   "x": 1520,
+   "y": 4860,
+   "w": 1440,
+   "h": 1200,
+   "title": "주문 > 반품·검수",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Exchange.dc.html": {
+   "x": 3040,
+   "y": 4860,
+   "w": 1440,
+   "h": 1200,
+   "title": "주문 > 교환",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "CsInbox.dc.html": {
+   "x": 4560,
+   "y": 4860,
+   "w": 1440,
+   "h": 1200,
+   "title": "CS > 통합함",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Ledger.dc.html": {
+   "x": 0,
+   "y": 6480,
+   "w": 1440,
+   "h": 1200,
+   "title": "재고 > 재고원장",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "StockOps.dc.html": {
+   "x": 1520,
+   "y": 6480,
+   "w": 1440,
+   "h": 1200,
+   "title": "재고 > 실사 차이 검토",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Allocation.dc.html": {
+   "x": 3040,
+   "y": 6480,
+   "w": 1440,
+   "h": 1200,
+   "title": "재고 > 채널 재고배분",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Logistics.dc.html": {
+   "x": 4560,
+   "y": 6480,
+   "w": 1440,
+   "h": 1200,
+   "title": "물류·3PL > 출고관리",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Inbound.dc.html": {
+   "x": 6080,
+   "y": 6480,
+   "w": 1440,
+   "h": 1200,
+   "title": "물류·3PL > 입고관리",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Procurement.dc.html": {
+   "x": 7600,
+   "y": 6480,
+   "w": 1440,
+   "h": 1200,
+   "title": "발주·매입 > 발주",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "WmsMobile.dc.html": {
+   "x": 9120,
+   "y": 6480,
+   "w": 390,
+   "h": 844,
+   "title": "WMS 모바일 > 피킹",
+   "is_interactive": true
+  },
+  "StockCount.dc.html": {
+   "x": 9590,
+   "y": 6480,
+   "w": 1440,
+   "h": 1200,
+   "title": "재고 > 실사 목록·생성",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "WmsCount.dc.html": {
+   "x": 11110,
+   "y": 6480,
+   "w": 390,
+   "h": 844,
+   "title": "WMS 모바일 > 블라인드 카운트",
+   "is_interactive": true
+  },
+  "StockPolicy.dc.html": {
+   "x": 11580,
+   "y": 6480,
+   "w": 1440,
+   "h": 1200,
+   "title": "재고 > 재고정책(실사)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Settlement.dc.html": {
+   "x": 0,
+   "y": 8100,
+   "w": 1440,
+   "h": 1200,
+   "title": "정산 > 대사·입금",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "MonthClose.dc.html": {
+   "x": 1520,
+   "y": 8100,
+   "w": 1440,
+   "h": 1200,
+   "title": "정산 > 월 마감",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "VatReport.dc.html": {
+   "x": 3040,
+   "y": 8100,
+   "w": 1440,
+   "h": 1200,
+   "title": "정산 > 부가세 신고자료",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ProfitSummary.dc.html": {
+   "x": 4560,
+   "y": 8100,
+   "w": 1440,
+   "h": 1200,
+   "title": "손익 > 현황",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Analytics.dc.html": {
+   "x": 6080,
+   "y": 8100,
+   "w": 1440,
+   "h": 1200,
+   "title": "분석",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Insights.dc.html": {
+   "x": 7600,
+   "y": 8100,
+   "w": 1440,
+   "h": 1200,
+   "title": "인사이트",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PricePolicy.dc.html": {
+   "x": 0,
+   "y": 9720,
+   "w": 1440,
+   "h": 1200,
+   "title": "상품 > 가격·판매정책",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "QualityCheck.dc.html": {
+   "x": 1520,
+   "y": 9720,
+   "w": 1440,
+   "h": 1200,
+   "title": "상품 > 품질 점검",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "BulkJobs.dc.html": {
+   "x": 3040,
+   "y": 9720,
+   "w": 1440,
+   "h": 1200,
+   "title": "상품 > 일괄 작업",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "OrderHolds.dc.html": {
+   "x": 4560,
+   "y": 9720,
+   "w": 1440,
+   "h": 1200,
+   "title": "주문 > 주문 보류",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ManualOrder.dc.html": {
+   "x": 6080,
+   "y": 9720,
+   "w": 1440,
+   "h": 1200,
+   "title": "주문 > 수동·B2B 주문",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "CsTemplates.dc.html": {
+   "x": 7600,
+   "y": 9720,
+   "w": 1440,
+   "h": 1200,
+   "title": "CS > 답변 템플릿·처리 기준",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "CsStats.dc.html": {
+   "x": 9120,
+   "y": 9720,
+   "w": 1440,
+   "h": 1200,
+   "title": "CS > 현황",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Reservations.dc.html": {
+   "x": 0,
+   "y": 11340,
+   "w": 1440,
+   "h": 1200,
+   "title": "재고 > 예약·할당",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "LotExpiry.dc.html": {
+   "x": 1520,
+   "y": 11340,
+   "w": 1440,
+   "h": 1200,
+   "title": "재고 > LOT·유통기한",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Transfers.dc.html": {
+   "x": 3040,
+   "y": 11340,
+   "w": 1440,
+   "h": 1200,
+   "title": "재고 > 재고이동",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Unsellable.dc.html": {
+   "x": 4560,
+   "y": 11340,
+   "w": 1440,
+   "h": 1200,
+   "title": "재고 > 비가용·불용재고",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "LogisticsOverview.dc.html": {
+   "x": 6080,
+   "y": 11340,
+   "w": 1440,
+   "h": 1200,
+   "title": "물류·3PL > 운영현황",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "RoutingPolicy.dc.html": {
+   "x": 7600,
+   "y": 11340,
+   "w": 1440,
+   "h": 1200,
+   "title": "물류·3PL > 출고 배정정책",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Nodes.dc.html": {
+   "x": 9120,
+   "y": 11340,
+   "w": 1440,
+   "h": 1200,
+   "title": "물류·3PL > 물류사업자·센터·거점",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "LogisticsBilling.dc.html": {
+   "x": 10640,
+   "y": 11340,
+   "w": 1440,
+   "h": 1200,
+   "title": "물류·3PL > 물류비",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Sla.dc.html": {
+   "x": 12160,
+   "y": 11340,
+   "w": 1440,
+   "h": 1200,
+   "title": "물류·3PL > SLA",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ReturnLogistics.dc.html": {
+   "x": 13680,
+   "y": 11340,
+   "w": 1440,
+   "h": 1200,
+   "title": "물류·3PL > 반품물류",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Suppliers.dc.html": {
+   "x": 0,
+   "y": 12960,
+   "w": 1440,
+   "h": 1200,
+   "title": "발주·매입 > 공급처",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PurchaseCost.dc.html": {
+   "x": 1520,
+   "y": 12960,
+   "w": 1440,
+   "h": 1200,
+   "title": "발주·매입 > 매입·매입원가·차이",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SettlementExpected.dc.html": {
+   "x": 3040,
+   "y": 12960,
+   "w": 1440,
+   "h": 1200,
+   "title": "정산 > 예정·확정·채널별",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SettlementAdjust.dc.html": {
+   "x": 4560,
+   "y": 12960,
+   "w": 1440,
+   "h": 1200,
+   "title": "정산 > 조정",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ProductCost.dc.html": {
+   "x": 6080,
+   "y": 12960,
+   "w": 1440,
+   "h": 1200,
+   "title": "비용·원가 > 상품원가",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ProfitDimension.dc.html": {
+   "x": 7600,
+   "y": 12960,
+   "w": 1440,
+   "h": 1200,
+   "title": "손익 > 상품·채널·계정별",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "AnalyticsInventory.dc.html": {
+   "x": 9120,
+   "y": 12960,
+   "w": 1440,
+   "h": 1200,
+   "title": "분석 > 재고",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "AnalyticsClaims.dc.html": {
+   "x": 10640,
+   "y": 12960,
+   "w": 1440,
+   "h": 1200,
+   "title": "분석 > 클레임·배송",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "AnalyticsAds.dc.html": {
+   "x": 12160,
+   "y": 12960,
+   "w": 1440,
+   "h": 1200,
+   "title": "분석 > 광고",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Simulation.dc.html": {
+   "x": 13680,
+   "y": 12960,
+   "w": 1440,
+   "h": 1200,
+   "title": "인사이트 > 시뮬레이션",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "IntegrationFile.dc.html": {
+   "x": 0,
+   "y": 14580,
+   "w": 1440,
+   "h": 1200,
+   "title": "연동 관리 > 파일 연동",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "IntegrationDiag.dc.html": {
+   "x": 1520,
+   "y": 14580,
+   "w": 1440,
+   "h": 1200,
+   "title": "연동 관리 > 진단·오류·이력",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "IntegrationOthers.dc.html": {
+   "x": 3040,
+   "y": 14580,
+   "w": 1440,
+   "h": 1200,
+   "title": "연동 관리 > 택배·광고·ERP",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "WorkspaceSettings.dc.html": {
+   "x": 4560,
+   "y": 14580,
+   "w": 1440,
+   "h": 1200,
+   "title": "설정 > 운영그룹",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ShipperAccounts.dc.html": {
+   "x": 6080,
+   "y": 14580,
+   "w": 1440,
+   "h": 1200,
+   "title": "설정 > 화주계정",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "BankAccounts.dc.html": {
+   "x": 7600,
+   "y": 14580,
+   "w": 1440,
+   "h": 1200,
+   "title": "설정 > 정산계좌",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ApprovalPolicy.dc.html": {
+   "x": 9120,
+   "y": 14580,
+   "w": 1440,
+   "h": 1200,
+   "title": "설정 > 승인정책",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "NotificationPolicy.dc.html": {
+   "x": 10640,
+   "y": 14580,
+   "w": 1440,
+   "h": 1200,
+   "title": "설정 > 알림정책",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "CostClosePolicy.dc.html": {
+   "x": 12160,
+   "y": 14580,
+   "w": 1440,
+   "h": 1200,
+   "title": "설정 > 원가·마감정책",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Login.dc.html": {
+   "x": 13680,
+   "y": 14580,
+   "w": 1440,
+   "h": 1200,
+   "title": "로그인",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "StatesKit.dc.html": {
+   "x": 15200,
+   "y": 14580,
+   "w": 1440,
+   "h": 1200,
+   "title": "공통 > 화면 상태",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "MobileHome.dc.html": {
+   "x": 16720,
+   "y": 14580,
+   "w": 390,
+   "h": 844,
+   "title": "모바일 > 홈·업무함",
+   "is_interactive": true
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "WorkQueue.dc.html",
+  "Orders.dc.html",
+  "Inventory.dc.html",
+  "Profit.dc.html",
+  "CostLedger.dc.html",
+  "ChannelAccounts.dc.html",
+  "AccessPolicy.dc.html",
+  "Integrations.dc.html",
+  "BusinessEntities.dc.html",
+  "AuditLog.dc.html",
+  "Products.dc.html",
+  "Skus.dc.html",
+  "Bundles.dc.html",
+  "Gwp.dc.html",
+  "ChannelListings.dc.html",
+  "Shipments.dc.html",
+  "Claims.dc.html",
+  "Exchange.dc.html",
+  "CsInbox.dc.html",
+  "Ledger.dc.html",
+  "StockOps.dc.html",
+  "Allocation.dc.html",
+  "Logistics.dc.html",
+  "Inbound.dc.html",
+  "Procurement.dc.html",
+  "WmsMobile.dc.html",
+  "StockCount.dc.html",
+  "WmsCount.dc.html",
+  "StockPolicy.dc.html",
+  "Settlement.dc.html",
+  "MonthClose.dc.html",
+  "VatReport.dc.html",
+  "ProfitSummary.dc.html",
+  "Analytics.dc.html",
+  "Insights.dc.html",
+  "PricePolicy.dc.html",
+  "QualityCheck.dc.html",
+  "BulkJobs.dc.html",
+  "OrderHolds.dc.html",
+  "ManualOrder.dc.html",
+  "CsTemplates.dc.html",
+  "CsStats.dc.html",
+  "Reservations.dc.html",
+  "LotExpiry.dc.html",
+  "Transfers.dc.html",
+  "Unsellable.dc.html",
+  "LogisticsOverview.dc.html",
+  "RoutingPolicy.dc.html",
+  "Nodes.dc.html",
+  "LogisticsBilling.dc.html",
+  "Sla.dc.html",
+  "ReturnLogistics.dc.html",
+  "Suppliers.dc.html",
+  "PurchaseCost.dc.html",
+  "SettlementExpected.dc.html",
+  "SettlementAdjust.dc.html",
+  "ProductCost.dc.html",
+  "ProfitDimension.dc.html",
+  "AnalyticsInventory.dc.html",
+  "AnalyticsClaims.dc.html",
+  "AnalyticsAds.dc.html",
+  "Simulation.dc.html",
+  "IntegrationFile.dc.html",
+  "IntegrationDiag.dc.html",
+  "IntegrationOthers.dc.html",
+  "WorkspaceSettings.dc.html",
+  "ShipperAccounts.dc.html",
+  "BankAccounts.dc.html",
+  "ApprovalPolicy.dc.html",
+  "NotificationPolicy.dc.html",
+  "CostClosePolicy.dc.html",
+  "Login.dc.html",
+  "StatesKit.dc.html",
+  "MobileHome.dc.html"
+ ],
+ "notes": {
+  "row1": {
+   "x": 0,
+   "y": -300,
+   "text": "운영 화면 — 후속 모듈(M2~M5) 시안 · 예시 데이터",
+   "kind": "title1",
+   "maxW": 9040
+  },
+  "row2": {
+   "x": 0,
+   "y": 1320,
+   "text": "Foundation 설정 화면 — 현재 구현된 API 기준",
+   "kind": "title1",
+   "maxW": 7520
+  },
+  "row3": {
+   "x": 0,
+   "y": 2940,
+   "text": "상품 — 상품마스터·SKU·BOM·GWP·채널 매핑 (M2)",
+   "kind": "title1",
+   "maxW": 7520
+  },
+  "row4": {
+   "x": 0,
+   "y": 4560,
+   "text": "주문·CS — 배송·클레임·교환·문의 (M4)",
+   "kind": "title1",
+   "maxW": 6000
+  },
+  "row5": {
+   "x": 0,
+   "y": 6180,
+   "text": "재고·물류·발주 — 원장·실사·배분·출고·입고·WMS (M3·M4)",
+   "kind": "title1",
+   "maxW": 13020
+  },
+  "row6": {
+   "x": 0,
+   "y": 7800,
+   "text": "재무·분석 — 정산·마감·부가세·손익·분석·인사이트 (M5·M6)",
+   "kind": "title1",
+   "maxW": 9040
+  },
+  "row7": {
+   "x": 0,
+   "y": 9420,
+   "text": "상품·주문·CS 보완 — 가격정책·품질·일괄작업·보류·수동주문·CS 기준·현황",
+   "kind": "title1",
+   "maxW": 10560
+  },
+  "row8": {
+   "x": 0,
+   "y": 11040,
+   "text": "재고·물류 보완 — 예약·LOT·이동·불용·운영현황·배정정책·거점·물류비·SLA·반품물류",
+   "kind": "title1",
+   "maxW": 15120
+  },
+  "row9": {
+   "x": 0,
+   "y": 12660,
+   "text": "발주·정산·비용·손익·분석 보완",
+   "kind": "title1",
+   "maxW": 15120
+  },
+  "row10": {
+   "x": 0,
+   "y": 14280,
+   "text": "연동·설정·공통 — 파일 연동·진단·기타 연동·설정 정책·로그인·공통 상태·모바일",
+   "kind": "title1",
+   "maxW": 17110
+  }
+ },
+ "designSystems": []
+}

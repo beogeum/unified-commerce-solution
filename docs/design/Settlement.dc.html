@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>정산 대사·입금 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.sel td{background:#F2F6FE}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 0;border-bottom:1px solid #EEF0F3}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a class="on" href="Settlement.dc.html" aria-current="page">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>A 코스메틱</option></select></label>
+      <label class="ctx" style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px">통합검색<input class="inp" type="search" placeholder="정산 차수, 주문번호, 입금 적요  ( / )"></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">정재무</span><span class="ctx">정산/재무</span></div>
+    </header>
+    <nav class="sub2" aria-label="정산 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="Settlement.dc.html">현황</a><a href="SettlementExpected.dc.html">예정</a><a href="SettlementExpected.dc.html">확정</a><a href="SettlementExpected.dc.html">채널별</a><a class="on" href="Settlement.dc.html" aria-current="page">대사·입금</a><a href="SettlementAdjust.dc.html">조정</a><a href="MonthClose.dc.html">월 마감</a><a href="VatReport.dc.html">부가세 신고자료</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div><h1 style="margin: 0; font-size: 24px">정산 대사·입금</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">A 코스메틱 · 2026년 11월 · 정산 확정액은 현금 수령이 아니며, 실입금은 은행 입금과 따로 맞춥니다. · <span class="chip c-mute">M5 시안 · 예시 데이터</span></p></div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">입금 내역 업로드</button><button class="btn pri" type="button">정산 파일 가져오기</button></div>
+      </div>
+
+      <section class="card" aria-labelledby="run-h" style="min-width: 0">
+        <h2 id="run-h" style="margin: 0; font-size: 16px; padding: 16px 16px 8px">정산 차수</h2>
+        <div style="overflow-x: auto">
+          <table>
+            <thead><tr><th scope="col">판매계정 · 차수</th><th scope="col">정산 기간</th><th scope="col" class="num">정산 예정</th><th scope="col" class="num">정산 확정</th><th scope="col" class="num">예정−확정</th><th scope="col">주문상품 매칭</th><th scope="col" class="num">매칭 입금</th><th scope="col">상태</th><th scope="col">원본</th></tr></thead>
+            <tbody>
+              <tr class="sel"><td><div>네이버 · A 공식스토어</div><div class="ctx">11월 1차</div></td><td>11-01~11-07</td><td class="num">12,480,300</td><td class="num">12,471,100</td><td class="num">9,200</td><td><span class="chip c-ok">정확 412</span> <span class="chip c-warn">검토 3</span></td><td class="num">12,471,100</td><td><span class="chip c-ok">입금 완료</span></td><td class="ctx">API · v2026-10</td></tr>
+              <tr><td><div>쿠팡 · A 코스메틱</div><div class="ctx">11월 1주차</div></td><td>11-01~11-07</td><td class="num">8,903,000</td><td class="num">8,903,000</td><td class="num">0</td><td><span class="chip c-ok">정확 287</span></td><td class="num">5,000,000</td><td><span class="chip c-warn">분할 입금 1/2</span></td><td class="ctx">CSV · 시트1 · 행 2~289</td></tr>
+              <tr><td><div>카카오톡스토어</div><div class="ctx">11월 1차</div></td><td>11-01~11-10</td><td class="num">2,140,500</td><td class="num">2,140,500</td><td class="num">0</td><td><span class="chip c-info">주문 단위 63</span></td><td class="num">2,140,500</td><td><span class="chip c-ok">입금 완료</span></td><td class="ctx">XLSX · 정산내역</td></tr>
+              <tr><td><div>카페24 · 자사몰(PG)</div><div class="ctx">11-01~11-07</div></td><td>11-01~11-07</td><td class="num">3,312,000</td><td class="num">3,309,800</td><td class="num">2,200</td><td><span class="chip c-info">기간 집계</span></td><td class="num">3,309,800</td><td><span class="chip c-ok">입금 완료</span></td><td class="ctx">PG 정산 CSV</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+        <section class="card" aria-labelledby="dep-h" style="flex: 1 1 420px; min-width: 0">
+          <h2 id="dep-h" style="margin: 0; font-size: 16px; padding: 16px 16px 8px">입금 대사 (여러 정산 ↔ 여러 입금)</h2>
+          <div style="overflow-x: auto">
+            <table>
+              <thead><tr><th scope="col">입금일 · 적요</th><th scope="col" class="num">입금액</th><th scope="col">연결된 정산</th><th scope="col" class="num">잔액</th></tr></thead>
+              <tbody>
+                <tr><td><div>11-10 · 네이버파이낸셜</div><div class="ctx">기업 1234 · 기본 정산계좌</div></td><td class="num">12,471,100</td><td>네이버 11월 1차 12,471,100</td><td class="num">0</td></tr>
+                <tr><td><div>11-12 · 쿠팡(주)</div><div class="ctx">국민 5678</div></td><td class="num">5,000,000</td><td>쿠팡 11월 1주차 일부</td><td class="num">0</td></tr>
+                <tr><td><div>11-15 · 카카오 + 카페24 PG</div><div class="ctx">기업 1234 · 합산 입금</div></td><td class="num">5,450,300</td><td><div>카카오 11월 1차 2,140,500</div><div>카페24 PG 3,309,800</div></td><td class="num">0</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="ctx" style="margin: 0; padding: 12px 16px">쿠팡 1주차는 8,903,000원 중 5,000,000원 입금, 미입금 3,903,000원이 남아 있습니다.</p>
+        </section>
+
+        <aside class="card" aria-labelledby="ln-h" style="flex: 1 1 380px; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 6px">
+          <h2 id="ln-h" style="margin: 0 0 4px; font-size: 16px">네이버 11월 1차 · 검토 3건</h2>
+          <div class="row"><span>O-26110500211 · 정산 수수료가 예상보다 1,800원 많음</span><span class="chip c-warn">수수료 차이</span></div>
+          <div class="row"><span>O-26110600480 · 주문상품 매칭 불가(외부 상품주문번호 없음)</span><span class="chip c-warn">주문 단위</span></div>
+          <div class="row"><span>보전금 7,400원 · 플랫폼 부담 할인 보전</span><span class="chip c-info">항목 매핑 확인</span></div>
+          <p class="ctx" style="margin: 4px 0 0; line-height: 1.6">정산 원문 행의 수수료·환불 정정은 내부 매출조정과 같은 거래를 가리킬 수 있어 출처를 연결해 한 번만 반영합니다. 같은 파일·행을 다시 올리면 중복으로 표시하고 반영하지 않습니다.</p>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

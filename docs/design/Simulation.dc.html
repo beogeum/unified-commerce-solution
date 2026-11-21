@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>손익 시뮬레이션 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.sub a{display:block;padding:8px 10px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.sub a.on{background:#15191F;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+.btn.dan{border-color:#C93A3A;color:#A11A1A}
+.tab{min-height:36px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#59616C;cursor:pointer}
+.tab.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.sel td{background:#F2F6FE}
+tr.tot td{font-weight:700;background:#FAFBFC}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pos{color:#1D6A3A}.neg{color:#A11A1A}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff;box-sizing:border-box}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 0;border-bottom:1px solid #EEF0F3}
+.kpi{padding:12px;display:flex;flex-direction:column;gap:4px}
+.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:#E7EAEE;overflow:hidden}
+.bar span{display:block;height:100%;background:#2350C8}
+.note{border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6}
+.n-warn{background:#FFF6E8;color:#6B3500}.n-err{background:#FDEBEB;color:#7A1414}.n-info{background:#EEF3FD;color:#1A3A85}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#59616C}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.step{flex:1 1 110px;display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 12px;border-radius:8px;background:#F7F8FA}
+.step.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.step.done{background:#E5F3EA;color:#1D6A3A}
+.dot{width:22px;height:22px;border-radius:50%;background:#2350C8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:0 0 22px}
+.tg{display:inline-block;width:34px;height:20px;border-radius:10px;background:#CDD2D9;position:relative;vertical-align:middle}
+.tg.on{background:#2350C8}
+.tg::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.tg.on::after{left:16px}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a class="on" href="Insights.dc.html" aria-current="page">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>A 코스메틱</option></select></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">오분석</span><span class="ctx">분석 담당</span></div>
+    </header>
+    <nav class="sub2" aria-label="인사이트 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="Insights.dc.html">오늘의 인사이트</a><a href="Insights.dc.html">이익 개선</a><a href="AnalyticsInventory.dc.html">재고 최적화</a><a href="LogisticsOverview.dc.html">물류 최적화</a><a href="ProfitDimension.dc.html">상품 분석</a><a class="on" href="Simulation.dc.html" aria-current="page">시뮬레이션</a>
+    </nav>
+
+    <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+      <main style="flex: 999 1 560px; min-width: 0; padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div><h1 style="margin: 0; font-size: 24px">손익 시뮬레이션 — AMP-30 · 네이버 A 공식스토어</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">가격·수수료·배송비·판매량 가정을 바꿔 공헌이익 변화를 봅니다. 결과는 추정이며 실제 데이터를 바꾸지 않습니다. · <span class="chip c-mute">M6 시안 · 예시 데이터</span></p></div>
+        
+      </div>
+      <div class="card" style="overflow-x: auto">
+        <table>
+          <thead><tr><th scope="col">시나리오</th><th scope="col" class="num">월 판매량</th><th scope="col" class="num">개당 공헌이익</th><th scope="col" class="num">월 공헌이익</th><th scope="col" class="num">현재 대비</th></tr></thead>
+          <tbody>
+            <tr><td>현재 33,000원</td><td class="num">3,200</td><td class="num">15,570</td><td class="num">49,824,000</td><td class="num">0</td></tr>
+            <tr class="sel"><td>31,000원 · 판매 +5%</td><td class="num">3,360</td><td class="num">13,852</td><td class="num">46,542,720</td><td class="num"><span class="neg">−3,281,280</span></td></tr>
+            <tr><td>31,000원 · 판매 +15%</td><td class="num">3,680</td><td class="num">13,852</td><td class="num">50,975,360</td><td class="num"><span class="pos">+1,151,360</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note n-info">31,000원으로 내리면 개당 공헌이익이 15,570 → 13,852원으로 1,718원 줄어, 판매량이 12.4% 이상 늘어야 현재 이익을 유지합니다.</div>
+      <p class="ctx" style="margin: 0">개당 공헌이익 = 공급가 − 원가 9,000 − 수수료(공급가 × 5.5%) − 배송비 3,200 − 부자재 580. 33,000원: 공급가 30,000, 수수료 1,650. 31,000원: 공급가 28,182, 수수료 1,550. 월 판매량 3,200개는 10월 실적 기준 가정입니다.</p>
+      </main>
+      <aside aria-labelledby="aside-h" style="flex: 1 1 340px; max-width: 420px; background: #fff; border-left: 1px solid #E3E6EA; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+        <h2 id="aside-h" style="margin: 0; font-size: 18px">가정</h2>
+        <label class="fld">판매가(부가세 포함)<input class="inp" value="31,000"></label>
+        <label class="fld">판매량 변화<input class="inp" value="+15%"></label>
+        <label class="fld">수수료율<input class="inp" value="5.5% (판매계정 계약값)"></label>
+        <label class="fld">배송비 · 부자재<input class="inp" value="3,200 · 580 (포장 BOM v3)"></label>
+        <div class="note n-warn">31,000원은 최저판매가 29,700원보다 높아 저장할 수 있는 가격입니다. 실제 변경은 가격·판매정책에서 합니다.</div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn pri" type="button">시나리오 저장</button><a class="btn" href="PricePolicy.dc.html">가격·판매정책으로</a></div>
+      </aside>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

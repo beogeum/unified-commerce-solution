@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>재고원장 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pos{color:#1D6A3A}.neg{color:#A11A1A}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a class="on" href="Inventory.dc.html" aria-current="page">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>A 코스메틱</option><option>전체 사업자 (3)</option></select></label>
+      <label class="ctx" style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px">통합검색<input class="inp" type="search" placeholder="SKU, 주문·출고·반품 번호  ( / )"></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">박물류</span><span class="ctx">물류관리자</span></div>
+    </header>
+    <nav class="sub2" aria-label="재고 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="Inventory.dc.html">통합재고</a><a href="Inventory.dc.html">거점별 재고</a><a class="on" href="Ledger.dc.html" aria-current="page">재고원장</a><a href="Reservations.dc.html">예약·할당</a><a href="Transfers.dc.html">재고이동</a><a href="StockCount.dc.html">재고조정·실사</a><a href="LotExpiry.dc.html">LOT·유통기한</a><a href="Unsellable.dc.html">비가용·불용재고</a><a href="Allocation.dc.html">채널 재고배분</a><a href="StockPolicy.dc.html">재고정책</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div><h1 style="margin: 0; font-size: 24px">재고원장</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">모든 수량·상태 변화의 기록입니다. 직접 수정·삭제할 수 없고, 정정은 반대 거래로 남깁니다. · <span class="chip c-mute">M3 시안 · 예시 데이터</span></p></div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><span class="chip c-ok" style="height: 30px">원장 합계 = 현재 재고 일치 (14:00 검증)</span><button class="btn" type="button">내보내기</button></div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end">
+        <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">SKU<input class="inp" type="text" value="AMP-30"></label>
+        <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">거점<select class="inp"><option>전체</option><option>화성 자체 WMS</option><option>파스토 용인</option></select></label>
+        <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">유형<select class="inp"><option>전체</option><option>입고</option><option>출고</option><option>예약·해제</option><option>상태변경</option><option>조정</option><option>이동</option><option>조립·해체</option><option>폐기</option></select></label>
+        <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">기간<select class="inp"><option>오늘</option><option>최근 7일</option></select></label>
+      </div>
+      <div class="card" style="overflow-x: auto">
+        <table>
+          <thead><tr><th scope="col">발생시각</th><th scope="col">SKU · LOT</th><th scope="col">소유 사업자 · 거점</th><th scope="col">유형</th><th scope="col">상태 이동</th><th scope="col" class="num">변동</th><th scope="col" class="num">이전 → 이후</th><th scope="col">원인 · 참조</th><th scope="col">처리 주체</th></tr></thead>
+          <tbody>
+            <tr><td>14:02</td><td>AMP-30 · 2610-C</td><td><div>A 코스메틱</div><div class="ctx">파스토 용인</div></td><td>단계 변경</td><td>예약 → 할당</td><td class="num">2</td><td class="num ctx">예약 24→22 · 할당 3→5</td><td><a href="Shipments.dc.html">F-88229</a> · O-26112100341</td><td>시스템 · 출고 배정</td></tr>
+            <tr><td>13:51</td><td>AMP-30 · 2610-C</td><td><div>A 코스메틱</div><div class="ctx">파스토 용인</div></td><td>예약</td><td>— → 예약</td><td class="num">+1</td><td class="num ctx">예약 23→24 · 판매가능 200→199</td><td>O-26112100322</td><td>시스템 · 주문 수집</td></tr>
+            <tr><td>13:40</td><td>AMP-30 · 2610-C</td><td><div>A 코스메틱</div><div class="ctx">파스토 용인</div></td><td>외부 스냅샷</td><td>외부 가용</td><td class="num neg">−3</td><td class="num ctx">원본 가용 251→248</td><td>파스토 재고 API · 워터마크 #F-88213</td><td>연동 · mock-3pl</td></tr>
+            <tr><td>11:20</td><td>AMP-30 · 2610-C</td><td><div>A 코스메틱</div><div class="ctx">파스토 용인</div></td><td>반품 입고</td><td>— → 검수대기</td><td class="num pos">+1</td><td class="num ctx">비가용 11→12</td><td><a href="Claims.dc.html">R-2611-0042</a></td><td>연동 · 파일 수신</td></tr>
+            <tr><td>10:15</td><td>AMP-30 · 2611-A</td><td><div>A 코스메틱</div><div class="ctx">화성 자체 WMS</div></td><td>상태변경</td><td>검수대기 → 정상</td><td class="num">1</td><td class="num ctx">비가용 21→20 · 정상 399→400</td><td>검수 R-2611-0031 · 정상 판정</td><td>창고작업자 서창고</td></tr>
+            <tr><td>09:05</td><td>AMP-30 · 2611-A</td><td><div>A 코스메틱</div><div class="ctx">화성 자체 WMS</div></td><td>출고</td><td>피킹 → 소진</td><td class="num neg">−4</td><td class="num ctx">실재고 424→420 · 피킹 10→6</td><td>F-88199 출고 확정</td><td>창고작업자 서창고</td></tr>
+            <tr><td>08:30</td><td>AMP-30 · 2611-A</td><td><div>A 코스메틱</div><div class="ctx">화성 자체 WMS</div></td><td>조정(정정)</td><td>정상</td><td class="num pos">+2</td><td class="num ctx">정상 397→399</td><td>실사 C-2611-03 승인 · 이전 조정 J-0911 반대 거래</td><td>승인 정재무</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ctx" style="margin: 0">출고 확정 시 피킹 수량이 소진되며 추가 판매가능 수량은 다시 변하지 않습니다(이미 예약 때 줄었기 때문). 외부 3PL 원본 수량은 별도 줄로 남기고 내부 분류로 덮어쓰지 않습니다.</p>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

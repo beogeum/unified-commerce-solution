@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>모바일 홈 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.sub a{display:block;padding:8px 10px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.sub a.on{background:#15191F;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+.btn.dan{border-color:#C93A3A;color:#A11A1A}
+.tab{min-height:36px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#59616C;cursor:pointer}
+.tab.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.sel td{background:#F2F6FE}
+tr.tot td{font-weight:700;background:#FAFBFC}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pos{color:#1D6A3A}.neg{color:#A11A1A}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff;box-sizing:border-box}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 0;border-bottom:1px solid #EEF0F3}
+.kpi{padding:12px;display:flex;flex-direction:column;gap:4px}
+.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:#E7EAEE;overflow:hidden}
+.bar span{display:block;height:100%;background:#2350C8}
+.note{border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6}
+.n-warn{background:#FFF6E8;color:#6B3500}.n-err{background:#FDEBEB;color:#7A1414}.n-info{background:#EEF3FD;color:#1A3A85}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#59616C}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.step{flex:1 1 110px;display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 12px;border-radius:8px;background:#F7F8FA}
+.step.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.step.done{background:#E5F3EA;color:#1D6A3A}
+.dot{width:22px;height:22px;border-radius:50%;background:#2350C8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:0 0 22px}
+.tg{display:inline-block;width:34px;height:20px;border-radius:10px;background:#CDD2D9;position:relative;vertical-align:middle}
+.tg.on{background:#2350C8}
+.tg::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.tg.on::after{left:16px}
+.mt a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:#59616C;text-decoration:none;padding:8px 0}.mt a.on{color:#163A99;font-weight:600}
+</style>
+</helmet>
+<div style="min-height: 844px; display: flex; flex-direction: column; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F; background: #F4F5F7">
+  <header style="background: #fff; border-bottom: 1px solid #E3E6EA; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px">
+    <div><div class="ctx">데모 운영그룹 · 전체 사업자</div><h1 style="margin: 0; font-size: 18px">오늘</h1></div>
+    <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+  </header>
+  <main style="flex: 1 1 auto; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+    <section aria-label="요약" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+      <div class="card kpi"><span class="ctx">오늘 주문</span><b>1,284</b></div>
+      <div class="card kpi"><span class="ctx">마감 전 미처리</span><b style="color: #8A4300">47</b></div>
+      <div class="card kpi"><span class="ctx">업무함</span><b style="color: #A11A1A">7</b></div>
+      <div class="card kpi"><span class="ctx">CS 미답변</span><b>14</b></div>
+    </section>
+    <section class="card" aria-labelledby="m-h" style="padding: 14px; display: flex; flex-direction: column; gap: 8px">
+      <h2 id="m-h" style="margin: 0; font-size: 15px">지금 볼 일</h2>
+      <a href="WorkQueue.dc.html" class="row" style="text-decoration: none; color: inherit"><span>품고 재고 판단 불가 · RUG-GR-160</span><span class="chip c-err">긴급</span></a>
+      <a href="OrderHolds.dc.html" class="row" style="text-decoration: none; color: inherit"><span>주소 보류 1건 · 16:00 마감</span><span class="chip c-warn">2시간</span></a>
+      <a href="ApprovalPolicy.dc.html" class="row" style="text-decoration: none; color: inherit"><span>승인 요청 2건</span><span class="chip c-info">대기</span></a>
+      <a href="IntegrationDiag.dc.html" class="row" style="text-decoration: none; color: inherit"><span>파스토 전송 재시도 대기</span><span class="chip c-warn">3/5</span></a>
+    </section>
+    <p class="ctx" style="margin: 0">모바일은 확인·승인·간단 처리 위주입니다. 대량 작업과 내보내기는 PC에서만 제공합니다. <span class="chip c-mute">M7 시안</span></p>
+  </main>
+  <nav class="mt" aria-label="하단 메뉴" style="display: flex; background: #fff; border-top: 1px solid #E3E6EA">
+    <a class="on" href="MobileHome.dc.html" aria-current="page">홈</a><a href="WorkQueue.dc.html">업무함</a><a href="Orders.dc.html">주문</a><a href="WmsMobile.dc.html">WMS</a><a href="BusinessEntities.dc.html">더보기</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>로그인 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.sub a{display:block;padding:8px 10px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.sub a.on{background:#15191F;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+.btn.dan{border-color:#C93A3A;color:#A11A1A}
+.tab{min-height:36px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#59616C;cursor:pointer}
+.tab.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.sel td{background:#F2F6FE}
+tr.tot td{font-weight:700;background:#FAFBFC}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pos{color:#1D6A3A}.neg{color:#A11A1A}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff;box-sizing:border-box}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 0;border-bottom:1px solid #EEF0F3}
+.kpi{padding:12px;display:flex;flex-direction:column;gap:4px}
+.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:#E7EAEE;overflow:hidden}
+.bar span{display:block;height:100%;background:#2350C8}
+.note{border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6}
+.n-warn{background:#FFF6E8;color:#6B3500}.n-err{background:#FDEBEB;color:#7A1414}.n-info{background:#EEF3FD;color:#1A3A85}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#59616C}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.step{flex:1 1 110px;display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 12px;border-radius:8px;background:#F7F8FA}
+.step.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.step.done{background:#E5F3EA;color:#1D6A3A}
+.dot{width:22px;height:22px;border-radius:50%;background:#2350C8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:0 0 22px}
+.tg{display:inline-block;width:34px;height:20px;border-radius:10px;background:#CDD2D9;position:relative;vertical-align:middle}
+.tg.on{background:#2350C8}
+.tg::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.tg.on::after{left:16px}
+
+</style>
+</helmet>
+<div style="min-height: 900px; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <div style="display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; width: 100%; max-width: 1340px">
+    <main class="card" style="flex: 1 1 360px; max-width: 420px; padding: 28px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box">
+      <div style="display: flex; align-items: center; gap: 10px"><div aria-hidden="true" style="width: 32px; height: 32px; border-radius: 8px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700">C</div><h1 style="margin: 0; font-size: 20px">커머스 운영 OS 로그인</h1></div>
+      <label class="fld">이메일<input class="inp" type="email" value="ops@example.com" autocomplete="username"></label>
+      <label class="fld">비밀번호<input class="inp" type="password" value="••••••••••" autocomplete="current-password"></label>
+      <div class="note n-err" role="alert">이메일 또는 비밀번호가 맞지 않습니다. 5회 틀리면 15분 동안 로그인할 수 없습니다(남은 횟수 3회).</div>
+      <button class="btn pri" type="button">로그인</button>
+      <a href="Login.dc.html" style="font-size: 13px">비밀번호를 잊으셨나요?</a>
+      <span class="chip c-mute" style="align-self: flex-start">F1 시안 · Foundation 인증 API 구현됨</span>
+    </main>
+    <section class="card" aria-labelledby="mfa-h" style="flex: 1 1 360px; max-width: 420px; padding: 28px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box">
+      <h2 id="mfa-h" style="margin: 0; font-size: 18px">2단계 인증</h2>
+      <p class="ctx" style="margin: 0">OTP 앱에 표시된 6자리 숫자를 입력하세요. 최고관리자·운영관리자는 반드시 등록해야 합니다.</p>
+      <label class="fld">인증 코드<input class="inp" inputmode="numeric" autocomplete="one-time-code" value="482 913"></label>
+      <button class="btn pri" type="button">확인</button>
+      <a href="Login.dc.html" style="font-size: 13px">OTP 앱을 쓸 수 없나요? 복구 코드 입력</a>
+    </section>
+    <section class="card" aria-labelledby="ws-h" style="flex: 1 1 360px; max-width: 420px; padding: 28px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box">
+      <h2 id="ws-h" style="margin: 0; font-size: 18px">운영그룹 선택</h2>
+      <p class="ctx" style="margin: 0">로그인 후 들어갈 운영그룹을 고릅니다. 세션은 선택한 운영그룹에만 묶이며, 다른 운영그룹 데이터는 보이지 않습니다.</p>
+      <a class="card" href="Main.dc.html" style="padding: 12px; text-decoration: none; color: inherit; display: flex; justify-content: space-between; align-items: center; border-color: #2350C8"><span><b>데모 운영그룹</b><br><span class="ctx">사업자 3 · 운영관리자</span></span><span class="chip c-info">마지막 사용</span></a>
+      <a class="card" href="Main.dc.html" style="padding: 12px; text-decoration: none; color: inherit; display: flex; justify-content: space-between; align-items: center"><span><b>테스트 운영그룹</b><br><span class="ctx">사업자 1 · 조회 전용</span></span></a>
+      <p class="ctx" style="margin: 0">운영그룹을 바꾸면 새 세션이 발급되고 이전 운영그룹 세션은 유지됩니다.</p>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -141,3 +141,10 @@ Content-Type: application/json
 - 응답 마스킹과 `export`에도 개인정보·원가/손익 권한 적용.
 - 외부 출고·환불 명령은 한 번 전송 후 타임아웃 시 결과조회/중복확인 필수; 무조건 재POST 금지.
 - SQL·OpenAPI 스타터는 전체 기능 완성명세가 아니므로 실제 구현 때 각 모듈의 request/response DTO/schema를 확장하고 계약 테스트를 생성할 것.
+
+---
+
+## 개정 이력(2026-11-21, 위임 결정 docs/11 §H)
+- CHG-003: 인증(`/auth/login`, `/auth/logout`, `/auth/mfa/*`), `/me`, 사용자·역할 API, If-Match 버전 규칙(없으면 428, 불일치 409), 401/404/428/429 규칙, 파일·내보내기 다운로드 API는 `docs/api/foundation-api.md`를 기준으로 한다.
+- CHG-009/010: 예약 API 의미와 반품 검수 enum은 docs/04 개정 이력을 따른다.
+- DLG-052: 연동 작업 경로는 `/integrations/{connectionId}/sync-jobs`를 유지한다(CHG-004 기각).

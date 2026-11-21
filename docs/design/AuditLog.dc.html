@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>변경이력 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub a{display:block;padding:8px 10px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.sub a.on{background:#15191F;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.sel td{background:#F2F6FE}
+.ctx{font-size:12px;color:#59616C}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+.diff{display:grid;grid-template-columns:110px 1fr 1fr;gap:6px 10px;font-size:13px}
+.old{background:#FDEBEB;color:#7A1414;border-radius:4px;padding:2px 6px}
+.new{background:#E5F3EA;color:#14532D;border-radius:4px;padding:2px 6px}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a class="on" href="BusinessEntities.dc.html" aria-current="page">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px">통합검색<input class="inp" type="search" placeholder="요청번호, 대상 ID  ( / )"></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">대표관리자</span><span class="ctx">최고관리자 · 감사이력 권한</span></div>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+      <nav class="sub" aria-label="설정 메뉴" style="flex: 1 1 180px; max-width: 200px; padding: 24px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+        <a href="WorkspaceSettings.dc.html">운영그룹</a>
+        <a href="BusinessEntities.dc.html">사업자 관리</a>
+        <a href="AccessPolicy.dc.html">사용자·권한</a>
+        <a href="ChannelAccounts.dc.html">판매계정</a>
+        <a href="ShipperAccounts.dc.html">화주계정</a>
+        <a href="BankAccounts.dc.html">정산계좌</a>
+        <a href="ApprovalPolicy.dc.html">승인정책</a>
+        <a href="NotificationPolicy.dc.html">알림정책</a>
+        <a href="CostClosePolicy.dc.html">원가·마감 정책</a>
+        <a class="on" href="AuditLog.dc.html" aria-current="page">변경이력</a>
+      </nav>
+
+      <main style="flex: 999 1 480px; min-width: 0; padding: 24px 24px 24px 8px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+        <div><h1 style="margin: 0; font-size: 24px">변경이력</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">모든 변경·거부·실패가 남습니다. 기록은 수정·삭제할 수 없고, 값 원문 대신 가린 값만 저장합니다. · <span class="chip c-ok">Foundation API 구현됨</span></p></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end">
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">주체<select class="inp"><option>전체</option><option>사용자</option><option>시스템</option><option>연동</option><option>승인자</option></select></label>
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">대상<select class="inp"><option>전체</option><option>사업자</option><option>판매계정</option><option>사용자</option><option>연동 연결</option><option>파일</option></select></label>
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">결과<select class="inp"><option>전체</option><option>성공</option><option>거부</option><option>실패</option></select></label>
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">기간<select class="inp"><option>최근 7일</option></select></label>
+        </div>
+        <div class="card" style="overflow-x: auto">
+          <table>
+            <thead><tr><th scope="col">시각</th><th scope="col">주체</th><th scope="col">작업</th><th scope="col">결과</th><th scope="col">대상</th><th scope="col">사업자 · 계정</th><th scope="col">요청번호</th></tr></thead>
+            <tbody>
+              <tr class="sel"><td>11-21 13:10</td><td><div>대표관리자</div><div class="ctx">사용자</div></td><td>접근정책 교체</td><td><span class="chip c-ok">성공</span></td><td>사용자 이주문</td><td class="ctx">—</td><td class="ctx">req-7f21…</td></tr>
+              <tr><td>11-21 13:40</td><td><div>mock-channel</div><div class="ctx">연동</div></td><td>상태 점검 실패</td><td><span class="chip c-err">실패</span></td><td>연동 · 네이버2 연동</td><td><div>A 코스메틱</div><div class="ctx">A 공식스토어 2</div></td><td class="ctx">—</td></tr>
+              <tr><td>11-21 12:58</td><td><div>이주문</div><div class="ctx">사용자</div></td><td>범위 밖 조회</td><td><span class="chip c-warn">거부</span></td><td>사업자 B 리빙</td><td><div>B 리빙</div></td><td class="ctx">req-a90c…</td></tr>
+              <tr><td>11-21 11:02</td><td><div>정재무</div><div class="ctx">사용자</div></td><td>계좌번호 원문 열람</td><td><span class="chip c-ok">성공</span></td><td>정산계좌 2건</td><td><div>A 코스메틱</div></td><td class="ctx">req-31bd…</td></tr>
+              <tr><td>11-20 15:02</td><td><div>김운영</div><div class="ctx">사용자</div></td><td>판매계정 귀속 변경</td><td><span class="chip c-ok">성공</span></td><td>판매계정 B 리빙몰</td><td><div>B 리빙</div><div class="ctx">B 리빙몰</div></td><td class="ctx">req-0e44…</td></tr>
+              <tr><td>11-20 15:02</td><td><div>integration.channel-account-reassigned</div><div class="ctx">시스템</div></td><td>연동 일시중지</td><td><span class="chip c-ok">성공</span></td><td>연동 · 카페24 B 연동</td><td><div>B 리빙</div><div class="ctx">B 리빙몰</div></td><td class="ctx">이벤트 연결</td></tr>
+              <tr><td>11-20 09:30</td><td><div>박물류</div><div class="ctx">사용자</div></td><td>내보내기 파일 다운로드</td><td><span class="chip c-ok">성공</span></td><td>파일 channel_accounts.csv</td><td class="ctx">—</td><td class="ctx">req-55ea…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="ctx" style="margin: 0">조회 범위 밖 사업자·판매계정의 기록은 이 화면에도 나타나지 않습니다.</p>
+      </main>
+
+      <aside aria-labelledby="au-h" style="flex: 1 1 360px; max-width: 460px; background: #fff; border-left: 1px solid #E3E6EA; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+        <div><h2 id="au-h" style="margin: 0; font-size: 18px">접근정책 교체 — 이주문</h2><p class="ctx" style="margin: 4px 0 0">11-21 13:10 · 대표관리자 · req-7f21c09a</p></div>
+        <section aria-label="변경 전후" class="diff">
+          <span class="ctx">항목</span><span class="ctx">변경 전</span><span class="ctx">변경 후</span>
+          <span>정책 버전</span><span class="old">2</span><span class="new">3</span>
+          <span>사업자 조회</span><span class="old">전체</span><span class="new">전체 · B 리빙 제외</span>
+          <span>사업자 내보내기</span><span class="old">조회와 같음</span><span class="new">A 코스메틱만</span>
+          <span>권한 예외</span><span class="old">없음</span><span class="new">pii.read 거부</span>
+        </section>
+        <p class="ctx" style="margin: 0; line-height: 1.6">변경은 저장 즉시 기존 로그인 세션에도 적용되었습니다. 이 기록은 수정·삭제할 수 없습니다.</p>
+      </aside>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

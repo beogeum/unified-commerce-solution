@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>분석 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+.ctx{font-size:12px;color:#59616C}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+.hb{display:grid;grid-template-columns:170px 1fr 96px;gap:10px;align-items:center;font-size:13px;padding:6px 0}
+.track{height:14px;border-left:1px solid #C9CED6;position:relative}
+.fill{position:absolute;left:0;top:0;bottom:0;background:#2350C8;border-radius:0 4px 4px 0}
+.fill:hover{background:#163A99}
+.val{text-align:right;font-variant-numeric:tabular-nums;color:#15191F}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a class="on" href="Analytics.dc.html" aria-current="page">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>전체 사업자 (3)</option></select></label>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">기간<select class="inp"><option>2026년 10월</option><option>최근 30일</option></select></label>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">비교<select class="inp"><option>전월</option><option>전년 동월</option></select></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">오분석</span><span class="ctx">분석읽기전용</span></div>
+    </header>
+    <nav class="sub2" aria-label="분석 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a class="on" href="Analytics.dc.html" aria-current="page">매출</a><a href="AnalyticsInventory.dc.html">재고</a><a href="AnalyticsClaims.dc.html">클레임</a><a href="Sla.dc.html">배송/SLA</a><a href="AnalyticsAds.dc.html">광고</a><a href="ProfitDimension.dc.html">상품/채널 비교</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box; max-width: 1280px; width: 100%">
+      <div><h1 style="margin: 0; font-size: 24px">매출 분석 — 2026년 10월</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">순매출은 공급가 기준이며 정산액과 다릅니다. 지표마다 분모·기준을 함께 표시합니다. · <span class="chip c-mute">M6 시안 · 예시 데이터</span></p></div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+        <figure class="card" style="flex: 1 1 460px; min-width: 0; margin: 0; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+          <figcaption style="display: flex; justify-content: space-between; gap: 8px"><b style="font-size: 16px">판매계정별 순매출</b><a href="#sales-table" style="font-size: 13px">표로 보기</a></figcaption>
+          <div role="img" aria-label="판매계정별 순매출 막대 그래프. 네이버 A 공식스토어 외 1 2억 2천만 원, 쿠팡 A 코스메틱 1억 8천만 원, 카페24 B 리빙몰 1억 2천만 원, 11번가 B 리빙 8천만 원, 쿠팡 로켓그로스 C 1천2백만 원, 11번가 C 푸드 8백만 원">
+            <div class="hb"><span>네이버 · A 공식스토어 외 1</span><div class="track" aria-hidden="true"><div class="fill" style="width: 100%" title="220,000,000원 · 전월 +8%"></div></div><span class="val">220,000,000</span></div>
+            <div class="hb"><span>쿠팡 · A 코스메틱</span><div class="track" aria-hidden="true"><div class="fill" style="width: 81.8%" title="180,000,000원 · 전월 +3%"></div></div><span class="val">180,000,000</span></div>
+            <div class="hb"><span>카페24 · B 리빙몰</span><div class="track" aria-hidden="true"><div class="fill" style="width: 54.5%" title="120,000,000원 · 전월 −4%"></div></div><span class="val">120,000,000</span></div>
+            <div class="hb"><span>11번가 · B 리빙</span><div class="track" aria-hidden="true"><div class="fill" style="width: 36.4%" title="80,000,000원 · 전월 +1%"></div></div><span class="val">80,000,000</span></div>
+            <div class="hb"><span>쿠팡 로켓그로스 · C 푸드</span><div class="track" aria-hidden="true"><div class="fill" style="width: 5.5%" title="12,000,000원 · 전월 −12%"></div></div><span class="val">12,000,000</span></div>
+            <div class="hb"><span>11번가 · C 푸드</span><div class="track" aria-hidden="true"><div class="fill" style="width: 3.6%" title="8,000,000원 · 전월 −20%"></div></div><span class="val">8,000,000</span></div>
+          </div>
+          <span class="ctx">단위: 원 · 합계 620,000,000 · 막대에 마우스를 올리면 전월 대비 변화</span>
+        </figure>
+
+        <figure class="card" style="flex: 1 1 380px; min-width: 0; margin: 0; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+          <figcaption style="display: flex; justify-content: space-between; gap: 8px"><b style="font-size: 16px">판매채널별 반품률</b><span class="ctx">반품 확정 수량 ÷ 출고 수량</span></figcaption>
+          <div role="img" aria-label="판매채널별 반품률. 카페24 6.1%, 11번가 4.8%, 쿠팡 3.9%, 네이버 3.2%, 로켓그로스 2.4%">
+            <div class="hb"><span>카페24</span><div class="track" aria-hidden="true"><div class="fill" style="width: 100%" title="6.1% · 반품 183 / 출고 3,000"></div></div><span class="val">6.1%</span></div>
+            <div class="hb"><span>11번가</span><div class="track" aria-hidden="true"><div class="fill" style="width: 78.7%" title="4.8% · 반품 96 / 출고 2,000"></div></div><span class="val">4.8%</span></div>
+            <div class="hb"><span>쿠팡</span><div class="track" aria-hidden="true"><div class="fill" style="width: 63.9%" title="3.9% · 반품 273 / 출고 7,000"></div></div><span class="val">3.9%</span></div>
+            <div class="hb"><span>네이버</span><div class="track" aria-hidden="true"><div class="fill" style="width: 52.5%" title="3.2% · 반품 256 / 출고 8,000"></div></div><span class="val">3.2%</span></div>
+            <div class="hb"><span>로켓그로스</span><div class="track" aria-hidden="true"><div class="fill" style="width: 39.3%" title="2.4% · 반품 36 / 출고 1,500"></div></div><span class="val">2.4%</span></div>
+          </div>
+          <span class="ctx">교환 출고는 신규 판매로 세지 않습니다.</span>
+        </figure>
+      </div>
+
+      <section class="card" id="sales-table" aria-labelledby="tb-h" style="min-width: 0">
+        <h2 id="tb-h" style="margin: 0; font-size: 16px; padding: 16px 16px 8px">지표 정의</h2>
+        <div style="overflow-x: auto">
+          <table>
+            <thead><tr><th scope="col">지표</th><th scope="col">계산</th><th scope="col">주의</th></tr></thead>
+            <tbody>
+              <tr><td>순판매수량</td><td>최초 수량 − 취소 확정 − 반품 확정</td><td class="ctx">같은 외부 이벤트 중복 제거 후</td></tr>
+              <tr><td>주문 순매출</td><td>판매가 − 판매자 부담 할인 − 취소·반품 조정(공급가)</td><td class="ctx">정산액과 다름</td></tr>
+              <tr><td>반품률</td><td>반품 확정 수량 ÷ 출고 수량</td><td class="ctx">금액 기준은 별도 표시</td></tr>
+              <tr><td>재고일수</td><td>판매가능 재고 ÷ 기간 일평균 판매</td><td class="ctx">판매가 0이면 '계산불가'</td></tr>
+              <tr><td>공헌이익률(합산)</td><td>이익 합계 ÷ 매출 합계</td><td class="ctx">이익률 단순 평균 금지</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

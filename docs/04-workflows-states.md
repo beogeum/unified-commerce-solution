@@ -87,3 +87,10 @@
 OrderReceived, OrderNormalized, OrderItemMapped, GwpApplied, BomExpanded, StockReserved, StockAllocated, FulfillmentCreated, FulfillmentRequested, FulfillmentAccepted, PickingStarted, ShipmentDispatched, TrackingReceived, CancellationRequested, CancellationConfirmed, ReturnReceived, ReturnInspected, RefundConfirmed, ExchangeReplacementDispatched, StockConditionChanged, StockDisposed, SettlementImported, SettlementMatched, CostFinalized, PeriodClosed.
 
 모든 이벤트에 `event_id, workspace_id, business_entity_id, aggregate_type/id, event_type, occurred_at, source_event_id, correlation_id, schema_version` 필드. 전달은 반복될 수 있으나 업무 적용은 멱등.
+
+---
+
+## 개정 이력(2026-11-21, 위임 결정 docs/11 §H)
+- CHG-009: 예약은 항상 (소유 사업자, SKU, 거점) 재고 버킷 단위이며, `ALLOCATED`는 출고 지시와 결합된 상태로 정의한다.
+- CHG-010: 반품 검수 판정 어휘는 docs/13 §5 기준 한 벌의 enum으로 통일한다: 정상 `SELLABLE` · 검수대기 `PENDING_INSPECTION` · 재포장 `REPACK` · 불량 `DEFECTIVE` · 파손 `DAMAGED` · 만료 `EXPIRED` · 폐기대기 `DISPOSAL_PENDING` · 미확정 `UNDETERMINED`.
+- DLG-040: 미결제 예약 만료 72시간, 반품 검수 기한 입고 후 2영업일(설정값).

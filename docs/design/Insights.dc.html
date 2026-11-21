@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>인사이트 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+.ctx{font-size:12px;color:#59616C}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+.kv{display:grid;grid-template-columns:96px 1fr;gap:6px 10px;font-size:13px;line-height:1.5}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a class="on" href="Insights.dc.html" aria-current="page">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>전체 사업자 (3)</option></select></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">대표관리자</span><span class="ctx">최고관리자</span></div>
+    </header>
+    <nav class="sub2" aria-label="인사이트 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a class="on" href="Insights.dc.html" aria-current="page">오늘의 인사이트</a><a href="Insights.dc.html">이익 개선</a><a href="AnalyticsInventory.dc.html">재고 최적화</a><a href="LogisticsOverview.dc.html">물류 최적화</a><a href="ProfitDimension.dc.html">상품 분석</a><a href="Simulation.dc.html">시뮬레이션</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box; max-width: 1280px; width: 100%">
+      <div><h1 style="margin: 0; font-size: 24px">오늘의 인사이트</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">규칙 기반으로 찾은 변화와 원인 후보입니다. 제안은 읽기·추천 전용이며, 실행은 담당자 승인 후에만 합니다. · <span class="chip c-mute">M6 시안 · 예시 데이터</span></p></div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px">
+        <article class="card" aria-labelledby="i1" style="padding: 16px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; justify-content: space-between; gap: 8px"><span class="chip c-warn">이익 개선</span><span class="ctx">관측 10-01~10-31 · 비교 9월</span></div>
+          <h2 id="i1" style="margin: 0; font-size: 17px">앰플 30ml · 쿠팡 공헌이익률 −4.1%p</h2>
+          <div class="kv">
+            <span class="ctx">원인 후보</span><span>광고비 +2.0%p · 반품비 +1.3%p · 물류비 +0.8%p</span>
+            <span class="ctx">근거</span><span>주문 4,210건 · 광고 캠페인 3개 · 반품 R 164건</span>
+            <span class="ctx">확실성</span><span>광고·반품: 원장 확정값 · 물류비: 청구서 23건 미확정(예상값 포함)</span>
+            <span class="ctx">예상 효과</span><span>검색광고 입찰가 10% 인하 시 이익률 +0.9%p 추정(가정: 전환율 유지)</span>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap"><a class="btn" href="Profit.dc.html">상세 분석</a><button class="btn" type="button">시뮬레이션</button><button class="btn pri" type="button">검토 업무 생성</button></div>
+        </article>
+
+        <article class="card" aria-labelledby="i2" style="padding: 16px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; justify-content: space-between; gap: 8px"><span class="chip c-err">재고 위험</span><span class="ctx">관측 최근 14일</span></div>
+          <h2 id="i2" style="margin: 0; font-size: 17px">러그 세트 구성품 PAD-160 품절 예상 5일</h2>
+          <div class="kv">
+            <span class="ctx">원인 후보</span><span>일평균 판매 2.1개, 입고예정 없음, 리드타임 30일</span>
+            <span class="ctx">근거</span><span>품고 김포 판매가능 11 · 가상묶음 BOM v2</span>
+            <span class="ctx">확실성</span><span>품고 재고 반영 시점 불명확 — 실제보다 적을 수 있음</span>
+            <span class="ctx">제안</span><span>B 리빙 PAD-160 100개 발주(MOQ 50 단위)</span>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap"><a class="btn" href="Procurement.dc.html">발주 제안 보기</a><button class="btn pri" type="button">실행 승인 요청</button></div>
+        </article>
+
+        <article class="card" aria-labelledby="i3" style="padding: 16px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; justify-content: space-between; gap: 8px"><span class="chip c-info">물류 최적화</span><span class="ctx">관측 10월</span></div>
+          <h2 id="i3" style="margin: 0; font-size: 17px">수도권 주문 화성 출고 비중 확대 검토</h2>
+          <div class="kv">
+            <span class="ctx">관찰</span><span>파스토 출고 1건당 배송·포장비 3,780원, 화성 3,200원 + 부자재 580원</span>
+            <span class="ctx">해석</span><span>부자재까지 포함하면 차이 0원 — 거점 변경 이익 없음</span>
+            <span class="ctx">확실성</span><span>파스토 포장비에 부자재 포함 계약 기준</span>
+          </div>
+          <span class="ctx">부자재를 빼고 비교하면 잘못된 제안이 나오므로 같은 범위로 비교합니다.</span>
+        </article>
+
+        <article class="card" aria-labelledby="i4" style="padding: 16px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; justify-content: space-between; gap: 8px"><span class="chip c-mute">미확인</span><span class="ctx">관측 10월</span></div>
+          <h2 id="i4" style="margin: 0; font-size: 17px">C 푸드 로켓그로스 손익 계산 불가</h2>
+          <div class="kv">
+            <span class="ctx">이유</span><span>10월 정산 원본이 수집되지 않아 수수료·물류비가 비어 있음</span>
+            <span class="ctx">다음 조치</span><span>정산 파일 업로드 후 다시 계산</span>
+          </div>
+          <span class="ctx">원본이 없는 값은 사실처럼 보여 주지 않고 '미확인'으로 표시합니다.</span>
+        </article>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

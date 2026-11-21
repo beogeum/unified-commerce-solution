@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>사용자·권한 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:16px 12px 6px;letter-spacing:.02em}
+.sub a{display:block;padding:8px 10px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.sub a.on{background:#15191F;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px 10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px 10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+.ctx{font-size:12px;color:#59616C}
+.sel-input{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+.user{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:8px;text-decoration:none;color:#15191F;font-size:14px}
+.user.on{background:#EAF0FD}
+.opt{display:flex;align-items:center;gap:8px;min-height:32px;font-size:13px}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a class="on" href="BusinessEntities.dc.html" aria-current="page">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #59616C">통합검색
+        <input class="sel-input" type="search" placeholder="사용자 이름, 이메일  ( / )">
+      </label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">대표관리자</span><span class="ctx">최고관리자</span></div>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+      <nav class="sub" aria-label="설정 메뉴" style="flex: 1 1 180px; max-width: 200px; padding: 24px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+        <a href="WorkspaceSettings.dc.html">운영그룹</a>
+        <a href="BusinessEntities.dc.html">사업자 관리</a>
+        <a class="on" href="AccessPolicy.dc.html" aria-current="page">사용자·권한</a>
+        <a href="ChannelAccounts.dc.html">판매계정</a>
+        <a href="ShipperAccounts.dc.html">화주계정</a>
+        <a href="BankAccounts.dc.html">정산계좌</a>
+        <a href="ApprovalPolicy.dc.html">승인정책</a>
+        <a href="NotificationPolicy.dc.html">알림정책</a>
+        <a href="CostClosePolicy.dc.html">원가·마감 정책</a>
+        <a href="AuditLog.dc.html">변경이력</a>
+      </nav>
+
+      <main style="flex: 999 1 480px; min-width: 0; padding: 24px 24px 24px 8px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+          <div>
+            <h1 style="margin: 0; font-size: 24px">사용자·권한</h1>
+            <p style="margin: 4px 0 0; font-size: 14px; color: #59616C">같은 운영그룹 직원은 다른 사업자 주문도 기본으로 볼 수 있습니다. 사용자별 제한이 있으면 화면·검색·API·내보내기 모두에 적용됩니다. · <span class="chip c-ok">Foundation API 구현됨</span></p>
+          </div>
+          <button class="btn pri" type="button">사용자 추가</button>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+          <section class="card" aria-label="사용자 목록" style="flex: 1 1 240px; max-width: 300px; padding: 8px; display: flex; flex-direction: column; gap: 2px">
+            <a class="user" href="#"><span style="font-weight: 600">대표관리자</span><span class="ctx">최고관리자 · 제한 없음</span></a>
+            <a class="user" href="#"><span style="font-weight: 600">김운영</span><span class="ctx">운영관리자 · 제한 없음</span></a>
+            <a class="user on" href="#" aria-current="true"><span style="font-weight: 600">이주문</span><span class="ctx">주문담당 · B 리빙 제외</span></a>
+            <a class="user" href="#"><span style="font-weight: 600">박물류</span><span class="ctx">물류관리자 · 수정은 B 리빙만</span></a>
+            <a class="user" href="#"><span style="font-weight: 600">정재무</span><span class="ctx">정산/재무 · 제한 없음</span></a>
+            <a class="user" href="#"><span style="font-weight: 600">최연동</span><span class="ctx">연동관리자 · 제한 없음</span></a>
+          </section>
+
+          <div style="flex: 3 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+            <section class="card" aria-labelledby="u-h" style="padding: 16px; display: flex; flex-direction: column; gap: 12px">
+              <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px">
+                <div>
+                  <h2 id="u-h" style="margin: 0; font-size: 18px">이주문</h2>
+                  <p class="ctx" style="margin: 2px 0 0">lee.order@example.test · 운영 중 · 접근정책 버전 3</p>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">사용 중지</button><button class="btn" type="button">변경이력</button></div>
+              </div>
+              <label class="ctx" style="display: flex; flex-direction: column; gap: 4px">역할<select class="sel-input"><option>주문담당</option><option>CS담당</option><option>일반읽기전용</option></select></label>
+            </section>
+
+            <section class="card" aria-labelledby="sc-h" style="padding: 16px; display: flex; flex-direction: column; gap: 12px">
+              <h2 id="sc-h" style="margin: 0; font-size: 16px">사업자·판매계정 범위</h2>
+              <div style="overflow-x: auto">
+                <table>
+                  <thead><tr><th scope="col">구분</th><th scope="col">조회</th><th scope="col">수정</th><th scope="col">내보내기</th></tr></thead>
+                  <tbody>
+                    <tr><th scope="row" style="background: none; border-bottom: 1px solid #EEF0F3">사업자</th>
+                      <td><div class="opt"><input type="radio" id="r1" name="ber" checked><label for="r1">전체 (신규 자동 포함)</label></div><div class="opt"><input type="radio" id="r2" name="ber"><label for="r2">선택한 사업자만</label></div><div style="margin-top: 4px"><span class="chip c-err">제외: B 리빙</span></div></td>
+                      <td><div class="opt"><input type="radio" id="w1" name="bew" checked><label for="w1">조회 범위와 같음</label></div><div class="opt"><input type="radio" id="w2" name="bew"><label for="w2">선택한 사업자만</label></div></td>
+                      <td><div class="opt"><input type="radio" id="e1" name="bee"><label for="e1">조회 범위와 같음</label></div><div class="opt"><input type="radio" id="e2" name="bee" checked><label for="e2">선택한 사업자만</label></div><div class="opt"><input type="checkbox" id="e2a" checked><label for="e2a">A 코스메틱</label></div><div class="opt"><input type="checkbox" id="e2c"><label for="e2c">C 푸드</label></div></td>
+                    </tr>
+                    <tr><th scope="row" style="background: none; border-bottom: 1px solid #EEF0F3">판매계정</th>
+                      <td><div class="opt"><input type="radio" id="cr1" name="car" checked><label for="cr1">전체</label></div><div style="margin-top: 4px"><span class="chip c-err">제외: A 공식스토어 2</span></div></td>
+                      <td><div class="opt"><input type="radio" id="cw1" name="caw" checked><label for="cw1">조회 범위와 같음</label></div></td>
+                      <td><div class="opt"><input type="radio" id="ce1" name="cae" checked><label for="ce1">조회 범위와 같음</label></div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="ctx" style="margin: 0">제외(DENY)가 허용보다 우선합니다. 사업자를 제외하면 그 사업자의 판매계정·연동·업무도 함께 제외됩니다. 출고거점 범위는 재고 모듈 이후 설정할 수 있습니다.</p>
+            </section>
+
+            <section class="card" aria-labelledby="pm-h" style="padding: 16px; display: flex; flex-direction: column; gap: 8px">
+              <h2 id="pm-h" style="margin: 0; font-size: 16px">개별 권한 예외</h2>
+              <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid #EEF0F3; font-size: 14px"><span>개인정보 원문 조회 <span class="ctx">pii.read · 민감</span></span><span class="chip c-err">거부 — 역할 권한보다 우선</span></div>
+              <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 8px 0; font-size: 14px"><span>데이터 내보내기 <span class="ctx">export.create · 민감</span></span><span class="chip c-ok">역할 기본 허용</span></div>
+              <button class="btn" type="button" style="align-self: flex-start">권한 예외 추가</button>
+            </section>
+          </div>
+        </div>
+
+        <section class="card" aria-labelledby="pv-h" style="padding: 16px; display: flex; flex-direction: column; gap: 10px; border-color: #C9D7F7">
+          <h2 id="pv-h" style="margin: 0; font-size: 16px">저장 전 영향도 미리보기</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 13px">
+            <div style="background: #F7F8FA; border-radius: 8px; padding: 10px"><div class="ctx">조회 가능 사업자</div><div style="font-weight: 600">A 코스메틱, C 푸드</div></div>
+            <div style="background: #F7F8FA; border-radius: 8px; padding: 10px"><div class="ctx">조회 가능 판매계정</div><div style="font-weight: 600">5개 (제외 2)</div></div>
+            <div style="background: #F7F8FA; border-radius: 8px; padding: 10px"><div class="ctx">내보내기 가능</div><div style="font-weight: 600">A 코스메틱</div></div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+            <button class="btn pri" type="button">저장</button><button class="btn" type="button">되돌리기</button>
+            <span class="ctx">저장 즉시 기존 로그인 세션에도 적용 · 변경 전후가 감사이력에 남습니다 · 본인에게 없는 권한·범위는 부여할 수 없습니다</span>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

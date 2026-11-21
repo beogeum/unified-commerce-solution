@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>부가세 신고자료 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.total td{font-weight:700;background:#F7F8FA;border-top:2px solid #D5DAE1}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a class="on" href="Settlement.dc.html" aria-current="page">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자 (한 곳만 선택)<select class="inp"><option>A 코스메틱</option><option>B 리빙</option><option>C 푸드</option></select></label>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">신고기간<select class="inp"><option>2026년 2기 예정(7~9월)</option><option>2026년 2기 확정(10~12월)</option></select></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">정재무</span><span class="ctx">정산/재무</span></div>
+    </header>
+    <nav class="sub2" aria-label="정산 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="Settlement.dc.html">현황</a><a href="SettlementExpected.dc.html">예정</a><a href="SettlementExpected.dc.html">확정</a><a href="SettlementExpected.dc.html">채널별</a><a href="Settlement.dc.html">대사·입금</a><a href="SettlementAdjust.dc.html">조정</a><a href="MonthClose.dc.html">월 마감</a><a class="on" href="VatReport.dc.html" aria-current="page">부가세 신고자료</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div><h1 style="margin: 0; font-size: 24px">부가세 신고자료 — A 코스메틱 · 2026년 2기 예정</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">채널별 매출 신고자료를 표준 분류로 모아 회계 담당자가 확인할 수 있게 합니다. 국세청 자동 신고는 하지 않습니다. · <span class="chip c-mute">후속(M6) 시안 · 예시 데이터</span></p></div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">원본 파일 올리기 (CSV·XLSX·ZIP)</button><button class="btn pri" type="button">엑셀 내보내기</button></div>
+      </div>
+      <div style="background: #FFF0DC; color: #5A2C00; border-radius: 8px; padding: 10px 12px; font-size: 13px">사업자 A·B·C의 자료는 하나로 합쳐 내보낼 수 없습니다. 판매계정이 다른 사업자로 이관된 기간은 거래 당시 귀속 사업자 기준으로 나눕니다.</div>
+
+      <section class="card" aria-labelledby="sum-h" style="min-width: 0">
+        <h2 id="sum-h" style="margin: 0; font-size: 16px; padding: 16px 16px 8px">신고 분류별 합계</h2>
+        <div style="overflow-x: auto">
+          <table>
+            <thead><tr><th scope="col">분류</th><th scope="col" class="num">건수</th><th scope="col" class="num">공급가</th><th scope="col" class="num">세액</th><th scope="col" class="num">합계</th><th scope="col">대사</th></tr></thead>
+            <tbody>
+              <tr><td>카드매출</td><td class="num">11,842</td><td class="num">312,450,000</td><td class="num">31,245,000</td><td class="num">343,695,000</td><td><span class="chip c-ok">일치</span></td></tr>
+              <tr><td>현금영수증</td><td class="num">2,107</td><td class="num">48,210,000</td><td class="num">4,821,000</td><td class="num">53,031,000</td><td><span class="chip c-ok">일치</span></td></tr>
+              <tr><td>휴대폰</td><td class="num">930</td><td class="num">15,880,000</td><td class="num">1,588,000</td><td class="num">17,468,000</td><td><span class="chip c-ok">일치</span></td></tr>
+              <tr><td>기타(포인트·간편결제 미분류)</td><td class="num">612</td><td class="num">9,400,000</td><td class="num">940,000</td><td class="num">10,340,000</td><td><span class="chip c-warn">분류 확인 41건</span></td></tr>
+              <tr><td>세금계산서(B2B)</td><td class="num">14</td><td class="num">22,600,000</td><td class="num">2,260,000</td><td class="num">24,860,000</td><td><span class="chip c-ok">일치</span></td></tr>
+              <tr><td>면세 전 분류</td><td class="num">0</td><td class="num">0</td><td class="num">—</td><td class="num">0</td><td><span class="chip c-mute">해당 없음</span></td></tr>
+              <tr class="total"><td>합계</td><td class="num">15,505</td><td class="num">408,540,000</td><td class="num">40,854,000</td><td class="num">449,394,000</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+        <section class="card" aria-labelledby="src-h" style="flex: 1 1 460px; min-width: 0">
+          <h2 id="src-h" style="margin: 0; font-size: 16px; padding: 16px 16px 8px">수집한 원본</h2>
+          <div style="overflow-x: auto">
+            <table>
+              <thead><tr><th scope="col">판매계정</th><th scope="col">원본</th><th scope="col">파서 버전</th><th scope="col">상태</th></tr></thead>
+              <tbody>
+                <tr><td>네이버 · A 공식스토어 (2개 계정)</td><td class="ctx">부가세신고내역.xlsx · 시트 2 · 행 4,812 · SHA-256 3f9a…</td><td>naver-vat v1</td><td><span class="chip c-ok">정규화 완료</span></td></tr>
+                <tr><td>쿠팡 · A 코스메틱</td><td class="ctx">매출신고자료.zip → CSV 3개</td><td>coupang-vat v1</td><td><span class="chip c-ok">정규화 완료</span></td></tr>
+                <tr><td>카카오톡스토어</td><td class="ctx">—</td><td>—</td><td><span class="chip c-err">원본 없음</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="rc-h" style="flex: 1 1 380px; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+          <h2 id="rc-h" style="margin: 0; font-size: 16px">3중 대사</h2>
+          <div style="font-size: 13px; line-height: 1.7">주문 기준 순판매액 410,120,000 ↔ 정산 매출 409,300,000 ↔ 신고자료 공급가 408,540,000</div>
+          <div class="ctx" style="line-height: 1.6">차이 1,580,000원: 카카오톡스토어 원본 누락 추정 1,210,000 · 기간 경계 주문 370,000. 결제수단과 증빙유형이 겹치는 거래는 임의로 두 번 더하지 않으며, 최종 배타 분류 규칙은 세무 담당자 확정 대기입니다.</div>
+          <button class="btn" type="button" style="align-self: flex-start">회계 담당자 확인 요청</button>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

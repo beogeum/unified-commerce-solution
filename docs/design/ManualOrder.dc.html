@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>수동·B2B 주문 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.sub a{display:block;padding:8px 10px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.sub a.on{background:#15191F;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+.btn.dan{border-color:#C93A3A;color:#A11A1A}
+.tab{min-height:36px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#59616C;cursor:pointer}
+.tab.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.sel td{background:#F2F6FE}
+tr.tot td{font-weight:700;background:#FAFBFC}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pos{color:#1D6A3A}.neg{color:#A11A1A}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff;box-sizing:border-box}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 0;border-bottom:1px solid #EEF0F3}
+.kpi{padding:12px;display:flex;flex-direction:column;gap:4px}
+.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:#E7EAEE;overflow:hidden}
+.bar span{display:block;height:100%;background:#2350C8}
+.note{border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6}
+.n-warn{background:#FFF6E8;color:#6B3500}.n-err{background:#FDEBEB;color:#7A1414}.n-info{background:#EEF3FD;color:#1A3A85}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#59616C}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.step{flex:1 1 110px;display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 12px;border-radius:8px;background:#F7F8FA}
+.step.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.step.done{background:#E5F3EA;color:#1D6A3A}
+.dot{width:22px;height:22px;border-radius:50%;background:#2350C8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:0 0 22px}
+.tg{display:inline-block;width:34px;height:20px;border-radius:10px;background:#CDD2D9;position:relative;vertical-align:middle}
+.tg.on{background:#2350C8}
+.tg::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.tg.on::after{left:16px}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a class="on" href="Orders.dc.html" aria-current="page">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>B 리빙</option></select></label>
+      <label class="ctx" style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px">통합검색<input class="inp" type="search" placeholder="주문번호, 거래처  ( / )"></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">김운영</span><span class="ctx">운영관리자</span></div>
+    </header>
+    <nav class="sub2" aria-label="주문 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="Orders.dc.html">전체 주문</a><a href="Shipments.dc.html">배송관리</a><a href="OrderHolds.dc.html">주문 보류</a><a href="Claims.dc.html">취소</a><a href="Exchange.dc.html">교환</a><a href="Claims.dc.html">반품</a><a class="on" href="ManualOrder.dc.html" aria-current="page">수동·B2B 주문</a><a href="WorkQueue.dc.html">수집·처리 오류</a>
+    </nav>
+
+    <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+      <main style="flex: 999 1 560px; min-width: 0; padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div><h1 style="margin: 0; font-size: 24px">수동·B2B 주문 등록</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">채널 밖 주문(도매·전화·행사)을 등록합니다. 채널 주문과 같은 재고 예약·출고 배정·손익 흐름을 탑니다. · <span class="chip c-mute">M4 시안 · 예시 데이터</span></p></div>
+        
+      </div>
+      <section class="card" aria-label="주문 정보" style="padding: 16px">
+        <div class="grid2"><label class="fld">사업자<select class="inp"><option>B 리빙</option></select></label><label class="fld">판매단위<select class="inp"><option>직접판매 · B2B 도매</option><option>직접판매 · 전화주문</option></select></label><label class="fld">거래처<select class="inp"><option>온하우스 잠실점(가상 거래처)</option></select></label><label class="fld">수동 주문번호<input class="inp" value="M-2611-0007 (자동 발급)" readonly></label><label class="fld">단가 기준<select class="inp"><option>부가세 별도 공급가</option><option>부가세 포함 판매가</option></select></label><label class="fld">결제 조건<select class="inp"><option>후불 · 월말 청구 30일</option><option>선불 · 입금 확인 후 출고</option></select></label><label class="fld">출고 거점<select class="inp"><option>출고 배정정책 자동</option><option>품고 김포 지정</option></select></label><label class="fld">희망 출고일<input class="inp" value="2026-11-24"></label></div>
+      </section>
+      <div class="card" style="overflow-x: auto">
+        <table><caption style="text-align: left; padding: 14px 16px 6px; font-weight: 600; font-size: 15px">주문 상품</caption>
+          <thead><tr><th scope="col">상품 · SKU</th><th scope="col" class="num">수량</th><th scope="col" class="num">단가(공급가)</th><th scope="col" class="num">공급가액</th><th scope="col">과세</th></tr></thead>
+          <tbody>
+            <tr><td><b>RUG-GR-160</b><div class="ctx">러그 그레이 160</div></td><td class="num">10</td><td class="num">58,000</td><td class="num">580,000</td><td>과세</td></tr>
+            <tr><td><b>PAD-160</b><div class="ctx">미끄럼방지 패드 160</div></td><td class="num">10</td><td class="num">21,000</td><td class="num">210,000</td><td>과세</td></tr>
+            <tr class="tot"><td><b>합계</b></td><td class="num">20</td><td class="num"></td><td class="num"><b>790,000</b></td><td>부가세 79,000</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note n-warn"><b>RUG-GR-160은 판매 제한 중입니다.</b> 품고 김포 재고가 이미 출고분을 반영했는지 확인되지 않아 판매가능 수량을 0으로 막아 두었습니다. 지금 저장하면 주문은 '재고' 사유로 <a href="OrderHolds.dc.html">주문 보류</a>에 들어가고, 제한이 풀리면 자동으로 예약됩니다.</div>
+      </main>
+      <aside aria-labelledby="aside-h" style="flex: 1 1 340px; max-width: 420px; background: #fff; border-left: 1px solid #E3E6EA; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+        <h2 id="aside-h" style="margin: 0; font-size: 18px">등록 전 확인</h2>
+        <section aria-label="금액">
+        <div class="row"><span>공급가액</span><span>790,000원</span></div>
+        <div class="row"><span>부가세(10%)</span><span>79,000원</span></div>
+        <div class="row"><span>청구 합계</span><span><b>869,000원</b></span></div>
+        <div class="row"><span>수금</span><span>후불 · 매출채권 2026-12-31 만기</span></div>
+        </section>
+        <section aria-label="처리 흐름">
+        <div class="row"><span>재고</span><span>저장 즉시 예약 시도(SKU별 원자적)</span></div>
+        <div class="row"><span>출고 배정</span><span>B 리빙 재고 보유 거점 → 품고 김포</span></div>
+        <div class="row"><span>매출 인식</span><span>출고 확정 시</span></div>
+        <div class="row"><span>손익</span><span>판매단위 '직접판매'로 집계</span></div>
+        </section>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn pri" type="button">주문 등록</button><button class="btn" type="button">임시 저장</button></div>
+        <p class="ctx" style="margin: 0">같은 내용을 두 번 눌러도 주문은 한 건만 생깁니다(멱등키). 등록·수정·취소는 모두 변경이력에 남습니다. 거래처 연락처는 개인정보 권한이 있는 사용자에게만 원문으로 보입니다.</p>
+      </aside>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>교환 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 0;border-bottom:1px solid #EEF0F3}
+.step{display:flex;gap:10px;font-size:13px;padding:5px 0}
+.dot{width:10px;height:10px;border-radius:50%;margin-top:4px;flex:0 0 10px}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a class="on" href="Orders.dc.html" aria-current="page">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>전체 사업자 (3)</option><option>A 코스메틱</option></select></label>
+      <label class="ctx" style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px">통합검색<input class="inp" type="search" placeholder="클레임번호, 주문번호  ( / )"></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">윤상담</span><span class="ctx">CS담당</span></div>
+    </header>
+    <nav class="sub2" aria-label="주문 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="Orders.dc.html">전체 주문</a><a href="Shipments.dc.html">배송관리</a><a href="OrderHolds.dc.html">주문 보류</a><a href="Claims.dc.html">취소</a><a class="on" href="Exchange.dc.html" aria-current="page">교환</a><a href="Claims.dc.html">반품</a><a href="ManualOrder.dc.html">수동·B2B 주문</a><a href="WorkQueue.dc.html">수집·처리 오류</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div><p class="ctx" style="margin: 0">교환 &gt; X-2611-0019</p><h1 style="margin: 4px 0 0; font-size: 24px">다른 옵션 교환 — 클렌징폼 150ml → 300ml</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">A 코스메틱 · 카페24 자사몰 · 원주문 O-26111700402 · <span class="chip c-mute">M4 시안 · 예시 데이터</span></p></div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><span class="chip c-info" style="height: 30px">클레임 처리중</span><button class="btn" type="button">교환 거부</button></div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+        <section class="card" aria-labelledby="ret-h" style="flex: 1 1 380px; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; justify-content: space-between"><h2 id="ret-h" style="margin: 0; font-size: 16px">회수</h2><span class="chip c-warn">회수중</span></div>
+          <div class="row"><span>회수 상품</span><span>CLF-150 젠틀 클렌징폼 150ml ×1</span></div>
+          <div class="row"><span>회수 송장</span><span>CJ 5512-0123-8801 · 집하 11-20</span></div>
+          <div class="row"><span>도착 예정 거점</span><span>화성 자체 WMS</span></div>
+          <div class="row"><span>검수</span><span class="ctx">도착 후 진행 — 결과에 따라 재고·평가 반영</span></div>
+          <div class="row"><span>회수 배송비(예상)</span><span>3,000원 · 판매자 부담</span></div>
+          <div class="step"><span class="dot" style="background: #1D6A3A" aria-hidden="true"></span>회수 요청 11-19</div>
+          <div class="step"><span class="dot" style="background: #8A4300" aria-hidden="true"></span>집하 11-20 · 이동중</div>
+          <div class="step"><span class="dot" style="background: #CDD2D9" aria-hidden="true"></span>도착 · 검수</div>
+        </section>
+
+        <section class="card" aria-labelledby="new-h" style="flex: 1 1 380px; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; justify-content: space-between"><h2 id="new-h" style="margin: 0; font-size: 16px">새 출고</h2><span class="chip c-mute">회수 확인 대기</span></div>
+          <div class="row"><span>교환 상품</span><span>CLF-300 젠틀 클렌징폼 300ml ×1</span></div>
+          <div class="row"><span>재고 확보</span><span><span class="chip c-ok">예약됨 1</span> 화성</span></div>
+          <div class="row"><span>출고 조건</span><span>회수품 도착 후 출고(기본)</span></div>
+          <div class="row"><span>교환 배송비(예상)</span><span>3,200원 · 판매자 부담</span></div>
+          <div style="background: #F7F8FA; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px">
+            <label style="display: flex; gap: 8px; align-items: center; font-size: 13px"><input type="checkbox">회수 전 먼저 출고(선출고)</label>
+            <span class="ctx">선출고는 승인 정책에 따라 운영관리자 승인이 필요합니다. 회수 실패 시 업무가 만들어집니다.</span>
+          </div>
+        </section>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+        <section class="card" aria-labelledby="diff-h" style="flex: 1 1 380px; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+          <h2 id="diff-h" style="margin: 0; font-size: 16px">차액</h2>
+          <div class="row"><span>원상품 결제액(150ml)</span><span>18,900원</span></div>
+          <div class="row"><span>교환 상품 판매가(300ml)</span><span>23,900원</span></div>
+          <div class="row"><b>고객 추가 결제</b><b>5,000원</b></div>
+          <div class="row"><span>결제 상태</span><span><span class="chip c-ok">결제완료</span> 11-19 · 카페24 PG</span></div>
+          <p class="ctx" style="margin: 0">차액 결제는 원주문 매출을 바꾸지 않는 별도 거래로 기록합니다.</p>
+        </section>
+        <section class="card" aria-labelledby="fin-h" style="flex: 1 1 380px; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+          <h2 id="fin-h" style="margin: 0; font-size: 16px">손익 반영 예정</h2>
+          <table>
+            <thead><tr><th scope="col">거래</th><th scope="col" class="num">공급가</th><th scope="col">시점</th></tr></thead>
+            <tbody>
+              <tr><td>원상품 매출 취소(150ml)</td><td class="num">−17,182</td><td class="ctx">회수 확정 시</td></tr>
+              <tr><td>교환 상품 매출(300ml)</td><td class="num">+21,727</td><td class="ctx">출고 확정 시</td></tr>
+              <tr><td>교환 상품 출고원가</td><td class="num">−8,100</td><td class="ctx">출고 확정 시</td></tr>
+              <tr><td>회수품 원가 환입</td><td class="num">+5,200</td><td class="ctx">검수 정상일 때만</td></tr>
+              <tr><td>교환 출고 포장 부자재</td><td class="num">−580</td><td class="ctx">출고 확정 시 · 포장 BOM v3</td></tr>
+              <tr><td>회수·교환 배송비</td><td class="num">−6,200</td><td class="ctx">청구 확정 시 실제로 대체</td></tr>
+            </tbody>
+          </table>
+          <p class="ctx" style="margin: 0">같은 상품 무상교환이면 원매출을 유지하고 새 매출을 만들지 않습니다. 다른 SKU 교환은 회수·새 출고·차액을 각각 독립 거래로 기록합니다.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

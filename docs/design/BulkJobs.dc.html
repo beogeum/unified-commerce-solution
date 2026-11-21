@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>상품 일괄 작업 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+.step{flex:1 1 120px;display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 12px;border-radius:8px;background:#F7F8FA}
+.step.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.dot{width:22px;height:22px;border-radius:50%;background:#2350C8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:0 0 22px}
+.bar{height:8px;border-radius:4px;background:#E7EAEE;overflow:hidden}
+.bar span{display:block;height:100%;background:#2350C8}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a class="on" href="Products.dc.html" aria-current="page">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>A 코스메틱</option></select></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">한상품</span><span class="ctx">상품/MD</span></div>
+    </header>
+    <nav class="sub2" aria-label="상품 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="Products.dc.html">상품마스터</a><a href="Skus.dc.html">SKU</a><a href="Bundles.dc.html">묶음·세트</a><a href="Gwp.dc.html">GWP·증정</a><a href="ChannelListings.dc.html">채널상품·연결</a><a href="PricePolicy.dc.html">가격·판매정책</a><a href="QualityCheck.dc.html">품질 점검</a><a class="on" href="BulkJobs.dc.html" aria-current="page">일괄 작업</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box; max-width: 1280px; width: 100%">
+      <div><h1 style="margin: 0; font-size: 24px">일괄 작업 — 엑셀로 상품·SKU 등록</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">파일을 바로 반영하지 않고, 미리보기에서 오류·경고를 확인한 뒤 실행합니다. 실행은 비동기 작업으로 처리되고 결과가 남습니다. · <span class="chip c-mute">M2 시안 · 예시 데이터</span></p></div>
+      <ol aria-label="진행 단계" style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px">
+        <li class="step"><span class="dot" aria-hidden="true">1</span>파일 업로드</li>
+        <li class="step"><span class="dot" aria-hidden="true">2</span>양식 인식</li>
+        <li class="step"><span class="dot" aria-hidden="true">3</span>컬럼 매핑</li>
+        <li class="step on" aria-current="step"><span class="dot" aria-hidden="true">4</span>미리보기</li>
+        <li class="step"><span class="dot" aria-hidden="true">5</span>실행 · 결과</li>
+      </ol>
+
+      <section class="card" aria-labelledby="pv-h" style="min-width: 0">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 16px 16px 8px"><h2 id="pv-h" style="margin: 0; font-size: 16px">미리보기 — 12월_신규상품.xlsx · 시트 '상품' · 양식 v2</h2><span class="ctx">SHA-256 9c2e… · 업로드 한상품 14:20</span></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 12px"><span class="chip c-ok">정상 46행</span><span class="chip c-warn">경고 3행</span><span class="chip c-err">오류 2행</span><span class="chip c-mute">전체 51행</span></div>
+        <div style="overflow-x: auto">
+          <table>
+            <thead><tr><th scope="col" class="num">행</th><th scope="col">상품명</th><th scope="col">SKU 코드</th><th scope="col">바코드</th><th scope="col">과세</th><th scope="col">결과</th><th scope="col">사유</th></tr></thead>
+            <tbody>
+              <tr><td class="num">7</td><td>수분 크림 50ml</td><td>CRM-50</td><td>8801234560011</td><td>과세</td><td><span class="chip c-err">오류</span></td><td>SKU 코드가 이미 있음(운영그룹 내 유일)</td></tr>
+              <tr><td class="num">19</td><td>선크림 SPF50</td><td>SUN-50</td><td>—</td><td>(빈칸)</td><td><span class="chip c-err">오류</span></td><td>과세유형 필수</td></tr>
+              <tr><td class="num">23</td><td>립밤 3종 세트</td><td>LIP-SET3</td><td>8801234560028</td><td>과세</td><td><span class="chip c-warn">경고</span></td><td>세트로 보이지만 유형이 '일반' — 가상묶음이면 BOM 등록 필요</td></tr>
+              <tr><td class="num">31</td><td>토너 500ml</td><td>TNR-500</td><td>8801234567909</td><td>과세</td><td><span class="chip c-warn">경고</span></td><td>바코드가 CLF-150과 중복</td></tr>
+              <tr><td class="num">44</td><td>핸드크림 30ml</td><td>HND-30</td><td>8801234560035</td><td>과세</td><td><span class="chip c-warn">경고</span></td><td>중량 미입력</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px">
+          <button class="btn" type="button">문제 행 내려받기</button>
+          <button class="btn" type="button">컬럼 매핑으로 돌아가기</button>
+          <button class="btn pri" type="button">정상·경고 49행 실행</button>
+          <span class="ctx">오류 2행은 실행에서 빠집니다.</span>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="jb-h" style="min-width: 0">
+        <h2 id="jb-h" style="margin: 0; font-size: 16px; padding: 16px 16px 8px">최근 일괄 작업</h2>
+        <div style="overflow-x: auto">
+          <table>
+            <thead><tr><th scope="col">작업</th><th scope="col">요청</th><th scope="col" style="min-width: 160px">진행</th><th scope="col">결과</th></tr></thead>
+            <tbody>
+              <tr><td>판매상태 일괄 변경 · 쿠팡 18개</td><td class="ctx">한상품 · 13:40</td><td><div class="bar" role="img" aria-label="100%"><span style="width: 100%"></span></div></td><td><span class="chip c-ok">성공 17</span> <span class="chip c-err">실패 1</span> <a href="WorkQueue.dc.html">실패 사유</a></td></tr>
+              <tr><td>채널 발행 · 카페24 6개</td><td class="ctx">한상품 · 13:10</td><td><div class="bar" role="img" aria-label="66%"><span style="width: 66%"></span></div></td><td><span class="chip c-info">진행 중 4/6</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

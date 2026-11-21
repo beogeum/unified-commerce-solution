@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>상품 원가 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.sub a{display:block;padding:8px 10px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.sub a.on{background:#15191F;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+.btn.dan{border-color:#C93A3A;color:#A11A1A}
+.tab{min-height:36px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#59616C;cursor:pointer}
+.tab.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.sel td{background:#F2F6FE}
+tr.tot td{font-weight:700;background:#FAFBFC}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pos{color:#1D6A3A}.neg{color:#A11A1A}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff;box-sizing:border-box}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 0;border-bottom:1px solid #EEF0F3}
+.kpi{padding:12px;display:flex;flex-direction:column;gap:4px}
+.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:#E7EAEE;overflow:hidden}
+.bar span{display:block;height:100%;background:#2350C8}
+.note{border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6}
+.n-warn{background:#FFF6E8;color:#6B3500}.n-err{background:#FDEBEB;color:#7A1414}.n-info{background:#EEF3FD;color:#1A3A85}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#59616C}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.step{flex:1 1 110px;display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 12px;border-radius:8px;background:#F7F8FA}
+.step.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.step.done{background:#E5F3EA;color:#1D6A3A}
+.dot{width:22px;height:22px;border-radius:50%;background:#2350C8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:0 0 22px}
+.tg{display:inline-block;width:34px;height:20px;border-radius:10px;background:#CDD2D9;position:relative;vertical-align:middle}
+.tg.on{background:#2350C8}
+.tg::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.tg.on::after{left:16px}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a class="on" href="CostLedger.dc.html" aria-current="page">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>전체 사업자 (3)</option></select></label>
+      <label class="ctx" style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px">통합검색<input class="inp" type="search" placeholder="SKU, 상품명  ( / )"></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">정재무</span><span class="ctx">재무 · 원가 조회 권한</span></div>
+    </header>
+    <nav class="sub2" aria-label="비용 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="CostLedger.dc.html">비용 현황</a><a class="on" href="ProductCost.dc.html" aria-current="page">상품 원가</a><a href="PurchaseCost.dc.html">매입원가</a><a href="LogisticsBilling.dc.html">물류비 대사</a><a href="CostClosePolicy.dc.html">원가·마감 정책</a>
+    </nav>
+
+    <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+      <main style="flex: 999 1 560px; min-width: 0; padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div><h1 style="margin: 0; font-size: 24px">상품 원가</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">SKU 원가를 사업자별로 따로 관리합니다. 같은 SKU라도 사업자마다 원가가 다를 수 있고, 변경은 적용 시작 시각이 있는 새 버전으로 남습니다. · <span class="chip c-mute">M5 시안 · 예시 데이터</span></p></div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">원가 일괄 등록</button></div>
+      </div>
+      <div class="card" style="overflow-x: auto">
+        <table>
+          <thead><tr><th scope="col">SKU</th><th scope="col">사업자</th><th scope="col">원가 방식</th><th scope="col" class="num">현재 원가</th><th scope="col">적용 시작</th><th scope="col" class="num">직전 원가</th><th scope="col">출처</th></tr></thead>
+          <tbody>
+            <tr class="sel"><td><b>AMP-30</b> 비타 앰플 30ml</td><td>A 코스메틱</td><td>이동평균</td><td class="num">9,000</td><td>10-28 매입 확정</td><td class="num">9,050</td><td>PO-2610-031</td></tr>
+            <tr><td><b>CLF-150</b> 클렌징폼 150ml</td><td>A 코스메틱</td><td>이동평균</td><td class="num">5,200</td><td>10-15</td><td class="num">5,200</td><td>PO-2610-018</td></tr>
+            <tr><td><b>CLF-300</b> 클렌징폼 300ml</td><td>A 코스메틱</td><td>이동평균</td><td class="num">8,100</td><td>09-30</td><td class="num">8,000</td><td>PO-2609-044</td></tr>
+            <tr><td><b>RUG-GR-160</b> 러그 그레이 160</td><td>B 리빙</td><td>이동평균</td><td class="num">41,000</td><td>10-02</td><td class="num">41,000</td><td>PO-2609-051</td></tr>
+            <tr><td><b>RUG-GR-200</b> 러그 그레이 200</td><td>B 리빙</td><td>—</td><td class="num"><span class="chip c-err">미등록</span></td><td>—</td><td class="num">—</td><td>손익 '계산 불가'</td></tr>
+            <tr><td><b>PAD-160</b> 미끄럼방지 패드</td><td>B 리빙</td><td>이동평균</td><td class="num">12,400</td><td>10-02</td><td class="num">12,400</td><td>PO-2609-051</td></tr>
+            <tr><td><b>BOX-S</b> 포장박스 S</td><td>A · B · C 각각</td><td>부자재 · 이동평균</td><td class="num">380</td><td>11-01</td><td class="num">370</td><td>팩앤박스</td></tr>
+            <tr><td><b>GIFT-PCH</b> 증정 파우치</td><td>A 코스메틱</td><td>이동평균</td><td class="num">1,200</td><td>10-20</td><td class="num">1,200</td><td>GWP 전용</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ctx" style="margin: 0">원가 조회 권한이 없는 사용자에게는 이 화면과 손익의 원가 열이 보이지 않습니다. 원가 변경은 이미 출고된 주문에 소급되지 않습니다.</p>
+      </main>
+      <aside aria-labelledby="aside-h" style="flex: 1 1 340px; max-width: 420px; background: #fff; border-left: 1px solid #E3E6EA; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+        <h2 id="aside-h" style="margin: 0; font-size: 18px">포장 부자재 BOM — 기본 출고 v3</h2>
+        <div class="card" style="overflow-x: auto">
+        <table>
+          <thead><tr><th scope="col">부자재</th><th scope="col" class="num">수량</th><th scope="col" class="num">단가</th><th scope="col" class="num">금액</th></tr></thead>
+          <tbody>
+            <tr><td>포장박스 S (BOX-S)</td><td class="num">1</td><td class="num">380</td><td class="num">380</td></tr>
+            <tr><td>에어캡</td><td class="num">1</td><td class="num">120</td><td class="num">120</td></tr>
+            <tr><td>테이프</td><td class="num">1</td><td class="num">30</td><td class="num">30</td></tr>
+            <tr><td>안내카드</td><td class="num">1</td><td class="num">50</td><td class="num">50</td></tr>
+            <tr class="tot"><td>합계</td><td class="num"></td><td class="num"></td><td class="num">580</td></tr>
+          </tbody>
+        </table>
+      </div>
+        <div class="row"><span>적용</span><span>화성 자체 WMS 출고 · 11-01부터</span></div>
+        <div class="row"><span>3PL 출고</span><span>부자재는 3PL 청구액(물류비 대사)으로 반영</span></div>
+        <div class="row"><span>손익 항목</span><span>부자재 — 물류비와 별도 표시</span></div>
+        <p class="ctx" style="margin: 0">출고 확정 시 출고 건별로 포장 BOM 버전이 고정되어 부자재 원가가 원장에 남습니다. BOM을 바꾸면 v4가 생기고 이후 출고부터 적용됩니다.</p>
+      </aside>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

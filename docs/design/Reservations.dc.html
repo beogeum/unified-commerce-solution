@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>예약·할당 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.sub a{display:block;padding:8px 10px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.sub a.on{background:#15191F;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+.btn.dan{border-color:#C93A3A;color:#A11A1A}
+.tab{min-height:36px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#59616C;cursor:pointer}
+.tab.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.sel td{background:#F2F6FE}
+tr.tot td{font-weight:700;background:#FAFBFC}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pos{color:#1D6A3A}.neg{color:#A11A1A}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff;box-sizing:border-box}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 0;border-bottom:1px solid #EEF0F3}
+.kpi{padding:12px;display:flex;flex-direction:column;gap:4px}
+.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:#E7EAEE;overflow:hidden}
+.bar span{display:block;height:100%;background:#2350C8}
+.note{border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6}
+.n-warn{background:#FFF6E8;color:#6B3500}.n-err{background:#FDEBEB;color:#7A1414}.n-info{background:#EEF3FD;color:#1A3A85}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#59616C}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.step{flex:1 1 110px;display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 12px;border-radius:8px;background:#F7F8FA}
+.step.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.step.done{background:#E5F3EA;color:#1D6A3A}
+.dot{width:22px;height:22px;border-radius:50%;background:#2350C8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:0 0 22px}
+.tg{display:inline-block;width:34px;height:20px;border-radius:10px;background:#CDD2D9;position:relative;vertical-align:middle}
+.tg.on{background:#2350C8}
+.tg::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.tg.on::after{left:16px}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a class="on" href="Inventory.dc.html" aria-current="page">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>A 코스메틱</option></select></label>
+      <label class="ctx" style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px">통합검색<input class="inp" type="search" placeholder="SKU, 주문번호  ( / )"></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">박물류</span><span class="ctx">물류관리자</span></div>
+    </header>
+    <nav class="sub2" aria-label="재고 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="Inventory.dc.html">통합재고</a><a href="Inventory.dc.html">거점별 재고</a><a href="Ledger.dc.html">재고원장</a><a class="on" href="Reservations.dc.html" aria-current="page">예약·할당</a><a href="Transfers.dc.html">재고이동</a><a href="StockCount.dc.html">재고조정·실사</a><a href="LotExpiry.dc.html">LOT·유통기한</a><a href="Unsellable.dc.html">비가용·불용재고</a><a href="Allocation.dc.html">채널 재고배분</a><a href="StockPolicy.dc.html">재고정책</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div><h1 style="margin: 0; font-size: 24px">예약·할당 — AMP-30 비타 앰플 30ml</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">확보 수량은 예약 → 할당 → 피킹 중 한 단계에만 있습니다. 단계가 넘어갈 때 수량이 옮겨질 뿐 다시 차감되지 않습니다. · <span class="chip c-mute">M3 시안 · 예시 데이터</span></p></div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">만료 예약 해제 점검</button></div>
+      </div>
+      <section aria-label="요약" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px">
+        <div class="card kpi"><span class="ctx">판매가능</span><b>513</b><span class="ctx">화성 314 · 파스토 199</span></div>
+        <div class="card kpi"><span class="ctx">예약</span><b>46</b></div>
+        <div class="card kpi"><span class="ctx">할당</span><b>27</b></div>
+        <div class="card kpi"><span class="ctx">피킹</span><b>12</b></div>
+        <div class="card kpi"><span class="ctx">확보 합계</span><b>85</b><span class="ctx">예약+할당+피킹</span></div>
+        <div class="card kpi"><span class="ctx">고아 예약</span><b style="color: #1D6A3A">0</b><span class="ctx">주문 없는 예약</span></div>
+      </section>
+      <div class="card" style="overflow-x: auto">
+        <table><caption style="text-align: left; padding: 14px 16px 6px; font-weight: 600; font-size: 15px">거점별</caption>
+          <thead><tr><th scope="col">거점</th><th scope="col" class="num">판매가능</th><th scope="col" class="num">예약</th><th scope="col" class="num">할당</th><th scope="col" class="num">피킹</th><th scope="col" class="num">확보 합계</th></tr></thead>
+          <tbody>
+            <tr><td>화성 자체 WMS</td><td class="num">314</td><td class="num">24</td><td class="num">22</td><td class="num">6</td><td class="num">52</td></tr>
+            <tr><td>파스토 용인</td><td class="num">199</td><td class="num">22</td><td class="num">5</td><td class="num">6</td><td class="num">33</td></tr>
+            <tr class="tot"><td>합계</td><td class="num">513</td><td class="num">46</td><td class="num">27</td><td class="num">12</td><td class="num">85</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card" style="overflow-x: auto">
+        <table><caption style="text-align: left; padding: 14px 16px 6px; font-weight: 600; font-size: 15px">최근 확보 내역</caption>
+          <thead><tr><th scope="col">주문 · 판매계정</th><th scope="col">단계</th><th scope="col" class="num">수량</th><th scope="col">거점 · LOT</th><th scope="col">생성</th><th scope="col">만료</th><th scope="col">비고</th></tr></thead>
+          <tbody>
+            <tr><td>O-26112100341 · 쿠팡</td><td><span class="chip c-info">할당</span></td><td class="num">2</td><td>파스토 · 2610-C</td><td>13:20</td><td>—</td><td>F-88229 출고 지시</td></tr>
+            <tr><td>O-26112100322 · 네이버</td><td><span class="chip c-mute">예약</span></td><td class="num">1</td><td>파스토</td><td>13:51</td><td>결제 후 72시간</td><td></td></tr>
+            <tr><td>O-26112100377 · 카페24</td><td><span class="chip c-mute">예약</span></td><td class="num">1</td><td>화성</td><td>11:15</td><td>결제 후 72시간</td><td>묶음 GIFT-BOX 부품 동시 예약</td></tr>
+            <tr><td>O-26112100198 · 쿠팡</td><td><span class="chip c-warn">피킹</span></td><td class="num">4</td><td>화성 · 2611-A</td><td>09:02</td><td>—</td><td>피킹 시작 서창고</td></tr>
+            <tr><td>O-26112000911 · 네이버</td><td><span class="chip c-err">예약 만료 임박</span></td><td class="num">1</td><td>화성</td><td>11-20 15:10</td><td>오늘 15:10</td><td>미결제 · 자동 해제 예정</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ctx" style="margin: 0">동시에 들어온 주문은 SKU·거점 단위로 잠금 후 판매가능 수량을 확인해 예약합니다. 가상 묶음은 모든 부품이 확보될 때만 예약되고, 하나라도 부족하면 전체가 예약되지 않습니다.</p>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

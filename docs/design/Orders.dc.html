@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>전체 주문 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:16px 12px 6px;letter-spacing:.02em}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px 10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px 10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.sel td{background:#F2F6FE}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.sel-input{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+.axis{display:grid;grid-template-columns:72px 1fr;gap:6px 10px;font-size:13px;align-items:center}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a class="on" href="Orders.dc.html" aria-current="page">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label style="display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #59616C">사업자
+        <select class="sel-input"><option>전체 사업자 (3)</option><option>A 코스메틱</option><option>B 리빙</option><option>C 푸드</option></select>
+      </label>
+      <label style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #59616C">통합검색
+        <input class="sel-input" type="search" placeholder="주문번호, 송장, SKU, 바코드, 판매계정  ( / )">
+      </label>
+      <a class="chip c-warn" href="Integrations.dc.html" style="text-decoration: none; height: 30px">연동 확인필요 2</a>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">이주문</span><span class="ctx">주문담당 · 개인정보 열람 권한 없음</span></div>
+    </header>
+    <nav class="sub2" aria-label="주문 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a class="on" href="Orders.dc.html" aria-current="page">전체 주문</a><a href="Shipments.dc.html">배송관리</a><a href="OrderHolds.dc.html">주문 보류</a><a href="Claims.dc.html">취소</a><a href="Exchange.dc.html">교환</a><a href="Claims.dc.html">반품</a><a href="ManualOrder.dc.html">수동·B2B 주문</a><a href="WorkQueue.dc.html">수집·처리 오류</a>
+    </nav>
+
+    <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto">
+      <main style="flex: 999 1 560px; min-width: 0; padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+          <div>
+            <h1 style="margin: 0; font-size: 24px">전체 주문</h1>
+            <p style="margin: 4px 0 0; font-size: 14px; color: #59616C">주문·결제·출고·배송·클레임 상태를 따로 표시합니다. · <span class="chip c-mute">M4 시안 · 예시 데이터</span></p>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">수동·B2B 주문 등록</button><button class="btn" type="button">내보내기</button></div>
+        </div>
+
+        <section aria-label="주문 지표" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px">
+          <div class="card" style="padding: 12px"><div class="ctx">오늘</div><div style="font-size: 20px; font-weight: 700">1,284</div></div>
+          <div class="card" style="padding: 12px"><div class="ctx">처리중</div><div style="font-size: 20px; font-weight: 700">463</div></div>
+          <div class="card" style="padding: 12px"><div class="ctx">출고대기</div><div style="font-size: 20px; font-weight: 700">312</div></div>
+          <div class="card" style="padding: 12px"><div class="ctx">배송중</div><div style="font-size: 20px; font-weight: 700">2,047</div></div>
+          <div class="card" style="padding: 12px"><div class="ctx">클레임</div><div style="font-size: 20px; font-weight: 700">38</div></div>
+          <div class="card" style="padding: 12px; border-color: #EDB3B3"><div class="ctx">오류·보류</div><div style="font-size: 20px; font-weight: 700; color: #A11A1A">19</div></div>
+        </section>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end">
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">판매계정<select class="sel-input"><option>전체 (11)</option><option>네이버 · A 공식스토어</option><option>쿠팡 · A 코스메틱</option></select></label>
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">주문기간<select class="sel-input"><option>최근 7일</option><option>오늘</option></select></label>
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">출고상태<select class="sel-input"><option>전체</option><option>미배정</option><option>출고요청</option><option>피킹</option></select></label>
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">클레임<select class="sel-input"><option>전체</option><option>부분취소 있음</option><option>반품 진행</option></select></label>
+          <button class="btn" type="button">상세필터</button>
+        </div>
+
+        <div class="card" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; background: #F2F6FE; border-color: #C9D7F7">
+          <span style="font-size: 14px; font-weight: 600">2건 선택</span>
+          <span class="ctx">출고지시 가능 1 · 불가 1(보류: 상품 미연결)</span>
+          <button class="btn" type="button">출고지시 (1건)</button><button class="btn" type="button">보류</button><button class="btn" type="button">담당 지정</button>
+        </div>
+
+        <div class="card" style="overflow-x: auto">
+          <table>
+            <thead><tr><th scope="col"><span class="ctx">선택</span></th><th scope="col">주문일시</th><th scope="col">사업자 · 판매계정 · 판매단위</th><th scope="col">내부 / 외부 주문번호</th><th scope="col">상품 · 수량</th><th scope="col" class="num">결제액</th><th scope="col">주문</th><th scope="col">결제</th><th scope="col">출고</th><th scope="col">배송</th><th scope="col">클레임</th><th scope="col">거점</th></tr></thead>
+            <tbody>
+              <tr class="sel"><td><input type="checkbox" checked aria-label="선택"></td><td>11-21 10:12</td><td><div>A 코스메틱</div><div class="ctx">네이버 · A 공식스토어 · 기본</div></td><td><div><a href="#order-drawer">O-26112100341</a></div><div class="ctx">2026112187341201</div></td><td><div>앰플 30ml × 2</div><div class="ctx">+ GWP 미니 파우치 × 1</div></td><td class="num">59,400</td><td><span class="chip c-info">처리중</span></td><td><span class="chip c-ok">결제완료</span></td><td><span class="chip c-info">피킹</span></td><td><span class="chip c-mute">—</span></td><td><span class="chip c-mute">없음</span></td><td>파스토 · 용인</td></tr>
+              <tr class="sel"><td><input type="checkbox" checked aria-label="선택"></td><td>11-21 09:47</td><td><div>A 코스메틱</div><div class="ctx">쿠팡 · A 코스메틱 · 기본</div></td><td><div>O-26112100298</div><div class="ctx">31000187123</div></td><td><div>클렌징폼 150ml × 1</div><div class="ctx">외부 옵션 미연결</div></td><td class="num">18,900</td><td><span class="chip c-warn">보류</span></td><td><span class="chip c-ok">결제완료</span></td><td><span class="chip c-mute">미배정</span></td><td><span class="chip c-mute">—</span></td><td><span class="chip c-mute">없음</span></td><td>—</td></tr>
+              <tr><td><input type="checkbox" aria-label="선택"></td><td>11-20 21:03</td><td><div>B 리빙</div><div class="ctx">카페24 · B 리빙몰 · 영문몰(shop 2)</div></td><td><div>O-26112000917</div><div class="ctx">20261120-0000412</div></td><td><div>러그 세트(가상묶음) × 1</div><div class="ctx">구성 3 SKU · BOM v2</div></td><td class="num">129,000</td><td><span class="chip c-info">처리중</span></td><td><span class="chip c-ok">결제완료</span></td><td><span class="chip c-ok">출고완료</span></td><td><span class="chip c-info">배송중</span></td><td><span class="chip c-mute">없음</span></td><td>품고 · 김포</td></tr>
+              <tr><td><input type="checkbox" aria-label="선택"></td><td>11-20 15:22</td><td><div>A 코스메틱</div><div class="ctx">카카오톡스토어 · 기본</div></td><td><div>O-26112000610</div><div class="ctx">K-7712093</div></td><td><div>토너 200ml × 3</div><div class="ctx">1개 취소 확정</div></td><td class="num">54,000</td><td><span class="chip c-info">처리중</span></td><td><span class="chip c-warn">부분환불</span></td><td><span class="chip c-ok">출고완료(2)</span></td><td><span class="chip c-ok">배송완료</span></td><td><span class="chip c-ok">취소완료</span></td><td>자체 WMS · 화성</td></tr>
+              <tr><td><input type="checkbox" aria-label="선택"></td><td>11-19 11:05</td><td><div>C 푸드</div><div class="ctx">쿠팡 로켓그로스 · 기본</div></td><td><div>O-26111900152</div><div class="ctx">RG-55120931</div></td><td><div>그래놀라 500g × 4</div><div class="ctx">플랫폼 물류</div></td><td class="num">35,600</td><td><span class="chip c-ok">완료</span></td><td><span class="chip c-ok">결제완료</span></td><td><span class="chip c-mute">플랫폼 출고</span></td><td><span class="chip c-ok">배송완료</span></td><td><span class="chip c-warn">반품 검수대기</span></td><td>로켓그로스</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="ctx" style="margin: 0">같은 운영그룹의 다른 사업자 주문도 기본으로 조회됩니다. 접근이 제한된 사업자는 목록·검색·내보내기 모두에서 제외됩니다.</p>
+      </main>
+
+      <aside id="order-drawer" aria-labelledby="od-h" style="flex: 1 1 380px; max-width: 460px; background: #fff; border-left: 1px solid #E3E6EA; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; justify-content: space-between; gap: 8px">
+          <div>
+            <h2 id="od-h" style="margin: 0; font-size: 18px">O-26112100341</h2>
+            <p class="ctx" style="margin: 4px 0 0">A 코스메틱 · 네이버 스마트스토어 · A 공식스토어 · 기본 판매단위</p>
+            <p class="ctx" style="margin: 2px 0 0">외부 2026112187341201 · 원본 수집 10:13 · 변환 규칙 v3</p>
+          </div>
+          <button class="btn" type="button" aria-label="닫기 (Esc)" style="min-width: 36px; padding: 0">×</button>
+        </div>
+        <section class="axis" aria-label="상태">
+          <span class="ctx">주문</span><span><span class="chip c-info">처리중</span></span>
+          <span class="ctx">결제</span><span><span class="chip c-ok">결제완료</span></span>
+          <span class="ctx">출고</span><span><span class="chip c-info">피킹</span> <span class="ctx">파스토 접수 10:20</span></span>
+          <span class="ctx">배송</span><span><span class="chip c-mute">송장 대기</span></span>
+          <span class="ctx">클레임</span><span><span class="chip c-mute">없음</span></span>
+        </section>
+        <section aria-label="상품" style="display: flex; flex-direction: column; gap: 8px">
+          <h3 style="margin: 0; font-size: 13px; color: #59616C">상품 · 구성</h3>
+          <div style="border: 1px solid #EEF0F3; border-radius: 8px; padding: 10px; font-size: 13px; display: flex; flex-direction: column; gap: 4px">
+            <div style="display: flex; justify-content: space-between"><span>앰플 30ml (SKU AMP-30)</span><span>2개 · 59,400</span></div>
+            <div class="ctx">판매자 할인 3,300/개 · 과세 · 확보 2 (피킹 단계)</div>
+          </div>
+          <div style="border: 1px solid #EEF0F3; border-radius: 8px; padding: 10px; font-size: 13px; display: flex; flex-direction: column; gap: 4px">
+            <div style="display: flex; justify-content: space-between"><span>미니 파우치 (GWP)</span><span>1개 · 0원</span></div>
+            <div class="ctx">출처: 내부 캠페인 '11월 앰플 증정' · 채널 사은품과 중복 없음</div>
+          </div>
+        </section>
+        <section aria-label="수령인" style="display: flex; flex-direction: column; gap: 6px">
+          <h3 style="margin: 0; font-size: 13px; color: #59616C">수령인</h3>
+          <div style="font-size: 14px">김** · 010-****-**12</div>
+          <div class="ctx">서울 강남구 ****** — 개인정보 열람 권한이 없어 가려졌습니다.</div>
+        </section>
+        <section aria-label="가능한 작업" style="display: flex; flex-direction: column; gap: 8px">
+          <h3 style="margin: 0; font-size: 13px; color: #59616C">가능한 작업</h3>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">보류</button><button class="btn" type="button">출고 중지 요청</button><button class="btn" type="button">클레임 생성</button></div>
+          <div class="ctx">주소 수정: 피킹 단계라 3PL 변경 지원 기능 확인이 필요합니다(현재 미확인).</div>
+        </section>
+        <section aria-label="관련" style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; border-top: 1px solid #EEF0F3; padding-top: 12px">
+          <a href="Profit.dc.html">주문 손익</a><a href="Inventory.dc.html">재고 확보 내역</a><a href="WorkQueue.dc.html">관련 업무 0</a>
+        </section>
+      </aside>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

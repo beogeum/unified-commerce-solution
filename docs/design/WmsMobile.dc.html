@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>WMS 피킹 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#15191F}
+a{color:#2350C8}a:hover{color:#163A99}
+.chip{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:600}
+.btn{display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:10px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:16px;font-weight:600;cursor:pointer;text-decoration:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F4F5F7; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F; display: flex; flex-direction: column">
+  <header style="background: #15191F; color: #fff; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+    <div style="display: flex; justify-content: space-between; align-items: center"><a href="Logistics.dc.html" style="color: #fff; font-size: 14px; text-decoration: none">← 작업 목록</a><span style="font-size: 13px; color: #C9CED6">화성 자체 WMS · 서창고</span></div>
+    <h1 style="margin: 6px 0 0; font-size: 20px">피킹 · Wave W-1121-03</h1>
+    <div style="font-size: 13px; color: #C9CED6">출고 12건 · 남은 품목 5 / 14</div>
+  </header>
+
+  <main style="flex: 1 1 auto; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+    <section aria-label="현재 위치" style="background: #fff; border: 1px solid #E3E6EA; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+      <div style="font-size: 13px; color: #59616C">이동할 로케이션</div>
+      <div style="font-size: 34px; font-weight: 700; letter-spacing: .02em">A-03-02</div>
+      <div style="font-size: 15px; font-weight: 600">비타 앰플 30ml · AMP-30</div>
+      <div style="font-size: 13px; color: #59616C">LOT 2611-A · 유통기한 2028-05 (FEFO 우선)</div>
+    </section>
+
+    <section aria-label="수량" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <div style="background: #fff; border: 1px solid #E3E6EA; border-radius: 12px; padding: 14px"><div style="font-size: 13px; color: #59616C">피킹 필요</div><div style="font-size: 30px; font-weight: 700">6</div></div>
+      <div style="background: #fff; border: 1px solid #E3E6EA; border-radius: 12px; padding: 14px"><div style="font-size: 13px; color: #59616C">스캔 완료</div><div style="font-size: 30px; font-weight: 700; color: #1D6A3A">4</div></div>
+    </section>
+
+    <section role="alert" style="background: #FDEBEB; border: 1px solid #EDB3B3; border-radius: 12px; padding: 14px; color: #7A1414; display: flex; flex-direction: column; gap: 4px">
+      <b style="font-size: 15px">다른 상품입니다</b>
+      <span style="font-size: 14px">스캔: 8801234567909 (클렌징폼 150ml). 이 로케이션의 AMP-30을 스캔하세요. 수량에 반영되지 않았습니다.</span>
+    </section>
+
+    <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #59616C">바코드 직접 입력
+      <input type="text" inputmode="numeric" placeholder="스캐너가 안 될 때만" style="min-height: 52px; border: 1px solid #CDD2D9; border-radius: 10px; padding: 0 14px; font: inherit; font-size: 17px; color: #15191F; background: #fff">
+    </label>
+  </main>
+
+  <footer style="padding: 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; background: #fff; border-top: 1px solid #E3E6EA">
+    <button class="btn" type="button">부족 신고</button>
+    <button class="btn" type="button" style="background: #2350C8; border-color: #2350C8; color: #fff">다음 로케이션</button>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

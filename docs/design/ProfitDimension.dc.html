@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>상품별 손익 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.sub a{display:block;padding:8px 10px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.sub a.on{background:#15191F;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+.btn.dan{border-color:#C93A3A;color:#A11A1A}
+.tab{min-height:36px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#59616C;cursor:pointer}
+.tab.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.sel td{background:#F2F6FE}
+tr.tot td{font-weight:700;background:#FAFBFC}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pos{color:#1D6A3A}.neg{color:#A11A1A}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff;box-sizing:border-box}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 0;border-bottom:1px solid #EEF0F3}
+.kpi{padding:12px;display:flex;flex-direction:column;gap:4px}
+.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:#E7EAEE;overflow:hidden}
+.bar span{display:block;height:100%;background:#2350C8}
+.note{border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6}
+.n-warn{background:#FFF6E8;color:#6B3500}.n-err{background:#FDEBEB;color:#7A1414}.n-info{background:#EEF3FD;color:#1A3A85}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#59616C}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.step{flex:1 1 110px;display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 12px;border-radius:8px;background:#F7F8FA}
+.step.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.step.done{background:#E5F3EA;color:#1D6A3A}
+.dot{width:22px;height:22px;border-radius:50%;background:#2350C8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:0 0 22px}
+.tg{display:inline-block;width:34px;height:20px;border-radius:10px;background:#CDD2D9;position:relative;vertical-align:middle}
+.tg.on{background:#2350C8}
+.tg::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.tg.on::after{left:16px}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a class="on" href="ProfitSummary.dc.html" aria-current="page">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>A 코스메틱</option><option>전체 사업자 (3)</option></select></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">정재무</span><span class="ctx">재무 · 원가 조회 권한</span></div>
+    </header>
+    <nav class="sub2" aria-label="손익 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="ProfitSummary.dc.html">현황</a><a href="Profit.dc.html">주문별</a><a class="on" href="ProfitDimension.dc.html" aria-current="page">상품별</a><a href="ProfitDimension.dc.html">SKU별</a><a href="ProfitDimension.dc.html">묶음별</a><a href="ProfitDimension.dc.html">채널별</a><a href="ProfitDimension.dc.html">판매계정별</a><a href="ProfitDimension.dc.html">브랜드별</a><a href="ProfitDimension.dc.html">사업자별</a><a href="ProfitDimension.dc.html">GWP 성과</a><a href="AnalyticsClaims.dc.html">클레임 손익</a><a href="Settlement.dc.html">대사</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div><h1 style="margin: 0; font-size: 24px">상품별 손익 — A 코스메틱 · 2026년 10월(마감)</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">상품·SKU·묶음·채널·판매계정·브랜드·사업자·GWP 기준으로 같은 원장을 다시 묶어 봅니다. 합계는 손익 현황과 같습니다. · <span class="chip c-mute">M5 시안 · 예시 데이터</span></p></div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">내보내기(권한 필요)</button></div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end"><label class="fld">묶는 기준<select class="inp"><option>상품</option><option>SKU</option><option>묶음·세트</option><option>채널</option><option>판매계정</option><option>브랜드</option><option>사업자</option><option>GWP</option></select></label><label class="fld">기간<select class="inp"><option>2026년 10월(마감)</option><option>2026년 11월(진행 중)</option></select></label><label class="fld">묶음 상품 원가<select class="inp"><option>부품 SKU로 나눠 집계</option><option>묶음 상품으로 집계</option></select></label></div>
+      <div class="card" style="overflow-x: auto">
+        <table><caption style="text-align: left; padding: 14px 16px 6px; font-weight: 600; font-size: 15px">단위: 원 · 공급가</caption>
+          <thead><tr><th scope="col">상품</th><th scope="col" class="num">순매출</th><th scope="col" class="num">출고원가</th><th scope="col" class="num">수수료</th><th scope="col" class="num">광고</th><th scope="col" class="num">물류·배송</th><th scope="col" class="num">부자재</th><th scope="col" class="num">GWP</th><th scope="col" class="num">클레임·재고손실</th><th scope="col" class="num">공헌이익</th><th scope="col" class="num">이익률</th></tr></thead>
+          <tbody>
+            <tr><td>AMP-30 비타 앰플 30ml</td><td class="num">180,000,000</td><td class="num">−54,000,000</td><td class="num">−16,200,000</td><td class="num">−14,000,000</td><td class="num">−19,800,000</td><td class="num">−1,700,000</td><td class="num">−1,500,000</td><td class="num">−5,800,000</td><td class="num"><b>67,000,000</b></td><td class="num">37.22%</td></tr>
+            <tr><td>CLF-150 클렌징폼 150ml</td><td class="num">86,000,000</td><td class="num">−26,000,000</td><td class="num">−7,700,000</td><td class="num">−6,000,000</td><td class="num">−13,500,000</td><td class="num">−1,000,000</td><td class="num">−600,000</td><td class="num">−3,200,000</td><td class="num"><b>28,000,000</b></td><td class="num">32.56%</td></tr>
+            <tr><td>CLF-300 클렌징폼 300ml</td><td class="num">65,000,000</td><td class="num">−24,300,000</td><td class="num">−5,900,000</td><td class="num">−5,000,000</td><td class="num">−10,200,000</td><td class="num">−700,000</td><td class="num">−500,000</td><td class="num">−3,000,000</td><td class="num"><b>15,400,000</b></td><td class="num">23.69%</td></tr>
+            <tr><td>그 외 14개 상품</td><td class="num">69,000,000</td><td class="num">−35,700,000</td><td class="num">−6,200,000</td><td class="num">−5,000,000</td><td class="num">−8,500,000</td><td class="num">−600,000</td><td class="num">−400,000</td><td class="num">−3,000,000</td><td class="num"><b>9,600,000</b></td><td class="num">13.91%</td></tr>
+            <tr class="tot"><td><b>A 코스메틱 합계</b></td><td class="num">400,000,000</td><td class="num">−140,000,000</td><td class="num">−36,000,000</td><td class="num">−30,000,000</td><td class="num">−52,000,000</td><td class="num">−4,000,000</td><td class="num">−3,000,000</td><td class="num">−15,000,000</td><td class="num"><b>120,000,000</b></td><td class="num">30.00%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ctx" style="margin: 0">A 코스메틱 합계(순매출 400,000,000 · 공헌이익 120,000,000)는 손익 현황의 A 코스메틱 행과 같습니다. 공동 광고비는 배부 규칙 v1로 나눈 금액이 들어갑니다. 금액을 누르면 해당 원장 목록으로 이동합니다.</p>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

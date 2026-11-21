@@ -1,6 +1,6 @@
 # 역할-권한 매트릭스 (초안)
 
-- 상태: **초안 — 제품 오너·보안 승인 필요(OQ-026)**. 코드: `backend/src/main/java/com/commerceos/identity/access/SystemRoles.java`(운영그룹 생성 시 역할로 복사).
+- 상태: **v1 기본 역할로 승인(2026-11-21 위임 결정 DLG-020)**. 코드: `backend/src/main/java/com/commerceos/identity/access/SystemRoles.java`(운영그룹 생성 시 역할로 복사).
 - 역할은 권한 묶음일 뿐이며 사업자·판매계정 **범위는 사용자별 접근정책**으로 따로 제한한다(ADR-0002).
 - ★ = 민감 권한(docs/08 §1). `order.*`, `claim.refund`, `inventory.*`, `pii.read`, `cost.read`, `settlement.read`, `profit.read`, `period.close` 는 후속 모듈에서 사용하며 지금은 카탈로그에만 정의되어 있다.
 

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>업무함 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:16px 12px 6px;letter-spacing:.02em}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+.tab{min-height:36px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#59616C;cursor:pointer}
+.tab.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px 12px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:middle}
+tr.sel td{background:#F2F6FE}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.sel-input{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a class="on" href="WorkQueue.dc.html" aria-current="page">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label style="display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #59616C">사업자
+        <select class="sel-input"><option>전체 사업자 (3)</option><option>A 코스메틱</option><option>B 리빙</option><option>C 푸드</option></select>
+      </label>
+      <label style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #59616C">통합검색
+        <input class="sel-input" type="search" placeholder="주문번호, 송장, SKU, 바코드, 판매계정  ( / )">
+      </label>
+      <a class="chip c-warn" href="Integrations.dc.html" style="text-decoration: none; height: 30px">연동 확인필요 2</a>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">김운영</span><span class="ctx">운영관리자</span></div>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto; min-height: 0">
+      <main style="flex: 999 1 560px; min-width: 0; padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+          <div>
+            <h1 style="margin: 0; font-size: 24px">업무함</h1>
+            <p style="margin: 4px 0 0; font-size: 14px; color: #59616C">정상 처리된 건은 보이지 않고, 사람이 확인해야 할 예외만 모입니다. · <span class="chip c-mute" style="height: 20px">예시 데이터</span></p>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">저장된 보기: 내 긴급 업무</button><button class="btn" type="button">일괄 배정</button></div>
+        </div>
+
+        <div role="tablist" aria-label="업무 보기" style="display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #E3E6EA">
+          <button class="tab" role="tab" type="button" aria-selected="false">내 업무 3</button>
+          <button class="tab" role="tab" type="button" aria-selected="false">팀 업무 5</button>
+          <button class="tab on" role="tab" type="button" aria-selected="true">전체 업무 7</button>
+          <button class="tab" role="tab" type="button" aria-selected="false">긴급 2</button>
+          <button class="tab" role="tab" type="button" aria-selected="false">오늘 마감 3</button>
+          <button class="tab" role="tab" type="button" aria-selected="false">데이터 검증 2</button>
+          <button class="tab" role="tab" type="button" aria-selected="false">연동 오류 2</button>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">업무유형<select class="sel-input"><option>전체</option><option>연동 인증 만료</option><option>상품 미연결</option><option>3PL 재고 불일치</option></select></label>
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">상태<select class="sel-input"><option>대기·진행·보류</option><option>완료</option><option>무시</option></select></label>
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">담당자<select class="sel-input"><option>전체</option><option>미배정</option><option>김운영</option></select></label>
+        </div>
+
+        <div class="card" style="overflow-x: auto">
+          <table>
+            <thead><tr><th scope="col"><span class="ctx">선택</span></th><th scope="col">사업자 · 계정</th><th scope="col">업무유형</th><th scope="col">제목</th><th scope="col" class="num">영향</th><th scope="col">우선순위</th><th scope="col">담당자</th><th scope="col">마감</th><th scope="col">상태</th><th scope="col">최초 / 마지막 발생</th></tr></thead>
+            <tbody>
+              <tr class="sel"><td><input type="checkbox" aria-label="선택"></td><td><div>A 코스메틱</div><div class="ctx">네이버 · A 공식스토어 2</div></td><td>연동 인증 만료</td><td><a href="#drawer">연동 인증 만료: 네이버2 연동</a></td><td class="num">발생 2회</td><td><span class="chip c-err">긴급</span></td><td>미배정</td><td>즉시</td><td><span class="chip c-info">대기</span></td><td class="ctx">13:02 / 13:40</td></tr>
+              <tr><td><input type="checkbox" aria-label="선택"></td><td><div>B 리빙</div><div class="ctx">품고 · 화주 B-01</div></td><td>3PL 재고 반영 불명확</td><td>예약 반영 시점 확인 불가 — 판매 제한</td><td class="num">SKU 4</td><td><span class="chip c-err">긴급</span></td><td>박물류</td><td>18:00</td><td><span class="chip c-warn">진행</span></td><td class="ctx">11:15 / 13:55</td></tr>
+              <tr><td><input type="checkbox" aria-label="선택"></td><td><div>A 코스메틱</div><div class="ctx">쿠팡 마켓플레이스</div></td><td>상품 미연결</td><td>외부 옵션 12건이 SKU와 연결되지 않음</td><td class="num">주문 12</td><td><span class="chip c-warn">높음</span></td><td>이주문</td><td>16:00</td><td><span class="chip c-warn">진행</span></td><td class="ctx">09:10 / 14:02</td></tr>
+              <tr><td><input type="checkbox" aria-label="선택"></td><td><div>C 푸드</div><div class="ctx">자체 WMS · 화성센터</div></td><td>미확인 반품</td><td>원주문 없는 반품 입고(SKU 불일치)</td><td class="num">수량 3</td><td><span class="chip c-warn">높음</span></td><td>미배정</td><td>오늘</td><td><span class="chip c-info">대기</span></td><td class="ctx">10:44 / 10:44</td></tr>
+              <tr><td><input type="checkbox" aria-label="선택"></td><td><div>B 리빙</div><div class="ctx">품고 · 화주 B-01</div></td><td>데이터 검증</td><td>비가용 원본 2 ↔ 내부 세부분류 3</td><td class="num">SKU 1</td><td><span class="chip c-info">보통</span></td><td>박물류</td><td>11-22</td><td><span class="chip c-mute">보류</span></td><td class="ctx">어제 / 08:00</td></tr>
+              <tr><td><input type="checkbox" aria-label="선택"></td><td><div>B 리빙</div><div class="ctx">11번가 · B 리빙몰</div></td><td>판매계정 귀속 변경</td><td>연동 일시중지 — 새 사업자 인증 확인</td><td class="num">연결 1</td><td><span class="chip c-info">보통</span></td><td>최연동</td><td>11-24</td><td><span class="chip c-info">대기</span></td><td class="ctx">11-20 / 11-20</td></tr>
+              <tr><td><input type="checkbox" aria-label="선택"></td><td><div>—</div><div class="ctx">운영그룹 공통</div></td><td>데이터 검증</td><td>예상 물류비 미대체(청구서 미수신)</td><td class="num">₩69,000</td><td><span class="chip c-mute">낮음</span></td><td>정재무</td><td>11-30</td><td><span class="chip c-info">대기</span></td><td class="ctx">11-18 / 14:00</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+
+      <aside id="drawer" aria-labelledby="dr-h" style="flex: 1 1 380px; max-width: 460px; background: #fff; border-left: 1px solid #E3E6EA; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px">
+          <div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap"><span class="chip c-err">긴급</span><span class="chip c-info">대기</span><span class="chip c-mute">발생 2회</span></div>
+            <h2 id="dr-h" style="margin: 10px 0 0; font-size: 18px">연동 인증 만료: 네이버2 연동</h2>
+            <p class="ctx" style="margin: 4px 0 0">A 코스메틱 · 네이버 스마트스토어 · A 공식스토어 2</p>
+          </div>
+          <button class="btn" type="button" aria-label="닫기 (Esc)" style="min-width: 36px; padding: 0">×</button>
+        </div>
+
+        <section aria-label="문제와 원인" style="display: flex; flex-direction: column; gap: 6px">
+          <h3 style="margin: 0; font-size: 13px; color: #59616C">무엇이 문제인가요</h3>
+          <p style="margin: 0; font-size: 14px; line-height: 1.6">판매채널 인증정보가 만료되어 이 연결의 주문 수집·송장 전송이 중단되었습니다. 같은 사업자의 다른 판매계정은 정상 처리 중입니다.</p>
+        </section>
+        <section aria-label="권장 조치" style="background: #F7F8FA; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px">
+          <h3 style="margin: 0; font-size: 13px; color: #59616C">권장 조치</h3>
+          <ol style="margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.7">
+            <li>판매자센터에서 API 인증정보를 재발급</li>
+            <li>연동 관리 &gt; 인증정보 교체</li>
+            <li>상태 점검 실행 — 성공하면 업무가 자동 해결됩니다</li>
+          </ol>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px"><a class="btn pri" href="Integrations.dc.html">인증정보 교체</a><button class="btn" type="button">상태 점검 다시 실행</button></div>
+        </section>
+        <section aria-label="관련 객체" style="display: flex; flex-direction: column; gap: 8px">
+          <h3 style="margin: 0; font-size: 13px; color: #59616C">관련 객체</h3>
+          <a href="Integrations.dc.html" style="font-size: 14px">연동 연결 · 네이버2 연동 (모의 연동)</a>
+          <a href="ChannelAccounts.dc.html" style="font-size: 14px">판매계정 · A 공식스토어 2</a>
+          <div class="ctx">원본 오류 요약: AUTH_EXPIRED · 마지막 시도 13:40 · 작업 FAILED(재시도 안 함)</div>
+        </section>
+        <section aria-label="처리" style="display: flex; flex-direction: column; gap: 8px">
+          <label class="ctx" style="display: flex; flex-direction: column; gap: 4px">담당자<select class="sel-input"><option>미배정</option><option>최연동</option><option>김운영</option></select></label>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">진행 시작</button><button class="btn" type="button">보류</button><button class="btn" type="button">다시 알림</button><button class="btn" type="button">무시</button></div>
+        </section>
+        <section aria-label="활동 이력" style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #EEF0F3; padding-top: 12px">
+          <h3 style="margin: 0; font-size: 13px; color: #59616C">활동 이력</h3>
+          <div style="font-size: 13px"><span class="ctx">13:40</span> · 시스템 · 같은 원인 재발(2회째)</div>
+          <div style="font-size: 13px"><span class="ctx">13:02</span> · 연동 · 상태 점검 실패 → 연결 인증만료로 전환</div>
+          <div style="font-size: 13px"><span class="ctx">13:02</span> · 시스템 · 업무 생성</div>
+        </section>
+      </aside>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

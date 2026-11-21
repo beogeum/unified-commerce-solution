@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>연동 관리 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:16px 12px 6px;letter-spacing:.02em}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+.btn[disabled]{color:#7A828C;background:#F4F5F7;cursor:not-allowed}
+.tab{min-height:36px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#59616C;cursor:pointer}
+.tab.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px 10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px 10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.sel td{background:#F2F6FE}
+.ctx{font-size:12px;color:#59616C}
+.sel-input{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:13px}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a class="on" href="Integrations.dc.html" aria-current="page">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label style="display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #59616C">사업자
+        <select class="sel-input"><option>전체 사업자 (3)</option><option>A 코스메틱</option><option>B 리빙</option><option>C 푸드</option></select>
+      </label>
+      <label style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #59616C">통합검색
+        <input class="sel-input" type="search" placeholder="연결 이름, 판매계정, 화주계정  ( / )">
+      </label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">최연동</span><span class="ctx">연동관리자</span></div>
+    </header>
+    <nav class="sub2" aria-label="연동 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a class="on" href="Integrations.dc.html" aria-current="page">연동 현황</a><a href="IntegrationFile.dc.html">파일 연동</a><a href="IntegrationOthers.dc.html">택배·광고·기타</a><a href="IntegrationDiag.dc.html">연동 진단</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div>
+          <h1 style="margin: 0; font-size: 24px">연동 관리</h1>
+          <p style="margin: 4px 0 0; font-size: 14px; color: #59616C">실제 판매채널·물류사 연동은 계정별 권한·API 확인 후 제공됩니다. 현재는 모의 연동만 연결할 수 있습니다. · <span class="chip c-ok">Foundation API 구현됨</span></p>
+        </div>
+        <button class="btn pri" type="button">연결 추가</button>
+      </div>
+
+      <div role="tablist" aria-label="연동 종류" style="display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #E3E6EA">
+        <button class="tab on" role="tab" type="button" aria-selected="true">판매채널 3</button>
+        <button class="tab" role="tab" type="button" aria-selected="false">물류·3PL 1</button>
+        <button class="tab" role="tab" type="button" aria-selected="false">택배</button>
+        <button class="tab" role="tab" type="button" aria-selected="false">광고</button>
+        <button class="tab" role="tab" type="button" aria-selected="false">ERP·회계</button>
+        <button class="tab" role="tab" type="button" aria-selected="false">파일 연동</button>
+        <button class="tab" role="tab" type="button" aria-selected="false">오류·이력</button>
+      </div>
+
+      <div class="card" style="overflow-x: auto">
+        <table>
+          <thead><tr><th scope="col">연결</th><th scope="col">사업자 · 대상 계정</th><th scope="col">연동 모듈</th><th scope="col">상태</th><th scope="col">인증정보</th><th scope="col">마지막 성공 / 오류</th><th scope="col">개발사 등록</th></tr></thead>
+          <tbody>
+            <tr><td>네이버1 연동</td><td><div>A 코스메틱</div><div class="ctx">네이버 · A 공식스토어</div></td><td>mock-channel <span class="chip c-mute">모의</span></td><td><span class="chip c-ok">정상</span></td><td class="ctx">sha256:4be1c0…</td><td class="ctx">14:00 / —</td><td><span class="chip c-mute">미확인</span></td></tr>
+            <tr><td>네이버2 연동</td><td><div>A 코스메틱</div><div class="ctx">네이버 · A 공식스토어 2</div></td><td>mock-channel <span class="chip c-mute">모의</span></td><td><span class="chip c-err">인증만료</span></td><td class="ctx">sha256:91a3d2… · 만료</td><td class="ctx">11-20 / 13:40 AUTH_EXPIRED</td><td><span class="chip c-mute">미확인</span></td></tr>
+            <tr><td>카페24 B 연동</td><td><div>B 리빙</div><div class="ctx">카페24 · B 리빙몰</div></td><td>mock-channel <span class="chip c-mute">모의</span></td><td><span class="chip c-mute">일시중지</span></td><td class="ctx">sha256:0fd77e…</td><td class="ctx">11-20 / —</td><td><span class="chip c-mute">미확인</span></td></tr>
+            <tr class="sel"><td>파스토 A 연동</td><td><div>A 코스메틱</div><div class="ctx">파스토 · 화주 FASSTO-A01</div></td><td>mock-3pl <span class="chip c-mute">모의</span></td><td><span class="chip c-ok">정상</span></td><td class="ctx">sha256:c52e19…</td><td class="ctx">14:00 / —</td><td><span class="chip c-mute">미확인</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+        <section class="card" aria-labelledby="cn-h" style="flex: 1 1 300px; max-width: 380px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+          <h2 id="cn-h" style="margin: 0; font-size: 16px">파스토 A 연동</h2>
+          <div class="kv">
+            <span class="ctx">대상</span><span>화주계정 FASSTO-A01</span>
+            <span class="ctx">연동 모듈</span><span>mock-3pl (모의)</span>
+            <span class="ctx">API 버전</span><span>mock-v1</span>
+            <span class="ctx">인증 방식</span><span>API 키</span>
+            <span class="ctx">인증정보</span><span>sha256:c52e19… <span class="ctx">(원문은 표시하지 않음)</span></span>
+            <span class="ctx">인증 만료일</span><span>미등록</span>
+            <span class="ctx">호출 제한</span><span>미확인</span>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">상태 점검</button><button class="btn" type="button">인증정보 교체</button><button class="btn" type="button">일시중지</button></div>
+        </section>
+
+        <section class="card" aria-labelledby="cap-h" style="flex: 3 1 560px; min-width: 0">
+          <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 16px 16px 8px">
+            <h2 id="cap-h" style="margin: 0; font-size: 16px">지원 기능</h2>
+            <span class="ctx">기본값은 모두 '미확인'입니다. 테스트 계정 요청·응답 근거와 함께 검증해야 실행할 수 있습니다.</span>
+          </div>
+          <div style="overflow-x: auto">
+            <table>
+              <thead><tr><th scope="col">기능</th><th scope="col">동작</th><th scope="col">지원 수준</th><th scope="col">계정 검증</th><th scope="col">실행</th><th scope="col">사유 · 근거</th><th scope="col"><span class="ctx">작업</span></th></tr></thead>
+              <tbody>
+                <tr><td>재고 조회</td><td>조회</td><td><span class="chip c-ok">공식 제공</span></td><td><span class="chip c-ok">검증됨</span></td><td><span class="chip c-ok">가능</span></td><td class="ctx">테스트 계정 요청/응답 캡처 #1</td><td><button class="btn" type="button">수정</button></td></tr>
+                <tr><td>출고요청</td><td>쓰기</td><td><span class="chip c-mute">미확인</span></td><td><span class="chip c-mute">미검증</span></td><td><span class="chip c-mute">불가</span></td><td class="ctx">지원 수준 미확인 · 계정 미검증</td><td><button class="btn" type="button">검증 기록</button></td></tr>
+                <tr><td>출고취소</td><td>취소</td><td><span class="chip c-mute">미확인</span></td><td><span class="chip c-mute">미검증</span></td><td><span class="chip c-mute">불가</span></td><td class="ctx">지원 수준 미확인 · 계정 미검증</td><td><button class="btn" type="button">검증 기록</button></td></tr>
+                <tr><td>송장</td><td>조회</td><td><span class="chip c-warn">권한·제휴 필요</span></td><td><span class="chip c-mute">미검증</span></td><td><span class="chip c-mute">불가</span></td><td class="ctx">제휴 신청 대기</td><td><button class="btn" type="button">검증 기록</button></td></tr>
+                <tr><td>반품검수 결과</td><td>조회</td><td><span class="chip c-err">미지원</span></td><td><span class="chip c-mute">미검증</span></td><td><span class="chip c-mute">불가</span></td><td class="ctx">연동 모듈 미구현 — 수동·파일 검수 절차 사용. 검수 결과는 '미확정' 표시</td><td><button class="btn" type="button" disabled>검증 불가</button></td></tr>
+                <tr><td>물류비/청구</td><td>조회</td><td><span class="chip c-info">파일</span></td><td><span class="chip c-mute">미검증</span></td><td><span class="chip c-mute">불가</span></td><td class="ctx">월 청구서 엑셀 업로드로 대체</td><td><button class="btn" type="button">검증 기록</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="ctx" style="margin: 0; padding: 12px 16px">실행 가능 = 연동 모듈 구현 + 지원 수준(공식 제공·일부) + 계정 검증 완료 + 연결 정상. 불가 기능의 버튼은 화면에서 비활성화되고, 서버도 요청을 거부합니다.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -113,3 +113,10 @@ erDiagram
 
 ## 8. SQL 관련 주의
 `sql/001-core-schema.sql`은 *작동 가능한 핵심 구조 출발점*이지만 일부 확장 모듈은 문서만 정의됐다. Claude Code는 PR 단위 migration으로 상세 테이블·FK·CHECK/Unique Index를 추가해야 한다. 임의로 한 테이블에 모든 업무 속성을 합쳐 넣지 않는다.
+
+---
+
+## 개정 이력(2026-11-21, 위임 결정 docs/11 §H)
+- CHG-001: ERD에 `CHANNEL_ACCOUNT_ATTRIBUTION`(판매계정 사업자 귀속 이력), `SHIPPER_ACCOUNT`, `LOGISTICS_PROVIDER`, `ROLE`/`MEMBER_ROLE`/`MEMBER_SCOPE`, 운영 엔터티(`AUDIT_LOG`, `OUTBOX_EVENT`, `ASYNC_JOB`, `STORED_FILE`, `WORK_ITEM`, `INTEGRATION_CREDENTIAL`, `CONNECTION_CAPABILITY`)를 추가한다. 실제 정의는 `migrations/V1~V4`.
+- CHG-011: 포장 부자재 비용 출처는 거점·3PL 계약별로 (a) 자체 포장 BOM 원가 (b) 3PL 포장비 포함 (c) 3PL 별도 청구 중 하나만 적용한다.
+- DLG-004: 비용·매출 권위 원장은 단일 `financial_entry`(basis=ESTIMATED/ACTUAL).

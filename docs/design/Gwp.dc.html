@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>GWP·증정 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+.tab{min-height:36px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#59616C;cursor:pointer}
+.tab.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.sel td{background:#F2F6FE}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff;box-sizing:border-box}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#59616C}
+.opt{display:flex;align-items:center;gap:8px;min-height:30px;font-size:13px;color:#15191F}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a class="on" href="Products.dc.html" aria-current="page">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>A 코스메틱</option><option>전체 사업자 (3)</option></select></label>
+      <label class="ctx" style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px">통합검색<input class="inp" type="search" placeholder="캠페인명, 증정 SKU  ( / )"></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">한상품</span><span class="ctx">상품/MD</span></div>
+    </header>
+    <nav class="sub2" aria-label="상품 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="Products.dc.html">상품마스터</a><a href="Skus.dc.html">SKU</a><a href="Bundles.dc.html">묶음·세트</a><a class="on" href="Gwp.dc.html" aria-current="page">GWP·증정</a><a href="ChannelListings.dc.html">채널상품·연결</a><a href="PricePolicy.dc.html">가격·판매정책</a><a href="QualityCheck.dc.html">품질 점검</a><a href="BulkJobs.dc.html">일괄 작업</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div><h1 style="margin: 0; font-size: 24px">GWP·증정</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">증정품은 주문에 0원으로 들어가지만 원가는 따로 집계합니다. 채널이 이미 준 사은품과 기본적으로 중복 지급하지 않습니다. · <span class="chip c-mute">M2 시안 · 예시 데이터</span></p></div>
+        <button class="btn pri" type="button">캠페인 등록</button>
+      </div>
+      <div role="tablist" aria-label="캠페인 상태" style="display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #E3E6EA">
+        <button class="tab on" role="tab" type="button" aria-selected="true">진행중 3</button><button class="tab" role="tab" type="button" aria-selected="false">예정 1</button><button class="tab" role="tab" type="button" aria-selected="false">재고위험 1</button><button class="tab" role="tab" type="button" aria-selected="false">중지 0</button><button class="tab" role="tab" type="button" aria-selected="false">종료 12</button>
+      </div>
+      <div class="card" style="overflow-x: auto">
+        <table>
+          <thead><tr><th scope="col">캠페인</th><th scope="col">사업자 · 판매계정</th><th scope="col">기간</th><th scope="col">조건</th><th scope="col">증정 SKU</th><th scope="col" class="num">증정 재고</th><th scope="col" class="num">지급 수</th><th scope="col">중복 정책</th><th scope="col">상태</th></tr></thead>
+          <tbody>
+            <tr class="sel"><td><b>11월 앰플 증정</b></td><td><div>A 코스메틱</div><div class="ctx">네이버 2개 계정 · 카카오톡스토어</div></td><td>11-01 ~ 11-30</td><td>앰플 30ml 2개 이상</td><td>미니 파우치 ×1</td><td class="num">340</td><td class="num">412</td><td>그룹당 하나</td><td><span class="chip c-ok">진행중</span></td></tr>
+            <tr><td><b>5만원 이상 샘플 키트</b></td><td><div>A 코스메틱</div><div class="ctx">카페24 자사몰</div></td><td>11-10 ~ 12-10</td><td>결제 50,000원 이상</td><td>샘플 키트 ×1 / 대체: 미니 파우치</td><td class="num">42</td><td class="num">188</td><td>최고 우선순위만</td><td><span class="chip c-warn">재고위험</span></td></tr>
+            <tr><td><b>러그 구매 시 클리너</b></td><td><div>B 리빙</div><div class="ctx">전체 판매계정</div></td><td>11-15 ~ 11-30</td><td>러그 카테고리 1개 이상</td><td>섬유 클리너 미니 ×1</td><td class="num">120</td><td class="num">37</td><td>누적 가능</td><td><span class="chip c-ok">진행중</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <section class="card" aria-labelledby="gw-h" style="padding: 16px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px"><h2 id="gw-h" style="margin: 0; font-size: 16px">11월 앰플 증정 — 편집</h2><span class="ctx">변경 시 이미 지급된 주문에는 영향 없음</span></div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <h3 style="margin: 0; font-size: 14px">대상·조건 (모두 충족)</h3>
+            <label class="fld">사업자 · 판매계정<select class="inp"><option>A 코스메틱 · 3개 계정</option></select></label>
+            <label class="fld">조건 SKU · 수량<input class="inp" type="text" value="AMP-30 · 2개 이상"></label>
+            <label class="fld">제외 조건<input class="inp" type="text" value="쿠폰 '직원가' 사용 주문 제외"></label>
+            <label class="fld">선착순 한도<input class="inp" type="number" value="500"></label>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <h3 style="margin: 0; font-size: 14px">증정품·재고</h3>
+            <label class="fld">증정 SKU · 수량<input class="inp" type="text" value="GIFT-PCH 미니 파우치 · 1"></label>
+            <label class="fld">대체 증정품 우선순위<input class="inp" type="text" value="1순위 없음"></label>
+            <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column"><legend class="ctx" style="margin-bottom: 4px">품절 시</legend>
+              <label class="opt"><input type="radio" name="oos" checked>캠페인 종료</label><label class="opt"><input type="radio" name="oos">대체품 지급</label><label class="opt"><input type="radio" name="oos">증정 없이 진행</label><label class="opt"><input type="radio" name="oos">주문 보류</label>
+            </fieldset>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <h3 style="margin: 0; font-size: 14px">중복·반품</h3>
+            <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column"><legend class="ctx" style="margin-bottom: 4px">중복 정책</legend>
+              <label class="opt"><input type="radio" name="dup">누적 가능</label><label class="opt"><input type="radio" name="dup" checked>그룹당 하나 (그룹: 11월 화장품)</label><label class="opt"><input type="radio" name="dup">최고 우선순위만</label>
+            </fieldset>
+            <label class="opt"><input type="checkbox" checked>채널 자체 사은품과 중복 지급 금지</label>
+            <label class="fld">반품 시<select class="inp"><option>조건 재평가 — 미충족 시 회수 요청, 미회수면 원가 유지</option><option>회수 안 함</option></select></label>
+          </div>
+        </div>
+        <div style="background: #F7F8FA; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.6">이번 달 지급 412개 · 증정 원가 1,200원 × 412 = 494,400원 · 채널 사은품 중복으로 지급 제외 9건 · 반품 회수 대상 6건(회수 2)</div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn pri" type="button">저장</button><button class="btn" type="button">캠페인 중지</button></div>
+      </section>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

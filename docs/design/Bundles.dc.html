@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>묶음·세트 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:middle}
+tr.sel td{background:#F2F6FE}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff;box-sizing:border-box}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 0;border-bottom:1px solid #EEF0F3}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a class="on" href="Products.dc.html" aria-current="page">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>B 리빙</option><option>전체 사업자 (3)</option></select></label>
+      <label class="ctx" style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px">통합검색<input class="inp" type="search" placeholder="묶음 SKU, 구성품 SKU  ( / )"></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">한상품</span><span class="ctx">상품/MD</span></div>
+    </header>
+    <nav class="sub2" aria-label="상품 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a href="Products.dc.html">상품마스터</a><a href="Skus.dc.html">SKU</a><a class="on" href="Bundles.dc.html" aria-current="page">묶음·세트</a><a href="Gwp.dc.html">GWP·증정</a><a href="ChannelListings.dc.html">채널상품·연결</a><a href="PricePolicy.dc.html">가격·판매정책</a><a href="QualityCheck.dc.html">품질 점검</a><a href="BulkJobs.dc.html">일괄 작업</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div><h1 style="margin: 0; font-size: 24px">묶음·세트</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">가상묶음은 구성품 재고로 판매가능 수량을 계산하고, 실물 세트는 조립한 완제품 재고만 출고합니다. · <span class="chip c-mute">M2 시안 · 예시 데이터</span></p></div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">세트 조립·해체</button><button class="btn pri" type="button">가상묶음 등록</button></div>
+      </div>
+
+      <div class="card" style="overflow-x: auto">
+        <table>
+          <thead><tr><th scope="col">묶음 SKU</th><th scope="col">유형</th><th scope="col" class="num">구성품</th><th scope="col" class="num">허용거점 기준 판매가능</th><th scope="col" class="num">실물세트 재고</th><th scope="col" class="num">추가 조립 가능</th><th scope="col" class="num">구성원가 / 포장비</th><th scope="col" class="num">판매가 / 예상 공헌이익</th><th scope="col">BOM 버전</th></tr></thead>
+          <tbody>
+            <tr class="sel"><td><b>RUG-SET</b> · 러그 세트</td><td><span class="chip c-info">가상묶음</span></td><td class="num">3</td><td class="num"><b>11</b></td><td class="num">—</td><td class="num">—</td><td class="num">58,200 / 1,900</td><td class="num">129,000 / 39,373</td><td>v2 · 11-01~</td></tr>
+            <tr><td><b>AMP-2SET</b> · 앰플 2개 세트</td><td><span class="chip c-info">가상묶음</span></td><td class="num">1</td><td class="num"><b>256</b></td><td class="num">—</td><td class="num">—</td><td class="num">18,000 / 580</td><td class="num">59,400 / 29,220</td><td>v1</td></tr>
+            <tr><td><b>GIFT-BOX</b> · 연말 선물세트</td><td><span class="chip c-ok">실물세트</span></td><td class="num">4</td><td class="num">—</td><td class="num">120</td><td class="num">38</td><td class="num">21,500 / 2,400</td><td class="num">49,000 / 12,545</td><td>v3</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+        <section class="card" aria-labelledby="bom-h" style="flex: 3 1 560px; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px"><h2 id="bom-h" style="margin: 0; font-size: 16px">RUG-SET 구성(BOM) 편집 — 새 버전 v3 초안</h2><span class="chip c-warn">발행 전</span></div>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px">
+            <label class="ctx" style="display: flex; flex-direction: column; gap: 4px">BOM 유형<select class="inp"><option>판매묶음(가상)</option><option>조립(실물 세트)</option><option>포장</option><option>프로모션</option></select></label>
+            <label class="ctx" style="display: flex; flex-direction: column; gap: 4px">적용 시작일<input class="inp" type="date" value="2026-12-01"></label>
+            <label class="ctx" style="display: flex; flex-direction: column; gap: 4px">분할출고<select class="inp"><option>허용 안 함(기본)</option><option>허용 — 채널·거점 지원 확인 필요</option></select></label>
+            <label class="ctx" style="display: flex; flex-direction: column; gap: 4px">포장 프로필<select class="inp"><option>대형 박스 기본 v1</option></select></label>
+          </div>
+          <div style="overflow-x: auto">
+            <table>
+              <thead><tr><th scope="col">구성품 SKU</th><th scope="col">이름</th><th scope="col" class="num">수량</th><th scope="col">필수</th><th scope="col" class="num">원가</th><th scope="col"><span class="ctx">삭제</span></th></tr></thead>
+              <tbody>
+                <tr><td>RUG-GR-160</td><td>러그 그레이 160</td><td class="num"><label><span class="ctx" style="position: absolute; left: -9999px">수량</span><input class="inp" type="number" value="1" min="1" style="width: 70px"></label></td><td><input type="checkbox" checked aria-label="필수"></td><td class="num">41,000</td><td><button class="btn" type="button" aria-label="RUG-GR-160 삭제">×</button></td></tr>
+                <tr><td>PAD-160</td><td>러그 미끄럼방지 패드</td><td class="num"><label><span class="ctx" style="position: absolute; left: -9999px">수량</span><input class="inp" type="number" value="1" min="1" style="width: 70px"></label></td><td><input type="checkbox" checked aria-label="필수"></td><td class="num">12,400</td><td><button class="btn" type="button" aria-label="PAD-160 삭제">×</button></td></tr>
+                <tr><td>CLN-SPR</td><td>섬유 클리너 미니</td><td class="num"><label><span class="ctx" style="position: absolute; left: -9999px">수량</span><input class="inp" type="number" value="1" min="1" style="width: 70px"></label></td><td><input type="checkbox" checked aria-label="필수"></td><td class="num">4,800</td><td><button class="btn" type="button" aria-label="CLN-SPR 삭제">×</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="background: #FDEBEB; color: #A11A1A; border-radius: 8px; padding: 10px; font-size: 13px">구성품에 RUG-SET 자신을 추가할 수 없습니다(순환 구성 금지). 수량은 1 이상의 정수만 입력할 수 있습니다.</div>
+          <p class="ctx" style="margin: 0">발행된 버전은 수정할 수 없습니다. 이미 접수된 주문은 접수 당시 BOM 버전(v2)을 그대로 사용합니다.</p>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">구성품 추가</button><button class="btn" type="button">임시저장</button><button class="btn pri" type="button">v3 발행</button></div>
+        </section>
+
+        <aside class="card" aria-labelledby="sum-h" style="flex: 2 1 320px; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+          <h2 id="sum-h" style="margin: 0 0 4px; font-size: 16px">요약</h2>
+          <div class="row"><span>품고 · 김포 판매가능</span><b>11</b></div>
+          <div class="row"><span>화성 자체 WMS 판매가능</span><span>0 <span class="ctx">(패드 재고 없음)</span></span></div>
+          <div class="row"><span>판매가능 합계(분할출고 불허)</span><b>11</b></div>
+          <div class="row"><span>구성품 원가</span><span>58,200</span></div>
+          <div class="row"><span>포장 부자재</span><span>1,900</span></div>
+          <div class="row"><span>예상 물류비</span><span>4,800</span></div>
+          <div class="row"><span>예상 판매수수료</span><span>12,900</span></div>
+          <div class="row"><span>예상 공헌이익(공급가 117,273 기준)</span><b>39,373</b></div>
+          <div style="margin-top: 6px; background: #FFF0DC; color: #8A4300; border-radius: 8px; padding: 10px; font-size: 13px">부족 SKU: PAD-160 — 품고 남은 수량 11, 일평균 판매 2.1</div>
+          <p class="ctx" style="margin: 0">판매가능 = 허용 거점마다 MIN(구성품 가용 ÷ 소요수량)의 합. 주문이 들어오면 구성품 3개를 한꺼번에 확보하고, 하나라도 부족하면 모두 확보하지 않습니다.</p>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

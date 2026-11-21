@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>비용·원가 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:16px 12px 6px;letter-spacing:.02em}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+.tab{min-height:36px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#59616C;cursor:pointer;white-space:nowrap}
+.tab.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px 10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px 10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.old td{color:#59616C;background:#FAFBFC}
+tr.total td{font-weight:700;background:#F7F8FA;border-top:2px solid #D5DAE1}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sel-input{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff}
+.kpi{padding:12px;display:flex;flex-direction:column;gap:4px}
+.kpi b{font-size:18px}
+</style>
+</helmet>
+<div style="min-height: 1400px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a href="Main.dc.html">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a class="on" href="CostLedger.dc.html" aria-current="page">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label style="display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #59616C">사업자
+        <select class="sel-input"><option>A 코스메틱</option><option>전체 사업자 (3)</option></select>
+      </label>
+      <label style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #59616C">통합검색
+        <input class="sel-input" type="search" placeholder="주문번호, 출고번호, 청구서 번호, SKU  ( / )">
+      </label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">정재무</span><span class="ctx">정산/재무 · 원가 조회 권한</span></div>
+    </header>
+    <nav class="sub2" aria-label="비용 메뉴" style="display: flex; gap: 2px; padding: 0 24px; background: #fff; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+      <a class="on" href="CostLedger.dc.html" aria-current="page">비용 현황</a><a href="ProductCost.dc.html">상품 원가</a><a href="PurchaseCost.dc.html">매입원가</a><a href="LogisticsBilling.dc.html">물류비 대사</a><a href="CostClosePolicy.dc.html">원가·마감 정책</a>
+    </nav>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; max-width: 1320px; width: 100%; box-sizing: border-box">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div>
+          <h1 style="margin: 0; font-size: 24px">비용 현황</h1>
+          <p style="margin: 4px 0 0; font-size: 14px; color: #59616C">A 코스메틱 · 2026년 11월 · 공급가 기준(부가세 별도) · <span class="chip c-mute">M5 시안 · 예시 데이터</span></p>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">청구서·파일 가져오기</button><button class="btn" type="button">배부 규칙</button><button class="btn" type="button">내보내기</button></div>
+      </div>
+
+      <div role="tablist" aria-label="비용·원가 메뉴" style="display: flex; gap: 2px; border-bottom: 1px solid #E3E6EA; overflow-x: auto">
+        <button class="tab on" role="tab" type="button" aria-selected="true">비용 현황</button>
+        <button class="tab" role="tab" type="button" aria-selected="false">상품원가</button>
+        <button class="tab" role="tab" type="button" aria-selected="false">판매·결제수수료</button>
+        <button class="tab" role="tab" type="button" aria-selected="false">배송·물류비</button>
+        <button class="tab" role="tab" type="button" aria-selected="false">광고비</button>
+        <button class="tab" role="tab" type="button" aria-selected="false">부자재</button>
+        <button class="tab" role="tab" type="button" aria-selected="false">GWP</button>
+        <button class="tab" role="tab" type="button" aria-selected="false">클레임비용</button>
+        <button class="tab" role="tab" type="button" aria-selected="false">재고손실</button>
+      </div>
+
+      <section aria-label="분류별 비용" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px">
+        <div class="card kpi"><span class="ctx">상품원가(출고)</span><b>182,400,000원</b><span class="ctx">확정 · 이동평균</span></div>
+        <div class="card kpi"><span class="ctx">판매·결제수수료</span><b>41,700,000원</b><span class="ctx">실제 38,200,000원 · 예상 3,500,000원</span></div>
+        <div class="card kpi"><span class="ctx">배송·물류비</span><b>29,800,000원</b><span class="ctx">실제 21,000,000원 · 예상 8,800,000원</span></div>
+        <div class="card kpi"><span class="ctx">광고비</span><b>24,100,000원</b><span class="ctx">배부 완료 · 미배부 0</span></div>
+        <div class="card kpi" style="border-color: #B9CBF4"><span class="ctx">포장 부자재</span><b>3,900,000원</b><span class="ctx">자체 출고 소모 · 3PL 별도청구</span></div>
+        <div class="card kpi"><span class="ctx">GWP</span><b>2,600,000원</b><span class="ctx">미회수 원가 포함</span></div>
+        <div class="card kpi"><span class="ctx">클레임비용</span><b>4,300,000원</b><span class="ctx">회수·검수·재포장</span></div>
+        <div class="card kpi"><span class="ctx">재고손실</span><b>900,000원</b><span class="ctx">평가손실·폐기 서비스</span></div>
+      </section>
+      <p class="ctx" style="margin: -6px 0 0">각 분류의 '예상'은 실제 청구가 오면 그 범위만 대체되며, 예상과 실제를 더하지 않습니다.</p>
+
+      <section class="card" aria-labelledby="led-h" style="min-width: 0">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 8px; padding: 16px 16px 8px">
+          <h2 id="led-h" style="margin: 0; font-size: 16px">비용 원장</h2>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">분류<select class="sel-input"><option>전체</option><option>포장 부자재</option><option>배송·물류비</option></select></label>
+            <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">구분<select class="sel-input"><option>유효 항목</option><option>대체된 예상 포함</option></select></label>
+          </div>
+        </div>
+        <div style="overflow-x: auto">
+          <table>
+            <thead><tr><th scope="col">발생일</th><th scope="col">분류</th><th scope="col">발생 원천</th><th scope="col">관련 대상</th><th scope="col">구분</th><th scope="col" class="num">공급가</th><th scope="col" class="num">부가세</th><th scope="col">귀속·배부</th><th scope="col">상태</th></tr></thead>
+            <tbody>
+              <tr><td>11-08</td><td>포장 부자재</td><td>포장 BOM v3 · 자체 부자재 출고</td><td><div>출고 F-88102</div><div class="ctx">O-26110800177 · 화성센터</div></td><td><span class="chip c-ok">실제</span></td><td class="num">580</td><td class="num">58</td><td class="ctx">출고 1건 → 주문상품 수량 비례</td><td><span class="chip c-ok">확정</span></td></tr>
+              <tr class="old"><td>11-08</td><td>배송·물류비</td><td>계약요율(예상)</td><td><div>출고 F-88102</div><div class="ctx">O-26110800177</div></td><td><span class="chip c-info">예상</span></td><td class="num">3,000</td><td class="num">300</td><td class="ctx">직접 귀속</td><td><span class="chip c-mute">실제로 대체됨</span></td></tr>
+              <tr><td>11-30</td><td>배송·물류비</td><td>3PL 청구서 #INV-2611-07 행 412</td><td><div>출고 F-88102</div><div class="ctx">O-26110800177</div></td><td><span class="chip c-ok">실제</span></td><td class="num">3,200</td><td class="num">320</td><td class="ctx">직접 귀속 · 예상 3,000 대체</td><td><span class="chip c-warn">대사 차이 200</span></td></tr>
+              <tr><td>11-14</td><td>클레임비용</td><td>반품 회수 계약요율(예상)</td><td><div>반품 R-2611-0042</div><div class="ctx">O-26110800177</div></td><td><span class="chip c-info">예상</span></td><td class="num">3,000</td><td class="num">300</td><td class="ctx">직접 귀속</td><td><span class="chip c-info">청구서 대기</span></td></tr>
+              <tr><td>11-20</td><td>배송·물류비</td><td>파스토 포장작업비(부자재 포함 계약)</td><td><div>파스토 · 용인 출고 412건</div><div class="ctx">화주 FASSTO-A01</div></td><td><span class="chip c-ok">실제</span></td><td class="num">247,200</td><td class="num">24,720</td><td class="ctx">출고건 균등 배부 v1 · 미배부 0</td><td><span class="chip c-ok">확정</span></td></tr>
+              <tr><td>11-01~30</td><td>광고비</td><td>검색광고 캠페인 정산</td><td><div>캠페인 '앰플 11월'</div><div class="ctx">네이버 · A 공식스토어</div></td><td><span class="chip c-ok">실제</span></td><td class="num">1,240,000</td><td class="num">124,000</td><td class="ctx">클릭 기여 배부 v1 · 미배부 0</td><td><span class="chip c-ok">확정</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+        <section class="card" aria-labelledby="pk-h" style="flex: 3 1 560px; min-width: 0">
+          <div style="padding: 16px 16px 8px">
+            <h2 id="pk-h" style="margin: 0; font-size: 16px">포장 부자재 기준 — 포장 프로필 '소형 박스 기본' v3</h2>
+            <p class="ctx" style="margin: 4px 0 0">출고 1건에 쓰이는 부자재 구성(포장 BOM). 판매 상품과 분리해 비용으로 집계합니다.</p>
+          </div>
+          <div style="overflow-x: auto">
+            <table>
+              <thead><tr><th scope="col">부자재</th><th scope="col">SKU 유형</th><th scope="col" class="num">출고당 수량</th><th scope="col" class="num">단가(공급가)</th><th scope="col" class="num">출고당 비용</th><th scope="col">재고 관리</th></tr></thead>
+              <tbody>
+                <tr><td>박스 S (25×20×10)</td><td>MATERIAL</td><td class="num">1</td><td class="num">380</td><td class="num">380</td><td><span class="chip c-ok">재고 차감</span></td></tr>
+                <tr><td>완충재(에어캡)</td><td>MATERIAL</td><td class="num">0.4m</td><td class="num">300/m</td><td class="num">120</td><td><span class="chip c-mute">단가 기준</span></td></tr>
+                <tr><td>박스 테이프</td><td>MATERIAL</td><td class="num">0.6m</td><td class="num">50/m</td><td class="num">30</td><td><span class="chip c-mute">단가 기준</span></td></tr>
+                <tr><td>안내카드</td><td>MATERIAL</td><td class="num">1</td><td class="num">50</td><td class="num">50</td><td><span class="chip c-ok">재고 차감</span></td></tr>
+                <tr class="total"><td colspan="4">출고 1건 합계</td><td class="num">580</td><td></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="ctx" style="margin: 0; padding: 12px 16px">부자재 원가는 매입 시 총입고원가(운임 포함)로 정하고, 출고 시 그 원가를 비용으로 옮깁니다. 출고에서 운임을 다시 더하지 않습니다.</p>
+        </section>
+
+        <aside style="flex: 2 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+          <section class="card" aria-labelledby="nd-h" style="padding: 16px; display: flex; flex-direction: column; gap: 10px">
+            <h2 id="nd-h" style="margin: 0; font-size: 16px">거점별 부자재 비용 출처</h2>
+            <p class="ctx" style="margin: 0">같은 박스 비용이 두 번 잡히지 않도록 거점 계약에 따라 한 곳에서만 집계합니다.</p>
+            <div style="border-top: 1px solid #EEF0F3; padding-top: 8px; font-size: 13px"><div style="font-weight: 600">자체 WMS · 화성</div><div class="ctx">포장 BOM 원가로 계산(출고당 580)</div></div>
+            <div style="border-top: 1px solid #EEF0F3; padding-top: 8px; font-size: 13px"><div style="font-weight: 600">파스토 · 용인</div><div class="ctx">포장작업비에 부자재 포함 계약 → 자체 부자재 비용 미적용</div></div>
+            <div style="border-top: 1px solid #EEF0F3; padding-top: 8px; font-size: 13px"><div style="font-weight: 600">품고 · 김포</div><div class="ctx">부자재 별도 청구 → 청구서 도착 전 BOM 원가로 예상, 도착 후 실제로 대체</div></div>
+          </section>
+          <section class="card" aria-labelledby="rc-h" style="padding: 16px; display: flex; flex-direction: column; gap: 8px">
+            <h2 id="rc-h" style="margin: 0; font-size: 16px">예상·실제 대사</h2>
+            <div style="display: flex; justify-content: space-between; font-size: 13px"><span>예상 배송비</span><span>3,000</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px"><span>청구 확정 배송비</span><span>3,200</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600"><span>손익 반영</span><span>3,200</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px; color: #8A4300"><span>대사 차이</span><span>200</span></div>
+            <p class="ctx" style="margin: 0">반품 시 이미 쓴 부자재는 환입되지 않습니다. 반품품을 다시 포장할 때 드는 부자재는 '재포장' 클레임비용으로 따로 잡습니다.</p>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>화면 상태 모음 — 커머스 운영 OS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F4F5F7}
+a{color:#2350C8}a:hover{color:#163A99}
+.nav a{display:flex;align-items:center;min-height:36px;padding:0 12px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.nav a:hover{background:#ECEEF2;color:#15191F}
+.nav a.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.navh{font-size:12px;font-weight:600;color:#59616C;padding:14px 12px 6px}
+.sub2 a{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-bottom:2px solid transparent;color:#59616C;text-decoration:none;font-size:14px;white-space:nowrap}
+.sub2 a.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+.sub a{display:block;padding:8px 10px;border-radius:6px;color:#2B3139;text-decoration:none;font-size:14px}
+.sub a.on{background:#15191F;color:#fff;font-weight:600}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:10px}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:#E5F3EA;color:#1D6A3A}.c-info{background:#EAF0FD;color:#1E4BB8}.c-warn{background:#FFF0DC;color:#8A4300}.c-err{background:#FDEBEB;color:#A11A1A}.c-mute{background:#ECEEF2;color:#3D444D}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 14px;border-radius:7px;border:1px solid #CDD2D9;background:#fff;color:#15191F;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none}
+.btn.pri{background:#2350C8;border-color:#2350C8;color:#fff}
+.btn.dan{border-color:#C93A3A;color:#A11A1A}
+.tab{min-height:36px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#59616C;cursor:pointer}
+.tab.on{border-bottom-color:#2350C8;color:#15191F;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-weight:600;color:#59616C;font-size:12px;padding:10px;border-bottom:1px solid #E3E6EA;background:#FAFBFC;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #EEF0F3;color:#15191F;vertical-align:top}
+tr.sel td{background:#F2F6FE}
+tr.tot td{font-weight:700;background:#FAFBFC}
+.ctx{font-size:12px;color:#59616C}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pos{color:#1D6A3A}.neg{color:#A11A1A}
+.inp{min-height:36px;border:1px solid #CDD2D9;border-radius:7px;padding:0 10px;font:inherit;font-size:14px;color:#15191F;background:#fff;box-sizing:border-box}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 0;border-bottom:1px solid #EEF0F3}
+.kpi{padding:12px;display:flex;flex-direction:column;gap:4px}
+.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:#E7EAEE;overflow:hidden}
+.bar span{display:block;height:100%;background:#2350C8}
+.note{border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6}
+.n-warn{background:#FFF6E8;color:#6B3500}.n-err{background:#FDEBEB;color:#7A1414}.n-info{background:#EEF3FD;color:#1A3A85}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#59616C}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.step{flex:1 1 110px;display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 12px;border-radius:8px;background:#F7F8FA}
+.step.on{background:#EAF0FD;color:#163A99;font-weight:600}
+.step.done{background:#E5F3EA;color:#1D6A3A}
+.dot{width:22px;height:22px;border-radius:50%;background:#2350C8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:0 0 22px}
+.tg{display:inline-block;width:34px;height:20px;border-radius:10px;background:#CDD2D9;position:relative;vertical-align:middle}
+.tg.on{background:#2350C8}
+.tg::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.tg.on::after{left:16px}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; font-family: 'IBM Plex Sans KR', system-ui, sans-serif; color: #15191F">
+  <nav class="nav" aria-label="주 메뉴" style="flex: 1 1 220px; max-width: 240px; background: #fff; border-right: 1px solid #E3E6EA; padding: 16px 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 12px"><div aria-hidden="true" style="width: 28px; height: 28px; border-radius: 7px; background: #15191F; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">C</div><div style="font-weight: 700; font-size: 15px">커머스 운영 OS</div></div>
+    <a class="on" href="Main.dc.html" aria-current="page">홈</a>
+    <a href="WorkQueue.dc.html">업무함 <span class="chip c-err" style="margin-left: auto; height: 20px">7</span></a>
+    <div class="navh">판매·주문</div>
+    <a href="Products.dc.html">상품</a>
+    <a href="Orders.dc.html">주문</a>
+    <a href="CsInbox.dc.html">CS</a>
+    <div class="navh">재고·물류</div>
+    <a href="Inventory.dc.html">재고</a>
+    <a href="Logistics.dc.html">물류·3PL</a>
+    <a href="Procurement.dc.html">발주·매입</a>
+    <div class="navh">재무</div>
+    <a href="Settlement.dc.html">정산</a>
+    <a href="CostLedger.dc.html">비용·원가</a>
+    <a href="ProfitSummary.dc.html">손익</a>
+    <div class="navh">분석</div>
+    <a href="Analytics.dc.html">분석</a>
+    <a href="Insights.dc.html">인사이트</a>
+    <div class="navh">관리</div>
+    <a href="Integrations.dc.html">연동 관리</a>
+    <a href="BusinessEntities.dc.html">설정</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E6EA">
+      <div style="display: flex; flex-direction: column"><span class="ctx">운영그룹</span><span style="font-weight: 600; font-size: 14px">데모 운영그룹</span></div>
+      <label class="ctx" style="display: flex; flex-direction: column; gap: 2px">사업자<select class="inp"><option>전체 사업자 (3)</option></select></label>
+      <button class="btn" type="button" aria-label="알림 5건">알림 5</button>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">김운영</span><span class="ctx">운영관리자</span></div>
+    </header>
+
+    <main style="padding: 24px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+        <div><h1 style="margin: 0; font-size: 24px">화면 상태 모음</h1><p style="margin: 4px 0 0; font-size: 14px; color: #59616C">모든 목록·상세 화면이 따르는 빈 화면 · 불러오는 중 · 오류 · 권한 없음 · 확인 대화상자 규칙입니다. · <span class="chip c-mute">공통 시안 · 예시 데이터</span></p></div>
+        
+      </div>
+      <div class="grid2">
+        <section class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0"><h2 style="margin: 0; font-size: 15px">빈 화면 — 데이터 없음</h2><p style="margin: 0; font-size: 14px">아직 등록된 공급처가 없습니다.</p><p class="ctx" style="margin: 0">공급처를 추가하면 발주를 만들 수 있습니다.</p><div><button class="btn pri" type="button">공급처 추가</button></div></section>
+        <section class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0"><h2 style="margin: 0; font-size: 15px">빈 화면 — 검색 결과 없음</h2><p style="margin: 0; font-size: 14px">'AMP-31'과 일치하는 SKU가 없습니다.</p><p class="ctx" style="margin: 0">필터 3개가 적용되어 있습니다.</p><div><button class="btn" type="button">필터 지우기</button></div></section>
+        <section class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0"><h2 style="margin: 0; font-size: 15px">불러오는 중</h2><div role="status" aria-live="polite" class="ctx">주문을 불러오는 중입니다…</div><div style="height: 12px; border-radius: 6px; background: #ECEEF2"></div><div style="height: 12px; border-radius: 6px; background: #ECEEF2"></div><div style="height: 12px; border-radius: 6px; background: #ECEEF2"></div><div style="height: 12px; border-radius: 6px; background: #ECEEF2"></div></section>
+        <section class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0"><h2 style="margin: 0; font-size: 15px">오류</h2><div class="note n-err" role="alert"><b>주문 목록을 불러오지 못했습니다.</b> 잠시 후 다시 시도해 주세요. 문제가 계속되면 오류번호 E-7F3A2를 알려 주세요.</div><div><button class="btn" type="button">다시 시도</button></div><p class="ctx" style="margin: 0">기술 상세는 화면에 보이지 않고 내부 로그에만 남습니다.</p></section>
+        <section class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0"><h2 style="margin: 0; font-size: 15px">권한 없음</h2><p style="margin: 0; font-size: 14px">이 화면을 볼 권한이 없습니다.</p><p class="ctx" style="margin: 0">필요한 권한: 원가 조회. 운영관리자에게 요청하세요.</p><div><button class="btn" type="button">권한 요청</button></div></section>
+        <section class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0"><h2 style="margin: 0; font-size: 15px">찾을 수 없음</h2><p style="margin: 0; font-size: 14px">요청한 주문을 찾을 수 없습니다.</p><p class="ctx" style="margin: 0">삭제됐거나 접근 범위 밖일 수 있습니다. (다른 운영그룹·제한된 사업자는 존재 여부도 알려 주지 않습니다.)</p></section>
+        <section class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0"><h2 style="margin: 0; font-size: 15px">확인 대화상자 — 영향도 미리보기</h2><div style="border: 1px solid #CDD2D9; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px"><b>판매상태 18개를 '판매중지'로 바꿀까요?</b><div class="row"><span>대상</span><span>쿠팡 · A 코스메틱 18개</span></div><div class="row"><span>채널 반영</span><span>비동기 · 지원 기능 확인 계정만</span></div><div class="row"><span>되돌리기</span><span>다시 '판매중'으로 일괄 변경</span></div><div style="display: flex; gap: 8px"><button class="btn pri" type="button">18개 변경</button><button class="btn" type="button">취소</button></div></div></section>
+        <section class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0"><h2 style="margin: 0; font-size: 15px">동시 수정 · 중복 제출</h2><div class="note n-warn">다른 사용자(한상품)가 먼저 이 상품을 수정했습니다. 최신 내용을 확인한 뒤 다시 저장해 주세요.</div><div><button class="btn" type="button">최신 내용 보기</button></div><p class="ctx" style="margin: 0">저장 버튼은 요청 중 비활성화되고, 같은 요청은 멱등키로 한 번만 처리됩니다.</p></section>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
