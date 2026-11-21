@@ -116,3 +116,17 @@
 - 자기참조 `BOM_SELF_REFERENCE`, 순환 `BOM_CYCLE`(`details.cycle` 경로). 순환은 모든 버전(초안 포함, 포장 제외)의 구성 관계로 판단하고 운영그룹 단위 잠금으로 동시 요청을 직렬화한다.
 - 게시본은 구성·대상·버전·시작 시각을 바꿀 수 없다(DB 트리거). 같은 대상·유형의 게시 버전 기간은 겹칠 수 없다(DB 배제 제약).
 - 가상묶음 판매가능 수량은 `BundleAvailability`(분할출고 불가: 거점별 MIN(floor(부품 가용÷소요량)) 합, 허용: 허용 거점 합계 기준)로 계산하며 M3 재고에서 값을 넣는다.
+
+# GWP 캠페인 (M2 C5)
+
+권한 `catalog.read`/`catalog.manage` + 행사 사업자 범위(READ/WRITE). 판정 엔진 `GwpEvaluator` 는 미리보기와 M4 주문 처리가 함께 쓴다.
+
+| 메서드·경로 | 비고 |
+|---|---|
+| `GET /gwp-campaigns?business_entity_id=&status=` | |
+| `POST /gwp-campaigns` | 초안. 주요 필드: `business_entity_id, name, starts_at, ends_at, channel_account_ids[](비우면 사업자 전체), min_order_amount, required_skus[{sku_id,min_quantity}], required_brand_id, condition_mode(ALL 기본/ANY), excluded_sku_ids[], rewards[{gift_sku_id,quantity}](순서 = 기본→대체), max_per_order, total_limit, priority, stack_group, stack_policy, out_of_stock_policy, return_policy, channel_overlap_policy(SKIP_INTERNAL 기본), channel_campaign_ref` |
+| `PUT /gwp-campaigns/{id}` | 초안만(`If-Match`). 운영 시작 후 → `GWP_NOT_DRAFT` |
+| `PATCH /gwp-campaigns/{id}` | `{status?, ends_at?, total_limit?}`. 상태 `DRAFT→ACTIVE/ENDED`, `ACTIVE↔PAUSED`, `→ENDED`. 운영 중 종료일 단축·선착순 감소 금지 |
+| `POST /gwp-campaigns/preview` | `{business_entity_id, channel_account_id, ordered_at?, lines[{sku_id,quantity,amount}], channel_gifts[{channel_campaign_ref?, gift_sku_id?}]}` → `{awards[], skipped[{reason}], hold_order}` |
+
+판정 순서: 상태·사업자·기간·대상 계정 → 조건(제외 SKU 금액 빼고) → 채널 사은품 중복(같은 행사 번호 또는 같은 사은품 SKU면 `CHANNEL_GIFT_DUPLICATE`, `ALLOW_BOTH` 일 때만 함께 지급) → 우선순위 높은 순으로 중복 그룹·정책(`STACK_GROUP`, `STACK_POLICY`) → 선착순(`LIMIT_EXHAUSTED`) → 사은품 재고(대체/보류/없이 진행). 같은 주문의 여러 캠페인이 같은 사은품 재고를 두 번 쓰지 않는다. 사은품은 운영 중인 재고관리 증정품·샘플·일반 SKU 만(`GWP_GIFT_INVALID`).

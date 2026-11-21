@@ -117,7 +117,7 @@ test.describe.serial("Foundation", () => {
     expect(noCsrf.status()).toBe(403);
   });
 
-  test("상품/MD: 상품·옵션·SKU 등록과 게시 조건(M2 C1)", async ({ page }) => {
+  test("상품/MD: 상품·SKU·사업자 정책·채널상품·BOM·GWP (M2 C1~C5)", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");
     await page.getByRole("link", { name: "브랜드·카테고리" }).click();
@@ -222,6 +222,39 @@ test.describe.serial("Foundation", () => {
     await page.getByRole("alertdialog").getByRole("button", { name: "게시" }).click();
     await expect(bomDrawer.getByText("게시했습니다.")).toBeVisible();
     await expect(bomDrawer.getByRole("button", { name: "종료" })).toBeVisible(); // 게시 상태에서만 보이는 동작
+    await bomDrawer.getByRole("button", { name: "닫기" }).click();
+
+    // C5: GWP 캠페인 → 진행 → 미리보기(T13: 채널이 같은 행사 사은품을 이미 주면 내부 지급 생략)
+    expect((await bff(page.request).post("/skus", { product_id: setProduct.data.product.id, sku_code: `GIFT-${RUN}`, sku_type: "GIFT" },
+      { "idempotency-key": `gift-${RUN}` })).status()).toBe(201);
+    const kst = (ms: number) => new Date(Date.now() + ms + 9 * 3600_000).toISOString().slice(0, 16);
+    await page.goto("/gwp");
+    await page.getByRole("button", { name: "캠페인 만들기" }).click();
+    const gf = page.getByRole("dialog", { name: "캠페인 만들기" });
+    await gf.getByLabel("캠페인 이름").fill(`겨울 파우치 ${RUN}`);
+    await gf.getByLabel("시작(한국 시간)").fill(kst(-3600_000));
+    await gf.getByLabel("종료(한국 시간)").fill(kst(7 * 86400_000));
+    await gf.getByLabel("사은품 추가").fill(`GIFT-${RUN}`);
+    await gf.getByRole("button", { name: new RegExp(`GIFT-${RUN}`) }).click();
+    await gf.getByLabel(/채널 행사 번호/).fill(`NAVER-${RUN}`);
+    await page.getByRole("button", { name: "초안 저장" }).click();
+    const cd = page.getByRole("dialog", { name: `겨울 파우치 ${RUN}` });
+    await cd.getByRole("button", { name: "진행 시작" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "확인" }).click();
+    await expect(cd.getByText("진행", { exact: true })).toBeVisible();
+    await cd.getByRole("button", { name: "닫기" }).click();
+
+    await page.getByRole("button", { name: "지급 미리보기" }).click();
+    const pv = page.getByRole("dialog", { name: "지급 미리보기" });
+    await pv.getByLabel("주문 상품 추가").fill(`AMP-30-${RUN}`);
+    await pv.getByRole("button", { name: new RegExp(`AMP-30-${RUN}`) }).click();
+    await pv.getByLabel(`AMP-30-${RUN} 결제금액`).fill("33000");
+    await page.getByRole("button", { name: "판정" }).click();
+    await expect(pv.getByRole("region", { name: "판정 결과" })).toContainText(`겨울 파우치 ${RUN}`);
+    await expect(pv.getByRole("region", { name: "판정 결과" })).toContainText("1개");
+    await pv.getByLabel(/행사 번호/).fill(`NAVER-${RUN}`);
+    await page.getByRole("button", { name: "판정" }).click();
+    await expect(pv.getByRole("region", { name: "판정 결과" })).toContainText("채널이 이미 같은 사은품을 지급");
   });
 
   test("관리자: 최저판매가 승인 → 반영(C2, 자기 요청 아님)", async ({ page }) => {
