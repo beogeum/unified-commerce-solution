@@ -86,7 +86,7 @@ public class MemberService {
         Set<UUID> roleIds = resolveRoles(a, req.roleCodes());
         Optional<UUID> existingUser = jdbc.sql("select id from user_account where email = :e").param("e", email).query(UUID.class).optional();
         UUID userId = existingUser.orElseGet(() -> {
-            PasswordPolicy.validate(req.initialPassword());
+            PasswordPolicy.validate(req.initialPassword(), req.email());
             UUID id = Ids.newId();
             jdbc.sql("insert into user_account (id, email, display_name, password_hash) values (:id, :e, :n, :h)")
                     .param("id", id).param("e", email).param("n", req.displayName().trim())

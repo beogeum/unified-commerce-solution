@@ -38,9 +38,14 @@ logging:
 
 commerce:
   auth:
+    # DLG-012: 절대 만료 12시간 + 비활동 만료 2시간
     session-ttl: PT12H
+    idle-timeout: PT2H
     max-failed-logins: 5
     lock-duration: PT15M
+    # DLG-014: 이 역할 보유자는 TOTP 2단계 인증 등록 필수. 미완료 세션은 10분 안에 인증해야 한다.
+    mfa-required-roles: SUPER_ADMIN,OPS_ADMIN
+    mfa-pending-ttl: PT10M
   idempotency:
     retention: PT24H
   jobs:

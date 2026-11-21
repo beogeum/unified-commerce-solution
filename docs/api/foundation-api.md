@@ -1,4 +1,4 @@
-# Foundation API 계약 (M1 F0~F6)
+# Foundation API 계약 (M1 F0~F6, F9 인증 강화)
 
 > docs/07 을 Foundation 범위에서 구체화한 계약이다. docs/07 에 없던 항목은 **[추가]** 로 표시했고 CHG-003 승인 대상이다.
 > 구현: `backend/src/main/java/com/commerceos/**/**Controller.java`. 검증: `backend/src/test/java/com/commerceos/foundation/*`.
@@ -7,7 +7,7 @@
 | 항목 | 규칙 |
 |---|---|
 | Base | `/api/v1` |
-| 인증 | `Authorization: Bearer <access_token>` ([추가] `POST /auth/sessions` 로 발급, 기본 12시간) |
+| 인증 | `Authorization: Bearer <access_token>` ([추가] `POST /auth/sessions` 로 발급). 절대 만료 12시간 + 비활동 만료 2시간(DLG-012). 응답의 `mfa_status`가 `NOT_REQUIRED`/`VERIFIED`가 아니면 2단계 인증 API·`GET /me`·로그아웃만 허용(DLG-014), 10분 안에 인증하지 않으면 세션 만료 |
 | JSON | snake_case. 시간은 ISO-8601 + `+09:00`(DB 는 UTC). 금액은 decimal 문자열 + 통화 + 세금 구분(`shared/money`) |
 | ID | 내부 UUIDv7. 외부 식별자는 별도 필드(`external_account_key`, `external_unit_key` 등) |
 | 목록 | `limit`(1~200, 기본 50) / `cursor`(불투명) → `page.next_cursor` |
@@ -24,18 +24,25 @@
 | HTTP | 코드(예) | 의미 |
 |---|---|---|
 | 401 | `UNAUTHENTICATED`, `LOGIN_FAILED`, `ACCOUNT_LOCKED` | 미인증·로그인 실패(존재 여부 비노출) |
-| 403 | `PERMISSION_DENIED`, `ACCESS_SCOPE_DENIED`, `WRITE_SCOPE_DENIED` | 권한·범위 |
+| 403 | `PERMISSION_DENIED`, `ACCESS_SCOPE_DENIED`, `WRITE_SCOPE_DENIED`, `MFA_ENROLLMENT_REQUIRED`, `MFA_VERIFICATION_REQUIRED` | 권한·범위·2단계 인증 미완료 |
 | 404 | `NOT_FOUND` | 없음, 다른 운영그룹, READ 범위 밖 객체 |
-| 409 | `VERSION_CONFLICT`, `*_DUPLICATE`, `LAST_SUPER_ADMIN`, `INVALID_STATE_TRANSITION`, `BUSINESS_ENTITY_HAS_ACTIVE_ACCOUNTS`, `EXTERNAL_KEY_IMMUTABLE` … | 충돌·상태 |
-| 422 | `VALIDATION_FAILED`, `IDEMPOTENCY_KEY_REQUIRED`, `IDEMPOTENCY_KEY_REUSED`, `PRIVILEGE_ESCALATION`, `CAPABILITY_NOT_AVAILABLE`, `CONNECTOR_NOT_AVAILABLE`, `JOB_TYPE_NOT_IMPLEMENTED` … | 검증·정책 |
+| 409 | `VERSION_CONFLICT`, `*_DUPLICATE`, `LAST_SUPER_ADMIN`, `MFA_ALREADY_ENROLLED`, `MFA_RESET_SHARED_USER`, `INVALID_STATE_TRANSITION`, `BUSINESS_ENTITY_HAS_ACTIVE_ACCOUNTS`, `EXTERNAL_KEY_IMMUTABLE` … | 충돌·상태 |
+| 422 | `VALIDATION_FAILED`, `IDEMPOTENCY_KEY_REQUIRED`, `IDEMPOTENCY_KEY_REUSED`, `PRIVILEGE_ESCALATION`, `CAPABILITY_NOT_AVAILABLE`, `CONNECTOR_NOT_AVAILABLE`, `JOB_TYPE_NOT_IMPLEMENTED`, `MFA_CODE_INVALID`, `MFA_NOT_ENROLLED`, `MFA_ENROLLMENT_NOT_STARTED`, `MFA_RESET_SELF`, `CURRENT_PASSWORD_MISMATCH` … | 검증·정책 |
 | 423 | (M5 월 마감에서 사용) | 마감 잠금 |
 | 428 | `IF_MATCH_REQUIRED` | 버전 누락 |
 
 ## 2. 엔드포인트
 | 영역 | 메서드·경로 | 권한 | 범위 | 비고 |
 |---|---|---|---|---|
-| 인증 [추가] | `POST /auth/sessions` | — | — | `{workspace_code, email, password}` |
+| 인증 [추가] | `POST /auth/sessions` | — | — | `{workspace_code, email, password}` → `{access_token, expires_at, mfa_status, …}` |
 | | `DELETE /auth/sessions/current` | 로그인 | — | 로그아웃 |
+| | `POST /auth/password` | 로그인(2단계 인증 완료) | — | `{current_password, new_password}` → 204. 비밀번호 정책 DLG-011, 현재 세션 외 이 사용자의 모든 세션 폐기 |
+| 2단계 인증 [추가] | `GET /auth/mfa` | 로그인 | — | `{mfa_status, enrolled, recovery_codes_remaining}` |
+| | `POST /auth/mfa/totp/enrollment` | 로그인 | — | 201 `{secret, otpauth_uri, period_seconds, digits}`(비밀키는 이때만 표시) |
+| | `POST /auth/mfa/totp/enrollment/confirm` | 로그인 | — | `{code}` → `{mfa_status, recovery_codes[10]}`(복구 코드는 이때만 표시) |
+| | `POST /auth/mfa/verify` | 로그인 | — | `{code}` 또는 `{recovery_code}`. 같은 30초 구간 코드 재사용 불가, 실패는 로그인 잠금 횟수에 포함 |
+| | `POST /auth/mfa/recovery-codes` | 로그인(인증 완료) | — | 복구 코드 재발급(기존 무효) |
+| | `POST /users/{userId}/mfa-reset` | `access.manage` | — | 기기 분실 시 관리자 초기화 → 대상 세션 전부 폐기. 본인·다른 운영그룹 소속 사용자는 불가 |
 | 내 정보 [추가] | `GET /me` | 로그인 | — | 역할·유효 권한·범위 요약(메뉴 노출용) |
 | 운영그룹 | `GET /workspaces/current` | 로그인 | — | 운영그룹 생성은 시스템 작업(API 없음) |
 | 사업자 | `GET /business-entities` | `business_entity.read` | READ | `status`, `q` |

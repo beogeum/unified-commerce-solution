@@ -12,7 +12,8 @@ public record CurrentActor(
         Set<String> permissions,
         Set<String> roleCodes,
         int accessPolicyVersion,
-        UUID sessionId) {
+        UUID sessionId,
+        String mfaStatus) {
 
     public boolean has(String permission) {
         return permissions.contains(permission);

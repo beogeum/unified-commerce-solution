@@ -33,7 +33,7 @@ public class AuthController {
     }
 
     public record LoginResponse(String accessToken, String tokenType, Instant expiresAt, UUID workspaceId, String workspaceCode,
-                                UUID memberId, UUID userId) {
+                                UUID memberId, UUID userId, String mfaStatus) {
     }
 
     @PostMapping
@@ -41,7 +41,7 @@ public class AuthController {
         SessionService.LoginResult r = sessions.login(req.workspaceCode(), req.email().trim(), req.password(),
                 http.getRemoteAddr(), http.getHeader("User-Agent"));
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.of(new LoginResponse(r.accessToken(), "Bearer",
-                r.expiresAt(), r.workspaceId(), r.workspaceCode(), r.memberId(), r.userId())));
+                r.expiresAt(), r.workspaceId(), r.workspaceCode(), r.memberId(), r.userId(), r.mfaStatus())));
     }
 
     @DeleteMapping("/current")

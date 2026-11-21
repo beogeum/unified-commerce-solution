@@ -61,7 +61,7 @@ public class WorkspaceProvisioningService {
 
         Optional<UUID> existing = jdbc.sql("select id from user_account where email = :e").param("e", ownerEmail).query(UUID.class).optional();
         UUID userId = existing.orElseGet(() -> {
-            PasswordPolicy.validate(ownerPassword);
+            PasswordPolicy.validate(ownerPassword, ownerEmail);
             UUID id = Ids.newId();
             jdbc.sql("insert into user_account (id, email, display_name, password_hash) values (:id, :e, :n, :h)")
                     .param("id", id).param("e", ownerEmail).param("n", ownerName).param("h", encoder.encode(ownerPassword)).update();

@@ -29,7 +29,7 @@ public class SecurityConfig {
                 .formLogin(f -> f.disable())
                 .logout(l -> l.disable())
                 .headers(h -> h.cacheControl(c -> { }))
-                .addFilterBefore(new BearerTokenFilter(sessions), AnonymousAuthenticationFilter.class)
+                .addFilterBefore(new BearerTokenFilter(sessions, mapper), AnonymousAuthenticationFilter.class)
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/sessions").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()

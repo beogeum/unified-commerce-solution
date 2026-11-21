@@ -13,6 +13,8 @@ commerce:
     hmac-key: dGVzdC1obWFjLWtleS1kby1ub3QtdXNlLWluLXByb2Q=
   auth:
     max-failed-logins: 3
+    # 기존 시나리오 테스트는 2단계 인증 없이 실행. 필수 역할 동작은 MfaTest 가 운영 기본값으로 따로 검증한다.
+    mfa-required-roles: ""
 logging:
   level:
     com.commerceos: INFO
