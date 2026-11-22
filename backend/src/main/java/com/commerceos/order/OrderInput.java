@@ -22,7 +22,7 @@ public record OrderInput(String externalOrderKey, String sourceType, String sale
 
     public record Item(String externalItemKey, String externalProductId, String externalOptionId, String productName, String optionName, Integer quantity,
                        Integer canceledQuantity, BigDecimal unitPrice, BigDecimal lineAmount, BigDecimal sellerDiscount, BigDecimal channelDiscount,
-                       String externalStatus) {
+                       String externalStatus, Boolean gift, String channelCampaignRef) {
     }
 
     /** 빈 구매자·수령인·상품 목록을 빈 값 객체로 채운다(이후 단계가 null 을 다루지 않게). */
@@ -43,7 +43,8 @@ public record OrderInput(String externalOrderKey, String sourceType, String sale
                 items.add(new Item(str(i.get("external_item_key")), str(i.get("external_product_id")), str(i.get("external_option_id")),
                         str(i.get("product_name")), str(i.get("option_name")), integer(i.get("quantity")), integer(i.get("canceled_quantity")),
                         money(i.get("unit_price")), money(i.get("line_amount")), money(i.get("seller_discount")), money(i.get("channel_discount")),
-                        str(i.get("external_status"))));
+                        str(i.get("external_status")), Boolean.TRUE.equals(i.get("gift")) || "true".equals(String.valueOf(i.get("gift"))),
+                        str(i.get("channel_campaign_ref"))));
             }
         }
         Map<String, Object> b = m.get("buyer") instanceof Map<?, ?> x ? (Map<String, Object>) x : Map.of();

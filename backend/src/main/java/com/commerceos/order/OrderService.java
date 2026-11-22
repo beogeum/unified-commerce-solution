@@ -62,7 +62,7 @@ public class OrderService {
                            String recipientNameMasked, Instant updatedAt) {
     }
 
-    public record ItemView(UUID id, int lineNo, String externalItemKey, String externalProductId, String externalOptionId, String productName, String optionName,
+    public record ItemView(UUID id, int lineNo, boolean isGift, String giftSource, UUID gwpCampaignId, String externalItemKey, String externalProductId, String externalOptionId, String productName, String optionName,
                            UUID listingId, UUID skuId, String skuCode, Integer skuQtyPerUnit, String mappingStatus, int originalQty, int canceledQty, int activeQty,
                            int shippedQty, int returnedQty, BigDecimal unitPrice, BigDecimal lineAmount, BigDecimal sellerDiscount, BigDecimal channelDiscount,
                            String taxType, String externalStatus) {
@@ -78,7 +78,12 @@ public class OrderService {
 
     public record OrderDetail(OrderRow order, Instant paidAt, String externalStatus, Instant externalUpdatedAt, BigDecimal itemsAmount, BigDecimal sellerDiscount,
                               BigDecimal channelDiscount, BigDecimal shippingFee, String buyerNameMasked, String recipientPhoneMasked, String addressMasked,
-                              String holdNote, List<ItemView> items, List<EventView> events, List<RawView> raws, int version) {
+                              String holdNote, List<ItemView> items, List<EventView> events, List<RawView> raws, String piiState, String compositionStatus,
+                              List<ComponentView> components, JsonNode gwpResult, int version) {
+    }
+
+    public record ComponentView(UUID orderItemId, UUID skuId, String skuCode, int quantityPerUnit, int requiredQuantity, String source, UUID bomId,
+                                Integer bomVersion, boolean splitShipmentAllowed) {
     }
 
     public record Import(UUID channelAccountId, List<Map<String, Object>> orders) {
@@ -139,7 +144,8 @@ public class OrderService {
         guard.checkRead("SALES_ORDER", id, (UUID) o.get("business_entity_id"), (UUID) o.get("channel_account_id"));
         OrderRow r = jdbc.sql(SELECT + " where o.id = :id").param("id", id).query((rs, i) -> row(rs)).single();
         List<ItemView> items = jdbc.sql("select i.*, s.sku_code from order_item i left join sku s on s.id = i.sku_id where i.order_id = :o order by i.line_no")
-                .param("o", id).query((rs, i) -> new ItemView(Db.uuid(rs, "id"), rs.getInt("line_no"), rs.getString("external_item_key"),
+                .param("o", id).query((rs, i) -> new ItemView(Db.uuid(rs, "id"), rs.getInt("line_no"), rs.getBoolean("is_gift"), rs.getString("gift_source"),
+                        Db.uuid(rs, "gwp_campaign_id"), rs.getString("external_item_key"),
                         rs.getString("external_product_id"), rs.getString("external_option_id"), rs.getString("product_name"), rs.getString("option_name"),
                         Db.uuid(rs, "listing_id"), Db.uuid(rs, "sku_id"), rs.getString("sku_code"), (Integer) rs.getObject("sku_qty_per_unit"),
                         rs.getString("mapping_status"), rs.getInt("original_qty"), rs.getInt("canceled_qty"), rs.getInt("original_qty") - rs.getInt("canceled_qty"),
@@ -158,12 +164,22 @@ public class OrderService {
         return new OrderDetail(r, ts(o.get("paid_at")), (String) o.get("external_status"), ts(o.get("external_updated_at")), (BigDecimal) o.get("items_amount"),
                 (BigDecimal) o.get("seller_discount"), (BigDecimal) o.get("channel_discount"), (BigDecimal) o.get("shipping_fee"), (String) o.get("buyer_name_masked"),
                 (String) o.get("recipient_phone_masked"), (String) o.get("address_masked"), (String) o.get("hold_note"), items, events, raws,
-                ((Number) o.get("version")).intValue());
+                (String) o.get("pii_state"), (String) o.get("composition_status"), components(id),
+                o.get("gwp_result") == null ? null : json.read(o.get("gwp_result").toString()), ((Number) o.get("version")).intValue());
+    }
+
+    private List<ComponentView> components(UUID orderId) {
+        return jdbc.sql("""
+                select c.*, s.sku_code, (i.original_qty - i.canceled_qty) * c.quantity_per_unit as required from order_item_component c
+                  join sku s on s.id = c.component_sku_id join order_item i on i.id = c.order_item_id where c.order_id = :o order by i.line_no, s.sku_code
+                """).param("o", orderId).query((rs, i) -> new ComponentView(Db.uuid(rs, "order_item_id"), Db.uuid(rs, "component_sku_id"), rs.getString("sku_code"),
+                rs.getInt("quantity_per_unit"), rs.getInt("required"), rs.getString("source"), Db.uuid(rs, "bom_id"), (Integer) rs.getObject("bom_version"),
+                rs.getBoolean("split_shipment_allowed"))).list();
     }
 
     /** 개인정보 원문 열람(pii.read). 사유 필수, 열람마다 감사로그. */
     @Transactional
-    public JsonNode revealPii(UUID id, String reason) {
+    public JsonNode revealPii(UUID id, String reason, String purpose) {
         guard.requirePermission(Perm.ORDER_READ);
         guard.requirePermission(Perm.PII_READ);
         CurrentActor a = guard.actor();
@@ -172,8 +188,22 @@ public class OrderService {
         if (reason == null || reason.isBlank() || reason.length() > 200) {
             throw Errors.validation("reason", "개인정보 열람 사유를 200자 이내로 입력하세요.");
         }
+        String state = (String) o.get("pii_state");
+        if ("PURGED".equals(state)) {
+            throw Errors.conflict("PII_PURGED", "보존기간이 지나 개인정보 원문을 파기한 주문입니다(거래 기록과 마스킹 값만 남아 있습니다).");
+        }
+        if ("ARCHIVED".equals(state)) {
+            // 분리보관: 법정 사유와 관리 권한(지정 담당자)으로만
+            if (!a.has(Perm.ACCESS_MANAGE)) {
+                throw Errors.permissionDenied(Perm.ACCESS_MANAGE);
+            }
+            if (!java.util.Set.of("DISPUTE", "LEGAL_REQUEST", "TAX_AUDIT").contains(String.valueOf(purpose))) {
+                throw Errors.unprocessable("PII_ARCHIVED", "운영 열람 기간이 지나 분리보관 중입니다. 분쟁 대응·수사기관 요청·세무 조사 중 하나의 목적으로만 열람할 수 있습니다.");
+            }
+        }
         audit.record(AuditEntry.builder(a.workspaceId(), "ORDER_PII_REVEALED", "SALES_ORDER", id).actor(ActorType.USER, a.memberId(), a.displayName())
-                .scope((UUID) o.get("business_entity_id"), (UUID) o.get("channel_account_id")).reason(reason.trim()).build());
+                .scope((UUID) o.get("business_entity_id"), (UUID) o.get("channel_account_id")).reason(reason.trim())
+                .metadata(Map.of("pii_state", state, "purpose", String.valueOf(purpose))).build());
         return json.read(cipher.decrypt((byte[]) o.get("pii_cipher"), (String) o.get("pii_key_id")));
     }
 

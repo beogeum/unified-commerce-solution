@@ -23,12 +23,14 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Component
 public class OrderRules {
-    static final Set<String> SYSTEM_REASONS = Set.of("UNMAPPED_ITEM", "AMOUNT_MISMATCH", "RECIPIENT_MISSING", "SKU_NOT_SELLABLE");
+    static final Set<String> SYSTEM_REASONS = Set.of("UNMAPPED_ITEM", "AMOUNT_MISMATCH", "RECIPIENT_MISSING", "SKU_NOT_SELLABLE", "GIFT_OUT_OF_STOCK", "BOM_MISSING");
     private final JdbcClient jdbc;
     private final WorkItemService workItems;
     private final Json json;
+    private final OrderComposer composer;
 
-    public OrderRules(JdbcClient jdbc, WorkItemService workItems, Json json) {
+    public OrderRules(JdbcClient jdbc, WorkItemService workItems, Json json, OrderComposer composer) {
+        this.composer = composer;
         this.jdbc = jdbc;
         this.workItems = workItems;
         this.json = json;
@@ -110,7 +112,9 @@ public class OrderRules {
             if ("UNMAPPED".equals(i.get("mapping_status"))) {
                 reasons.add("UNMAPPED_ITEM");
                 causes.add(i.get("line_no") + "번 상품(" + i.get("product_name") + ")이 SKU 에 연결되지 않았습니다.");
-            } else if (!Boolean.TRUE.equals(i.get("sellable")) || !"ACTIVE".equals(i.get("sku_status")) || Boolean.FALSE.equals(i.get("sell_enabled"))) {
+            } else if (!Boolean.TRUE.equals(i.get("is_gift"))
+                    && (!Boolean.TRUE.equals(i.get("sellable")) || !"ACTIVE".equals(i.get("sku_status")) || Boolean.FALSE.equals(i.get("sell_enabled")))) {
+                // 사은품 줄은 판매용 SKU 가 아니어도 된다(무상 증정)
                 reasons.add("SKU_NOT_SELLABLE");
                 causes.add(i.get("line_no") + "번 상품의 SKU 가 판매 불가 상태이거나 사업자 판매 설정이 꺼져 있습니다.");
             }
@@ -133,6 +137,17 @@ public class OrderRules {
             reasons.add("RECIPIENT_MISSING");
             causes.add("수령인 이름·연락처·주소가 빠져 있습니다.");
         }
+        // O3: 문제가 없고 결제된 주문은 사은품 지급·구성 확정(한 번만)
+        if (reasons.isEmpty() && anyActive && o.get("paid_at") != null && "PENDING".equals(o.get("composition_status"))) {
+            OrderComposer.Outcome out = composer.compose(ws, orderId, actor, this);
+            if (out == OrderComposer.Outcome.GIFT_HOLD) {
+                reasons.add("GIFT_OUT_OF_STOCK");
+                causes.add("사은품 재고가 없어 행사 설정(주문 보류)에 따라 보류했습니다. 사은품이 입고되면 다시 연결·검증하세요.");
+            } else if (out == OrderComposer.Outcome.BOM_MISSING) {
+                reasons.add("BOM_MISSING");
+                causes.add("가상묶음 SKU 에 주문 시각에 유효한 판매묶음 BOM 이 없습니다. BOM 을 게시한 뒤 다시 연결·검증하세요.");
+            }
+        }
         String[] prev = textArray(o.get("hold_reasons"));
         Set<String> next = new LinkedHashSet<>(reasons);
         for (String r : prev) {
@@ -148,7 +163,8 @@ public class OrderRules {
             newStatus = "CONFIRMED";
         }
         jdbc.sql("""
-                update sales_order set hold_reasons = cast(:r as text[]), on_hold = :h, status = :st, version = version + 1, updated_at = now() where id = :id
+                update sales_order set hold_reasons = cast(:r as text[]), on_hold = :h, status = :st, version = version + 1, updated_at = now(),
+                       closed_at = case when :st in ('CANCELLED', 'COMPLETED') then coalesce(closed_at, now()) else closed_at end where id = :id
                 """).param("r", next.toArray(new String[0])).param("h", !next.isEmpty()).param("st", newStatus).param("id", orderId).update();
         Set<String> before = Set.of(prev);
         if (!before.equals(next)) {

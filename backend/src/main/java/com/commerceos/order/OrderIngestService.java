@@ -212,12 +212,15 @@ public class OrderIngestService {
         String itemKey = i.externalItemKey() == null ? String.valueOf(line) : i.externalItemKey();
         jdbc.sql("""
                 insert into order_item (id, workspace_id, order_id, line_no, external_item_key, external_product_id, external_option_id, product_name, option_name,
-                    mapping_status, original_qty, canceled_qty, unit_price, line_amount, seller_discount, channel_discount, external_status)
-                values (:id, :ws, :o, :line, :k, :p, :opt, :name, cast(:on as text), 'UNMAPPED', :q, :c, :up, :la, :sd, :cd, cast(:es as text))
+                    mapping_status, original_qty, canceled_qty, unit_price, line_amount, seller_discount, channel_discount, external_status, is_gift, gift_source,
+                    channel_campaign_ref)
+                values (:id, :ws, :o, :line, :k, :p, :opt, :name, cast(:on as text), 'UNMAPPED', :q, :c, :up, :la, :sd, :cd, cast(:es as text), :gift,
+                        cast(:gs as text), cast(:ref as text))
                 """).param("id", Ids.newId()).param("ws", ws).param("o", orderId).param("line", line).param("k", itemKey).param("p", i.externalProductId())
                 .param("opt", i.externalOptionId() == null ? "" : i.externalOptionId()).param("name", i.productName() == null ? i.externalProductId() : i.productName())
                 .param("on", i.optionName()).param("q", i.quantity()).param("c", i.canceledQuantity() == null ? 0 : i.canceledQuantity()).param("up", i.unitPrice())
-                .param("la", i.lineAmount()).param("sd", nz(i.sellerDiscount())).param("cd", nz(i.channelDiscount())).param("es", i.externalStatus()).update();
+                .param("la", i.lineAmount()).param("sd", nz(i.sellerDiscount())).param("cd", nz(i.channelDiscount())).param("es", i.externalStatus())
+                .param("gift", Boolean.TRUE.equals(i.gift())).param("gs", Boolean.TRUE.equals(i.gift()) ? "CHANNEL" : null).param("ref", i.channelCampaignRef()).update();
     }
 
     // ---------------------------------------------------------------- 갱신
@@ -261,7 +264,8 @@ public class OrderIngestService {
             Map<String, Object> e = items.get(itemKey);
             if (e == null) {
                 insertItem(ws, orderId, line++, new OrderInput.Item(itemKey, i.externalProductId(), i.externalOptionId(), i.productName(), i.optionName(),
-                        i.quantity(), i.canceledQuantity(), i.unitPrice(), i.lineAmount(), i.sellerDiscount(), i.channelDiscount(), i.externalStatus()));
+                        i.quantity(), i.canceledQuantity(), i.unitPrice(), i.lineAmount(), i.sellerDiscount(), i.channelDiscount(), i.externalStatus(), i.gift(),
+                        i.channelCampaignRef()));
                 event(ws, orderId, null, "ITEM_ADDED", null, itemKey, Map.of(), rawId, in);
                 changes.add("상품 추가");
                 continue;

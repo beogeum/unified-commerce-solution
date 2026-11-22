@@ -234,6 +234,19 @@ public class GwpService {
         return GwpEvaluator.evaluate(new GwpEvaluator.Order(p.businessEntityId(), p.channelAccountId(), at, lines, gifts), campaigns, null);
     }
 
+    /**
+     * 주문 처리(M4 O3, 시스템 문맥)용: 사업자의 진행 중·일시중지 캠페인을 판정 엔진 형식으로. 선착순 잔여는 호출자가 지급 기록으로 계산해 넘긴다.
+     */
+    public List<GwpEvaluator.Campaign> engineCampaigns(UUID ws, UUID businessEntityId, Map<UUID, Integer> awardedSoFar) {
+        return jdbc.sql(SELECT + " where g.workspace_id = :ws and g.business_entity_id = :be and g.status in ('ACTIVE', 'PAUSED')")
+                .param("ws", ws).param("be", businessEntityId).query(this::map).list().stream().map(this::withParts).map(GwpService::toEngine)
+                .map(c -> c.remainingLimit() == null ? c : new GwpEvaluator.Campaign(c.id(), c.name(), c.businessEntityId(), c.channelAccountIds(), c.startsAt(),
+                        c.endsAt(), c.status(), c.priority(), c.stackGroup(), c.stackPolicy(), c.minOrderAmount(), c.requiredBrandId(), c.conditionMode(),
+                        c.requiredSkus(), c.excludedSkus(), c.rewards(), c.maxPerOrder(), Math.max(0, c.remainingLimit() - awardedSoFar.getOrDefault(c.id(), 0)),
+                        c.outOfStockPolicy(), c.channelOverlapPolicy(), c.channelCampaignRef()))
+                .toList();
+    }
+
     static GwpEvaluator.Campaign toEngine(CampaignView c) {
         Map<UUID, Integer> required = new LinkedHashMap<>();
         c.requiredSkus().forEach(r -> required.put(r.skuId(), r.quantity()));

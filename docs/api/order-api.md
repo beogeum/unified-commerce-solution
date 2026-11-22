@@ -1,4 +1,4 @@
-# 주문 API (M4 O1~O2)
+# 주문 API (M4 O1~O3)
 
 공통 규칙(인증·오류 형식·If-Match·멱등키)은 `foundation-api.md` §1 과 같다. 주문은 **같은 운영그룹이면 기본 조회 허용**, 사용자별 사업자·판매계정 제한은 서버에서 거부(범위 밖 단건 404, 범위 밖 필터 403). 다른 운영그룹은 절대 노출하지 않는다(RLS).
 
@@ -30,3 +30,16 @@
 | `POST /integrations/{connectionId}/sync-jobs {job_type: "ORDER_FETCH"}` | `integration.sync` + 지원 기능 `ORDER/READ` | 구간 = 마지막 워터마크 − 30분 ~ 지금(첫 실행 3일), 쪽 커서, 주문마다 별도 트랜잭션, 워터마크 `integration_sync_state` |
 
 표준 주문(JSON, snake_case): `external_order_key, source_type?, sales_unit_key?(기본 DEFAULT), ordered_at, paid_at?, external_status?, external_updated_at?, shipping_fee?, total_amount, buyer{name, phone, email}, recipient{name, phone, postal_code, address1, address2, memo}, items[{external_item_key?, external_product_id, external_option_id?, product_name, option_name?, quantity, canceled_quantity?, unit_price, line_amount, seller_discount?, channel_discount?, external_status?}]`. 금액은 부가세 포함 원 단위.
+
+## 4. 출고 구성 확정·사은품 (O3, DLG-121~122)
+- 결제 확인 + 시스템 보류 없음 → 사은품 판정·지급(0원 주문상품, `gift_source = INTERNAL`) → 출고 구성 확정(`composition_status = FIXED`). 상세 응답 `components[]`(재고 SKU·필요 수량·근거 DIRECT/BOM/GIFT·BOM 버전), `gwp_result`(지급·미지급 사유).
+- 보류 사유 추가: `GIFT_OUT_OF_STOCK`(행사 정책 '주문 보류' + 사은품 재고 없음), `BOM_MISSING`(가상묶음에 유효한 판매묶음 BOM 없음).
+- 표준 주문 상품 필드 추가: `gift`(채널 사은품 여부), `channel_campaign_ref`(채널 행사 번호).
+
+## 5. 개인정보 보관 (DLG-120)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `GET /orders/privacy-policies/{businessEntityId}` | `order.read` | `{active_days(기본 90), retention_years(기본 5), configured}` |
+| `PUT /orders/privacy-policies/{businessEntityId}` | `access.manage` | `If-Match`(설정 후). 30~3650일, 1~10년 |
+- 상세 `pii_state`: `ACTIVE` → (주문 종료 + 운영 열람 기간) `ARCHIVED` → (주문 시각 + 보존기간) `PURGED`.
+- `POST /orders/{id}/pii`: `ARCHIVED` 는 `access.manage` + `purpose`(DISPUTE·LEGAL_REQUEST·TAX_AUDIT) 필수(`PII_ARCHIVED`), `PURGED` 는 `409 PII_PURGED`.

@@ -6,7 +6,7 @@ import { ConfirmModal, Drawer } from "@/components/Overlay";
 import { Empty, ErrorState, Forbidden, Loading } from "@/components/States";
 import { api, ApiError, qs } from "@/lib/api";
 import { formatDateTime, formatWon } from "@/lib/format";
-import { EVENT_KO, HOLD_KO, ORDER_STATUS, OrderDetail, OrderRow, PAYMENT_KO, RAW_RESULT_KO, SOURCE_TYPE_KO } from "@/lib/orders";
+import { EVENT_KO, GWP_SKIP_KO, HOLD_KO, ORDER_STATUS, OrderDetail, OrderRow, PAYMENT_KO, PII_STATE_KO, RAW_RESULT_KO, SOURCE_TYPE_KO } from "@/lib/orders";
 import { useSession } from "@/lib/session";
 
 export default function OrdersPage() {
@@ -82,7 +82,8 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
   const [revealing, setRevealing] = useState(false);
   const [reason, setReason] = useState("");
   const [pii, setPii] = useState<{ buyer: Record<string, string | null>; recipient: Record<string, string | null> } | null>(null);
-  const [tab, setTab] = useState<"items" | "events" | "raws">("items");
+  const [tab, setTab] = useState<"items" | "components" | "events" | "raws">("items");
+  const [purpose, setPurpose] = useState("DISPUTE");
   const load = () => api<OrderDetail>(`/orders/${id}`).then((r) => setD(r.data)).catch((e) => setLoadErr(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "불러오지 못했습니다.")));
   useEffect(() => { load(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   const run = async (path: string, body: unknown, ifMatch?: number) => {
@@ -98,7 +99,7 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
   const reveal = async () => {
     setErr(null);
     try {
-      const r = await api<{ buyer: Record<string, string | null>; recipient: Record<string, string | null> }>(`/orders/${id}/pii`, { method: "POST", body: { reason } });
+      const r = await api<{ buyer: Record<string, string | null>; recipient: Record<string, string | null> }>(`/orders/${id}/pii`, { method: "POST", body: { reason, purpose: d?.pii_state === "ARCHIVED" ? purpose : undefined } });
       setPii(r.data);
     } catch (x) {
       setErr(x instanceof ApiError ? x.message : "열람하지 못했습니다.");
@@ -124,17 +125,26 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
       <div className="kv"><span>금액</span><span>상품 {formatWon(d.items_amount)} − 할인 {formatWon(String(Number(d.seller_discount) + Number(d.channel_discount)))} + 배송비 {formatWon(d.shipping_fee)} = <b>{formatWon(o.total_amount)}원</b></span></div>
       <div className="kv"><span>수령인</span><span>{pii ? `${pii.recipient.name ?? ""} · ${pii.recipient.phone ?? ""} · (${pii.recipient.postal_code ?? ""}) ${pii.recipient.address1 ?? ""} ${pii.recipient.address2 ?? ""}`
         : `${o.recipient_name_masked ?? "—"} · ${d.recipient_phone_masked ?? "—"} · ${d.address_masked ?? "—"}`}
-        {!pii && can("pii.read") && <> <button className="btn" type="button" onClick={() => setRevealing(true)}>원문 보기</button></>}</span></div>
+        {!pii && can("pii.read") && d.pii_state !== "PURGED" && <> <button className="btn" type="button" onClick={() => setRevealing(true)}>원문 보기</button></>}
+        <span className="ctx"> · {PII_STATE_KO[d.pii_state]}</span></span></div>
+      <div className="kv"><span>출고 구성</span><span>{d.composition_status === "FIXED" ? "확정(묶음 BOM 버전 고정)" : "확정 전"}
+        {d.gwp_result && d.gwp_result.skipped.length > 0 && <span className="ctx"> · 미지급 행사: {d.gwp_result.skipped.map((x) => `${x.campaign_name}(${GWP_SKIP_KO[x.reason] ?? x.reason})`).join(", ")}</span>}</span></div>
       <nav className="row-gap" aria-label="주문 상세">
-        {([["items", "주문상품"], ["events", "변경 이력"], ["raws", "원본 수집 이력"]] as const).map(([k, l]) =>
+        {([["items", "주문상품"], ["components", "출고 구성"], ["events", "변경 이력"], ["raws", "원본 수집 이력"]] as const).map(([k, l]) =>
           <button key={k} className="btn" type="button" aria-current={tab === k ? "page" : undefined} onClick={() => setTab(k)}>{l}</button>)}
       </nav>
       {tab === "items" && <DataTable caption="주문상품" rows={d.items} rowKey={(i) => i.id} empty={<Empty title="주문상품이 없습니다." />} columns={[
-        { key: "n", header: "상품", render: (i) => <>{i.product_name}{i.option_name && <span className="ctx"> · {i.option_name}</span>}<div className="ctx mono">{i.external_product_id}{i.external_option_id ? `/${i.external_option_id}` : ""} · {i.external_item_key}</div></> },
+        { key: "n", header: "상품", render: (i) => <>{i.is_gift && <Chip kind="info">{i.gift_source === "INTERNAL" ? "사은품(자체 행사)" : "사은품(채널)"}</Chip>} {i.product_name}{i.option_name && <span className="ctx"> · {i.option_name}</span>}<div className="ctx mono">{i.external_product_id}{i.external_option_id ? `/${i.external_option_id}` : ""} · {i.external_item_key}</div></> },
         { key: "sku", header: "SKU", render: (i) => i.mapping_status === "MAPPED" ? <span className="mono">{i.sku_code}{i.sku_qty_per_unit && i.sku_qty_per_unit > 1 ? ` ×${i.sku_qty_per_unit}` : ""}</span> : <Chip kind="err">미연결</Chip> },
         { key: "q", header: "수량(주문/취소/출고/반품)", num: true, render: (i) => `${i.original_qty} / ${i.canceled_qty} / ${i.shipped_qty} / ${i.returned_qty}` },
         { key: "a", header: "금액", num: true, render: (i) => `${formatWon(i.line_amount)}원` },
         { key: "d", header: "할인(판매자/채널)", num: true, render: (i) => `${formatWon(i.seller_discount)} / ${formatWon(i.channel_discount)}` },
+      ]} />}
+      {tab === "components" && <DataTable caption="출고 구성" rows={d.components} rowKey={(c) => `${c.order_item_id}:${c.sku_id}`}
+        empty={<Empty title="확정된 출고 구성이 없습니다." hint="보류가 풀리고 결제가 확인되면 사은품 지급과 함께 확정됩니다." />} columns={[
+        { key: "s", header: "재고 SKU", render: (c) => <span className="mono">{c.sku_code}</span> },
+        { key: "q", header: "필요 수량", num: true, render: (c) => `${c.required_quantity} (단위당 ${c.quantity_per_unit})` },
+        { key: "src", header: "근거", render: (c) => c.source === "BOM" ? `묶음 BOM v${c.bom_version}${c.split_shipment_allowed ? " · 분할 출고 허용" : ""}` : c.source === "GIFT" ? "사은품" : "직접" },
       ]} />}
       {tab === "events" && <DataTable caption="변경 이력" rows={d.events} rowKey={(e) => e.id} empty={<Empty title="이력이 없습니다." />} columns={[
         { key: "t", header: "시각", render: (e) => <span className="ctx">{formatDateTime(e.occurred_at)}</span> },
@@ -156,6 +166,8 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
       {revealing && <ConfirmModal title="개인정보 원문 보기" confirmLabel="열람" onClose={() => setRevealing(false)} confirmDisabled={!reason.trim()}
         impact={[["대상", `${o.order_no} 구매자·수령인`], ["기록", "열람자·사유·시각이 감사로그에 남습니다"]]}
         onConfirm={() => { setRevealing(false); reveal(); }}>
+        {d.pii_state === "ARCHIVED" && <label className="fld">법정 열람 목적<select className="inp" value={purpose} onChange={(e) => setPurpose(e.target.value)}>
+          <option value="DISPUTE">분쟁 대응</option><option value="LEGAL_REQUEST">수사기관 등 법령에 따른 요청</option><option value="TAX_AUDIT">세무 조사</option></select></label>}
         <label className="fld">열람 사유(필수)<input className="inp" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={200} placeholder="예: 배송지 확인 문의 CS-11" /></label>
       </ConfirmModal>}
     </Drawer>

@@ -29,8 +29,10 @@ public class OrderController {
     private final OrderService orders;
     private final IdempotencyService idempotency;
     private final AccessGuard guard;
+    private final OrderPrivacyService privacy;
 
-    public OrderController(OrderService orders, IdempotencyService idempotency, AccessGuard guard) {
+    public OrderController(OrderService orders, IdempotencyService idempotency, AccessGuard guard, OrderPrivacyService privacy) {
+        this.privacy = privacy;
         this.orders = orders;
         this.idempotency = idempotency;
         this.guard = guard;
@@ -39,7 +41,7 @@ public class OrderController {
     public record Note(String note) {
     }
 
-    public record Reason(String reason) {
+    public record Reason(String reason, String purpose) {
     }
 
     @GetMapping
@@ -62,7 +64,7 @@ public class OrderController {
 
     @PostMapping("/{id}/pii")
     public ApiResponse<JsonNode> pii(@PathVariable UUID id, @RequestBody Reason req) {
-        return ApiResponse.of(orders.revealPii(id, req.reason()));
+        return ApiResponse.of(orders.revealPii(id, req.reason(), req.purpose()));
     }
 
     @PostMapping("/{id}/hold")
@@ -82,6 +84,20 @@ public class OrderController {
     @PostMapping("/{id}/revalidate")
     public ApiResponse<OrderService.OrderDetail> revalidate(@PathVariable UUID id) {
         return ApiResponse.of(orders.revalidate(id));
+    }
+
+    @GetMapping("/privacy-policies/{businessEntityId}")
+    public ResponseEntity<ApiResponse<OrderPrivacyService.PolicyView>> privacyPolicy(@PathVariable UUID businessEntityId) {
+        var v = privacy.policy(businessEntityId);
+        return ResponseEntity.ok().eTag(IfMatch.etag(v.version())).body(ApiResponse.of(v));
+    }
+
+    @org.springframework.web.bind.annotation.PutMapping("/privacy-policies/{businessEntityId}")
+    public ResponseEntity<ApiResponse<OrderPrivacyService.PolicyView>> putPrivacyPolicy(@PathVariable UUID businessEntityId,
+                                                                                       @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+                                                                                       @RequestBody OrderPrivacyService.PolicyPut req) {
+        var v = privacy.putPolicy(businessEntityId, ifMatch == null ? null : IfMatch.parse(ifMatch), req);
+        return ResponseEntity.ok().eTag(IfMatch.etag(v.version())).body(ApiResponse.of(v));
     }
 
     @PostMapping("/imports")
