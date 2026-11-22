@@ -14,7 +14,7 @@ public final class SystemRoles {
 
     private static final List<String> BASE_READ = List.of(
             "business_entity.read", "channel_account.read", "logistics_account.read", "order.read",
-            "work_item.read", "integration.read", "catalog.read");
+            "work_item.read", "integration.read", "catalog.read", "inventory.read");
 
     public record Template(String code, String nameKo, Set<String> permissions) {
     }
@@ -27,15 +27,15 @@ public final class SystemRoles {
         t.put(SUPER_ADMIN, new Template(SUPER_ADMIN, "최고관리자", new TreeSet<>(allPermissions)));
         t.put("OPS_ADMIN", tpl("OPS_ADMIN", "운영관리자", "member.read", "business_entity.manage", "channel_account.manage",
                 "logistics_account.manage", "integration.manage", "integration.sync", "work_item.update", "audit.read",
-                "export.create", "file.upload", "file.read", "order.update", "catalog.manage", "approval.decide"));
+                "export.create", "file.upload", "file.read", "order.update", "catalog.manage", "approval.decide", "inventory.operate"));
         t.put("MD", tpl("MD", "상품/MD", "export.create", "file.upload", "file.read", "cost.read", "catalog.manage"));
         t.put("ORDER_MANAGER", tpl("ORDER_MANAGER", "주문담당", "order.update", "work_item.update", "file.upload", "file.read",
                 "export.create", "pii.read"));
         t.put("CS_AGENT", tpl("CS_AGENT", "CS담당", "order.update", "work_item.update", "pii.read"));
-        t.put("LOGISTICS_MANAGER", tpl("LOGISTICS_MANAGER", "물류관리자", "inventory.adjust", "logistics_account.manage",
+        t.put("LOGISTICS_MANAGER", tpl("LOGISTICS_MANAGER", "물류관리자", "inventory.adjust", "inventory.operate", "logistics_account.manage",
                 "work_item.update", "file.upload", "file.read", "export.create", "integration.sync"));
         t.put("WAREHOUSE_WORKER", new Template("WAREHOUSE_WORKER", "창고작업자",
-                new TreeSet<>(Set.of("business_entity.read", "logistics_account.read", "order.read", "work_item.read", "catalog.read"))));
+                new TreeSet<>(Set.of("business_entity.read", "logistics_account.read", "order.read", "work_item.read", "catalog.read", "inventory.read", "inventory.operate"))));
         t.put("FINANCE", tpl("FINANCE", "정산/재무", "bank_account.read", "bank_account.manage", "settlement.read", "cost.read",
                 "profit.read", "period.close", "export.create", "file.upload", "file.read", "audit.read", "cost.manage"));
         t.put("ANALYST", tpl("ANALYST", "분석읽기전용", "cost.read", "profit.read", "settlement.read", "export.create"));

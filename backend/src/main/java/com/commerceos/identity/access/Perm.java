@@ -30,6 +30,8 @@ public final class Perm {
     public static final String COST_READ = "cost.read";
     public static final String COST_MANAGE = "cost.manage";
     public static final String APPROVAL_DECIDE = "approval.decide";
+    public static final String INVENTORY_READ = "inventory.read";
+    public static final String INVENTORY_OPERATE = "inventory.operate";
 
     private Perm() {
     }

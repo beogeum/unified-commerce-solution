@@ -7,7 +7,7 @@ type Item = { href?: string; label: string; perm?: string; soon?: string };
 const MENU: { head?: string; items: Item[] }[] = [
   { items: [{ href: "/", label: "홈" }, { href: "/work-queue", label: "업무함", perm: "work_item.read" }] },
   { head: "판매·주문", items: [{ href: "/products", label: "상품", perm: "catalog.read" }, { label: "주문", soon: "M4" }, { label: "CS", soon: "M4" }] },
-  { head: "재고·물류", items: [{ label: "재고", soon: "M3" }, { label: "물류·3PL", soon: "M3" }, { label: "발주·매입", soon: "M3" }] },
+  { head: "재고·물류", items: [{ href: "/inventory", label: "재고", perm: "inventory.read" }, { href: "/logistics/nodes", label: "물류·3PL", perm: "logistics_account.read" }, { label: "발주·매입", soon: "M3" }] },
   { head: "재무", items: [{ label: "정산", soon: "M5" }, { label: "비용·원가", soon: "M5" }, { label: "손익", soon: "M5" }] },
   { head: "관리", items: [
     { href: "/approvals", label: "승인" },

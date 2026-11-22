@@ -183,7 +183,7 @@ test.describe.serial("Foundation", () => {
     await expect(card).toContainText("33,000원");
     await expect(card).toContainText("공급가 30,000");
     await expect(card).toContainText("29,700원 승인 대기");
-    await drawer.getByRole("button", { name: "닫기" }).click();
+    await drawer.getByRole("button", { name: "닫기", exact: true }).click();
 
     // C3: 채널상품 등록 → 외부 SKU 코드로 제안 → 연결 → 미연결 목록에서 사라짐
     await page.goto("/channel-listings");
@@ -288,6 +288,72 @@ test.describe.serial("Foundation", () => {
     const skus = await (await bff(page.request).get(`/skus?q=AMP-30-${RUN}`)).json();
     const policy = await (await bff(page.request).get(`/business-entities/${ids.a}/sku-policies/${skus.data[0].id}`)).json();
     expect(policy.data.min_price).toBe("29700");
+  });
+
+  test("관리자: 출고거점 → 입고 → 예약·할당·피킹·출고 확정 → 원장·검증 (M3 I1~I3, T06)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+
+    await page.getByRole("link", { name: "물류·3PL" }).click();
+    await page.getByRole("button", { name: "거점 추가" }).click();
+    const nd = page.getByRole("dialog", { name: "출고거점 추가" });
+    await nd.getByLabel("거점 코드").fill(`SELF-${RUN}`.toUpperCase());
+    await nd.getByLabel("거점 이름").fill(`화성 자체창고 ${RUN}`);
+    await nd.getByLabel("출고 마감 시각").fill("16:00");
+    await page.getByRole("button", { name: "저장" }).click();
+    const drawer = page.getByRole("dialog", { name: `화성 자체창고 ${RUN}` });
+    await expect(drawer).toContainText("내부 원장");
+    await drawer.getByRole("button", { name: "닫기", exact: true }).click();
+    await expect(page.getByRole("row", { name: new RegExp(`화성 자체창고 ${RUN}`) })).toContainText("16:00");
+
+    await page.getByRole("link", { name: "재고", exact: true }).click();
+    await page.getByRole("button", { name: "입고 등록" }).click();
+    const rd = page.getByRole("dialog", { name: "입고 등록" });
+    await rd.getByLabel("소유 사업자").selectOption({ label: NAMES.a });
+    await rd.getByLabel("입고 거점").selectOption({ label: `화성 자체창고 ${RUN} (${`SELF-${RUN}`.toUpperCase()})` });
+    await rd.getByLabel("SKU", { exact: true }).fill(`AMP-30-${RUN}`);
+    await rd.getByRole("button", { name: new RegExp(`AMP-30-${RUN}`) }).click();
+    await rd.getByLabel("수량").fill("5");
+    await rd.getByLabel("참조 유형").fill("PO");
+    await rd.getByLabel("참조 번호").fill(`PO-${RUN}`);
+    await page.getByRole("button", { name: "입고 기록" }).click();
+    const posRow = page.getByRole("row", { name: new RegExp(`AMP-30-${RUN}`) });
+    await expect(posRow).toContainText("5");
+
+    // 주문 수집(M4) 전이므로 확보는 API 로 만들고, 단계 전환은 화면에서 한다
+    const skus = await (await bff(page.request).get(`/skus?q=AMP-30-${RUN}`)).json();
+    const nodes = await (await bff(page.request).get("/fulfillment-nodes")).json();
+    const nodeId = nodes.data.find((n: { code: string }) => n.code === `SELF-${RUN}`.toUpperCase()).id;
+    const res = await bff(page.request).post("/inventory/reservations", { business_entity_id: ids.a, node_id: nodeId, demand_type: "ORDER_LINE",
+      demand_ref: `E2E-${RUN}`, lines: [{ sku_id: skus.data[0].id, quantity: 2 }] }, { "idempotency-key": `e2e-res-${RUN}` });
+    expect(res.status()).toBe(201);
+
+    await page.getByRole("link", { name: "예약·할당" }).click();
+    const resRow = page.getByRole("row", { name: new RegExp(`E2E-${RUN}`) });
+    for (const [btn, chip] of [["할당", "할당"], ["피킹 시작", "피킹"], ["출고 확정", null]] as const) {
+      await resRow.getByRole("button", { name: btn }).click();
+      const m = page.getByRole("alertdialog");
+      await expect(m).toContainText(btn === "출고 확정" ? "ATP 변화 없음" : "판매 가능 재고(ATP) 변화 없음");
+      await m.getByRole("button", { name: btn }).click();
+      await expect(m).toBeHidden();
+      if (chip) await expect(resRow).toContainText(chip);
+    }
+    await expect(resRow).toBeHidden(); // 진행 중 목록에서 빠짐
+    await page.getByLabel("단계").selectOption({ label: "출고 확정" });
+    await expect(resRow).toContainText("출고 확정");
+
+    await page.getByRole("link", { name: "통합재고" }).click();
+    await expect(page.getByText("재고 검증: 집계·버킷·확보·원장이 모두 일치합니다.")).toBeVisible();
+    await expect(posRow.getByRole("cell").nth(2)).toHaveText("3"); // 정상 5 − 출고 2
+    await expect(posRow.getByRole("cell").nth(7)).toHaveText("3"); // 추가 판매가능: 확보 단계 전환으로 다시 줄지 않음
+    await page.getByRole("link", { name: "재고원장" }).click();
+    for (const t of ["입고", "예약", "할당", "피킹", "출고 확정"]) {
+      await expect(page.getByRole("cell", { name: new RegExp(`^${t}`) }).first()).toBeVisible();
+    }
   });
 
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {

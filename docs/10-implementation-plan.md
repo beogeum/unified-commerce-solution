@@ -158,6 +158,7 @@ M0 설계 정리 ─▶ M1 Foundation ─▶ M2 Catalog ─▶ M3 Inventory ─�
 - 테스트: T04, T12(가용수량 계산부), T13, BOM 순환 거부, 매핑 충돌.
 
 ### 12.5 M3 — Inventory
+- **I1~I3 완료(2026-11-22)**: `V13`, 출고거점·화주계정 연결·로케이션(`/fulfillment-nodes`), 재고 버킷·집계·원장·ATP·검증(`/inventory/positions|stocks|transactions|availability|verification`), 입고·품질 변경, 확보 lifecycle(`/inventory/reservations`), 만료 자동 해제, 화면(물류센터·출고거점, 통합재고·재고원장·예약·할당), InventoryTest 7개(T05·T06·T07 포함) + E2E 1개. 결정 DLG-087~095.
 - **착수 게이트:** CHG-009(예약 단위), OQ-006(3PL 수량 의미) 임시 규칙 확정, OQ-010.
 - PR: I1 물류센터·출고거점(Provider→Center→Node, 화주계정 연결) → I2 재고 버킷·원장(append-only, 버킷=원장 합 검증) → I3 예약 lifecycle·원자적 확보(행 잠금, 동시성) → I4 외부 재고 스냅샷·수량 의미·워터마크·보수적 제한 → I5 실사(Blind)·조정 승인·이동 → I6 재고 검증센터.
 - I5 범위(CONF-012~014): 실사 생성(범위·기준 스냅샷·정책 버전 고정) → 로케이션 잠금 → 블라인드 카운트 → 재실사 기준 판정(설정값) → 차이 승인(요청자·카운트 담당자 제외) → 조정 원장. 재고정책 화면에서 사업자·거점·Zone별 재실사 기준 설정. 테스트: T40, 잠금 중 출고 배정 거부, 자기 승인 거부, 기준 초과 행 승인 거부.

@@ -2,7 +2,7 @@
 
 - 상태: **v1 기본 역할로 승인(2026-11-21 위임 결정 DLG-020)**. 코드: `backend/src/main/java/com/commerceos/identity/access/SystemRoles.java`(운영그룹 생성 시 역할로 복사).
 - 역할은 권한 묶음일 뿐이며 사업자·판매계정 **범위는 사용자별 접근정책**으로 따로 제한한다(ADR-0002).
-- ★ = 민감 권한(docs/08 §1). `order.*`, `claim.refund`, `inventory.*`, `pii.read`, `cost.read`, `settlement.read`, `profit.read`, `period.close` 는 후속 모듈에서 사용하며 지금은 카탈로그에만 정의되어 있다.
+- ★ = 민감 권한(docs/08 §1). `order.*`, `claim.refund`, `inventory.adjust`·`inventory.dispose`, `pii.read`, `cost.read`, `settlement.read`, `profit.read`, `period.close` 는 후속 모듈에서 사용하며 지금은 카탈로그에만 정의되어 있다.
 
 | 권한 | 이름 | 최고관리자 | 운영관리자 | 상품/MD | 주문담당 | CS담당 | 물류관리자 | 창고작업자 | 정산/재무 | 분석읽기전용 | 일반읽기전용 | 연동관리자 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -12,6 +12,8 @@
 | `catalog.manage` | 상품·SKU·브랜드 등록·변경 | ● | ● | ● |  |  |  |  |  |  |  |  |
 | `cost.manage` ★ | 원가 등록 | ● |  |  |  |  |  |  | ● |  |  |  |
 | `approval.decide` ★ | 승인 요청 승인·반려 | ● | ● |  |  |  |  |  |  |  |  |  |
+| `inventory.read` | 재고·원장·확보 조회 | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● |
+| `inventory.operate` | 입고·품질 변경·확보·출고 확정 | ● | ● |  |  |  | ● | ● |  |  |  |  |
 | `channel_account.read` | 판매계정·판매단위 조회 | ● | ● | ● | ● | ● | ● |  | ● | ● | ● | ● |
 | `channel_account.manage` | 판매계정·판매단위 등록·변경 | ● | ● |  |  |  |  |  |  |  |  | ● |
 | `channel_account.reassign` ★ | 판매계정 사업자 귀속 변경 | ● |  |  |  |  |  |  |  |  |  |  |

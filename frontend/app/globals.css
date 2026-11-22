@@ -64,7 +64,7 @@ tr.clickable { cursor: pointer; } tr.clickable:hover td { background: #F7F9FD; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
 .note { border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.6; }
-.n-info { background: #EEF3FD; color: #1A3A85; } .n-warn { background: #FFF6E8; color: #6B3500; } .n-err { background: var(--err-bg); color: #7A1414; }
+.n-info { background: #EEF3FD; color: #1A3A85; } .n-warn { background: #FFF6E8; color: #6B3500; } .n-err { background: var(--err-bg); color: #7A1414; } .n-ok { background: #EAF7EF; color: #0F5132; }
 
 .state { padding: 32px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
 .skeleton { height: 12px; border-radius: 6px; background: var(--mute-bg); width: 100%; animation: pulse 1.2s ease-in-out infinite; }
