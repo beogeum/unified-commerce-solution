@@ -7,7 +7,7 @@ import { Empty, ErrorState, Forbidden, Loading } from "@/components/States";
 import { api, ApiError, qs } from "@/lib/api";
 import { formatDateTime, formatWon } from "@/lib/format";
 import { EVENT_KO, GWP_SKIP_KO, HOLD_KO, ORDER_STATUS, OrderDetail, OrderRow, PAYMENT_KO, PII_STATE_KO, RAW_RESULT_KO, SOURCE_TYPE_KO } from "@/lib/orders";
-import { ALLOCATION_KO, AllocationResult, DISPATCH_MODE_KO, FO_STATUS, FulfillmentOrder } from "@/lib/fulfillment";
+import { ALLOCATION_KO, AllocationResult, CHANNEL_DISPATCH, DISPATCH_MODE_KO, FO_STATUS, FulfillmentOrder, Shipment, SHIP_STATUS, SHIPPING_KO } from "@/lib/fulfillment";
 import { useSession } from "@/lib/session";
 
 export default function OrdersPage() {
@@ -85,10 +85,14 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
   const [pii, setPii] = useState<{ buyer: Record<string, string | null>; recipient: Record<string, string | null> } | null>(null);
   const [tab, setTab] = useState<"items" | "components" | "fulfillment" | "events" | "raws">("items");
   const [fos, setFos] = useState<FulfillmentOrder[] | null>(null);
+  const [ships, setShips] = useState<Shipment[]>([]);
   const [allocMsg, setAllocMsg] = useState<string | null>(null);
   const [purpose, setPurpose] = useState("DISPUTE");
   const load = () => api<OrderDetail>(`/orders/${id}`).then((r) => setD(r.data)).catch((e) => setLoadErr(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "불러오지 못했습니다.")));
-  const loadFos = () => api<FulfillmentOrder[]>(`/fulfillment-orders?order_id=${id}`).then((r) => setFos(r.data)).catch(() => setFos([]));
+  const loadFos = () => {
+    api<FulfillmentOrder[]>(`/fulfillment-orders?order_id=${id}`).then((r) => setFos(r.data)).catch(() => setFos([]));
+    api<Shipment[]>(`/shipments?order_id=${id}`).then((r) => setShips(r.data)).catch(() => setShips([]));
+  };
   useEffect(() => { load(); loadFos(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   const allocate = async () => {
     setErr(null);
@@ -151,7 +155,8 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
         <span className="ctx"> · {PII_STATE_KO[d.pii_state]}</span></span></div>
       <div className="kv"><span>출고 구성</span><span>{d.composition_status === "FIXED" ? "확정(묶음 BOM 버전 고정)" : "확정 전"}
         {d.gwp_result && d.gwp_result.skipped.length > 0 && <span className="ctx"> · 미지급 행사: {d.gwp_result.skipped.map((x) => `${x.campaign_name}(${GWP_SKIP_KO[x.reason] ?? x.reason})`).join(", ")}</span>}</span></div>
-      <div className="kv"><span>출고 배정</span><span>{ALLOCATION_KO[d.allocation_status] ?? d.allocation_status}</span></div>
+      <div className="kv"><span>출고 배정 · 배송</span><span>{ALLOCATION_KO[d.allocation_status] ?? d.allocation_status} · {SHIPPING_KO[d.shipping_status] ?? d.shipping_status}
+        {d.delivered_at && <span className="ctx"> ({formatDateTime(d.delivered_at)})</span>}</span></div>
       <nav className="row-gap" aria-label="주문 상세">
         {([["items", "주문상품"], ["components", "출고 구성"], ["fulfillment", "출고"], ["events", "변경 이력"], ["raws", "원본 수집 이력"]] as const).map(([k, l]) =>
           <button key={k} className="btn" type="button" aria-current={tab === k ? "page" : undefined} onClick={() => setTab(k)}>{l}</button>)}
@@ -177,6 +182,11 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
         { key: "m", header: "전달", render: (f) => f.dispatch_mode ? DISPATCH_MODE_KO[f.dispatch_mode] : "—" },
         { key: "s", header: "상태", render: (f) => <Chip kind={FO_STATUS[f.status][0]}>{FO_STATUS[f.status][1]}</Chip> },
       ]} />)}
+      {tab === "fulfillment" && ships.length > 0 && <DataTable caption="송장" rows={ships} rowKey={(s) => s.id} empty={<Empty title="송장이 없습니다." />} columns={[
+        { key: "t", header: "택배사 · 송장번호", render: (s) => <>{s.carrier_name} <span className="mono">{s.tracking_no}</span></> },
+        { key: "s", header: "배송", render: (s) => <Chip kind={SHIP_STATUS[s.status][0]}>{SHIP_STATUS[s.status][1]}</Chip> },
+        { key: "c", header: "채널 발송처리", render: (s) => <Chip kind={CHANNEL_DISPATCH[s.channel_dispatch_status][0]}>{CHANNEL_DISPATCH[s.channel_dispatch_status][1]}</Chip> },
+      ]} />}
       {tab === "events" && <DataTable caption="변경 이력" rows={d.events} rowKey={(e) => e.id} empty={<Empty title="이력이 없습니다." />} columns={[
         { key: "t", header: "시각", render: (e) => <span className="ctx">{formatDateTime(e.occurred_at)}</span> },
         { key: "e", header: "내용", render: (e) => `${EVENT_KO[e.event_type] ?? e.event_type}${e.from_value || e.to_value ? ` (${e.from_value ?? "—"} → ${e.to_value ?? "—"})` : ""}` },

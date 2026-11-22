@@ -195,7 +195,8 @@ function ListingDrawer({ id, onClose, onChanged, onOpen }: { id: string; onClose
 }
 
 function CreateListing({ accounts, onClose, onCreated }: { accounts: Account[]; onClose: () => void; onCreated: (id: string) => void }) {
-  const [account, setAccount] = useState(accounts[0]?.id ?? "");
+  const [accountSel, setAccount] = useState("");
+  const account = accountSel || accounts[0]?.id || "";
   const units = useApi<Unit[]>(account ? `/channel-accounts/${account}/sales-units` : null);
   const [key] = useState(newIdempotencyKey);
   const [err, setErr] = useState<string | null>(null);

@@ -61,3 +61,21 @@
 - 자동 배정: 출고 구성 확정(`OrderComposed` outbox) 뒤 시스템 자동 처리 주체로 같은 배정 로직을 실행(`commerce.fulfillment.auto-allocate`, 기본 켬).
 - 출고지시 전송(`FULFILLMENT_DISPATCH` 작업, 최대 6회): 자체 WMS → `INTERNAL` 즉시 접수. 3PL → 사업자 화주계정 연결 + 지원 기능 `OUTBOUND_REQUEST/WRITE` 확인 시 API(멱등 키 = `dispatch_key`), 아니면 `MANUAL` + 업무 `FULFILLMENT_DISPATCH_MANUAL`. 재시도는 먼저 같은 키로 사후조회(T11). 5회 연속 응답 불명 → `DISPATCH_UNKNOWN` 검토 업무.
 - 출고거점 `routing_priority`(0~10000, 작을수록 먼저, 기본 100): `PATCH /fulfillment-nodes/{id} {routing_priority}`.
+
+## 7. 출고 확정·송장·배송 추적·채널 발송처리 (O5, DLG-129~136)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `GET /carriers` | 로그인 | 내부 택배사 코드(CJ·LOTTE·HANJIN·EPOST·LOGEN·KDEXP·DAESIN·ILYANG·CVSNET·CU_POST·DIRECT·OTHER) |
+| `POST /fulfillment-orders/{id}/ship {shipped_at, parcels[{carrier_code, tracking_no, items?[{sku_id, quantity}]}]}` | `order.update` + `inventory.operate` + 사업자·판매계정·거점 쓰기 범위 | 출고지시 전체를 출고 확정. 박스 1~20. 품목을 적으면 합이 출고지시와 같아야 함(`422 PARCEL_ITEMS_MISMATCH`), 안 적으면 첫 박스에 전부. 같은 송장 재요청 = 중복(200), 다른 송장 = `409 FULFILLMENT_ALREADY_SHIPPED`, 취소된 출고 = `409 FULFILLMENT_CANCELLED`. 미래 시각·배정 전 시각은 `422` |
+| `GET /shipments?business_entity_id&status&channel_dispatch_status&order_id&fulfillment_order_id&q` | `order.read` + 사업자·판매계정·거점 읽기 범위 | 최신순 300건, `q` = 송장번호·주문번호·출고번호 |
+| `GET /shipments/{id}` | 같음 | 품목·배송 이력 포함, 범위 밖·다른 워크스페이스 `404` |
+| `POST /shipments/{id}/tracking-events {status, occurred_at?, description?, location?}` | `order.update` + 쓰기 범위 | `{result: APPLIED·IGNORED_STALE·DUPLICATE, shipment}`. 이전 시각·역행 기록은 이력에만 남음 |
+| `POST /shipments/{id}/channel-dispatch/retry` | 같음 | `FAILED`·`MANUAL_REQUIRED` → `PENDING` 후 재전송 |
+| `POST /shipments/{id}/channel-dispatch/manual-done {note?}` | 같음 | 판매자센터에서 직접 발송처리한 사실 기록, 업무 종료 |
+| `POST /shipments/imports` (multipart `file`) | `order.update` + `inventory.operate` | 열: 출고번호·택배사(코드·이름)·송장번호·출고일시(선택, KST). 출고지시마다 따로 반영, `{row_count, shipped, duplicate, failed, results[]}` |
+| `POST /integrations/{connectionId}/sync-jobs {job_type: "SHIPMENT_SYNC"}` | `integration.sync` + 지원 기능 `OUTBOUND_STATUS/READ` 또는 `TRACKING/READ` | 3PL 출고상태(PICKING·PACKING·SHIPPED+송장)·배송 단계 수신. 정기 실행 10분 |
+
+- 배송 단계: `LABEL_CREATED → PICKED_UP → IN_TRANSIT → OUT_FOR_DELIVERY → DELIVERED`, `EXCEPTION`(배송완료 전까지, 업무 `SHIPMENT_EXCEPTION`). 송장 등록은 `LABEL_CREATED` 일 뿐 배송완료가 아니다.
+- 채널 발송처리 `channel_dispatch_status`: `PENDING · SENT · MANUAL_REQUIRED · MANUAL_DONE · FAILED · NOT_REQUIRED`(추가 박스에 새 품목 없음·수동 주문). 판매계정 연결 + `SHIPMENT_DISPATCH/WRITE` 확인 시만 API(멱등 키 = `shipment_no`).
+- 주문: `order_item.shipped_qty`(구성품 전부 출고된 단위), `shipping_status`(`NONE · PARTIALLY_SHIPPED · SHIPPED · DELIVERED`), `delivered_at`. 전부 배송완료 후 8일(`commerce.order.complete-after-delivery-days`)이 지나고 진행 중 출고가 없으면 `COMPLETED`.
+- 출고지시 `tracking_sla_hours`(거점, 기본 24): 물류사 접수 후 이 시간 안에 송장이 없으면 업무 `FULFILLMENT_TRACKING_MISSING`. `PATCH /fulfillment-nodes/{id} {tracking_sla_hours}`.

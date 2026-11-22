@@ -214,7 +214,7 @@ public class FulfillmentService {
         if ("ACCEPTED".equals(st) || "PICKING".equals(st) || "PACKING".equals(st) || "SHIPPED".equals(st)) {
             return; // 늦게 온 같은 결과 — 역행 금지
         }
-        if (!"ALLOCATED".equals(st) && !"REQUESTED".equals(st)) {
+        if (!"ALLOCATED".equals(st) && !"REQUESTED".equals(st) && !"FAILED".equals(st)) {
             throw Errors.conflict("FULFILLMENT_STATE_INVALID", "접수할 수 없는 출고 상태입니다.", Map.of("status", st));
         }
         jdbc.sql("""
@@ -378,7 +378,7 @@ public class FulfillmentService {
 
     // ---------------------------------------------------------------- 내부
 
-    private Map<String, Object> writable(UUID foId) {
+    Map<String, Object> writable(UUID foId) {
         guard.requirePermission(Perm.ORDER_UPDATE);
         guard.requirePermission(Perm.INVENTORY_OPERATE);
         CurrentActor a = guard.actor();
@@ -388,12 +388,12 @@ public class FulfillmentService {
         return f;
     }
 
-    private Map<String, Object> lock(UUID ws, UUID foId) {
+    Map<String, Object> lock(UUID ws, UUID foId) {
         return jdbc.sql("select * from fulfillment_order where workspace_id = :ws and id = :id for update").param("ws", ws).param("id", foId).query().listOfRows()
                 .stream().findFirst().orElseThrow(() -> Errors.notFound("FULFILLMENT_ORDER"));
     }
 
-    private void foEvent(CurrentActor a, UUID foId, String type, String from, String to, Instant externalAt, Map<String, Object> detail) {
+    void foEvent(CurrentActor a, UUID foId, String type, String from, String to, Instant externalAt, Map<String, Object> detail) {
         jdbc.sql("""
                 insert into fulfillment_event (id, workspace_id, fo_id, event_type, from_status, to_status, external_at, detail, actor_type, actor_member_id)
                 values (:id, :ws, :f, :t, cast(:fr as text), cast(:to as text), :ext, cast(:d as jsonb), :at, cast(:m as uuid))
@@ -401,7 +401,7 @@ public class FulfillmentService {
                 .param("ext", Db.ts(externalAt)).param("d", json.write(detail)).param("at", a.memberId() == null ? "SYSTEM" : "USER").param("m", a.memberId()).update();
     }
 
-    private void orderEvent(CurrentActor a, UUID orderId, String type, String from, String to, Map<String, Object> detail) {
+    void orderEvent(CurrentActor a, UUID orderId, String type, String from, String to, Map<String, Object> detail) {
         jdbc.sql("""
                 insert into order_event (id, workspace_id, order_id, event_type, from_value, to_value, detail, actor_type, actor_member_id)
                 values (:id, :ws, :o, :t, cast(:f as text), cast(:to as text), cast(:d as jsonb), :at, cast(:m as uuid))

@@ -99,7 +99,8 @@ function SnapshotDrawer({ id, onClose }: { id: string; onClose: () => void }) {
 
 function UploadDrawer({ nodes, onClose, onDone }: { nodes: Node[]; onClose: () => void; onDone: (id: string) => void }) {
   const { entities } = useSession();
-  const [node, setNode] = useState(nodes[0]?.id ?? "");
+  const [nodeSel, setNode] = useState("");
+  const node = nodeSel || nodes[0]?.id || "";
   const n = nodes.find((x) => x.id === node);
   const owners = entities.filter((e) => n?.shippers.some((s) => s.business_entity_id === e.id));
   const [be, setBe] = useState("");

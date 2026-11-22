@@ -620,6 +620,80 @@ test.describe.serial("Foundation", () => {
     await expect(fd.getByRole("row", { name: new RegExp(`AMP-30-${RUN}`) })).toContainText("해제");
   });
 
+  test("관리자: 출고 확정·송장 입력 → 배송 단계(역행 금지) → 채널 수동 발송처리 → 송장 파일 (M4 O5)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    const accounts = await (await bff(page.request).get(`/channel-accounts?q=${encodeURIComponent(RUN)}`)).json();
+    const account = accounts.data.find((a: { display_name: string }) => a.display_name === `A 공식스토어 ${RUN}`);
+    const orderIds: string[] = [];
+    for (const k of ["S1", "S2"]) {
+      const now = new Date().toISOString();
+      const order = { external_order_key: `NV-O5-${k}-${RUN}`, ordered_at: now, paid_at: now, external_updated_at: now, total_amount: 10000,
+        recipient: { name: "박수령", phone: "010-5555-6666", postal_code: "06236", address1: "서울특별시 강남구 테헤란로 152" },
+        items: [{ external_item_key: `NV-O5-${k}-${RUN}-1`, external_product_id: `PRD-${RUN}`, external_option_id: "", product_name: "비타 앰플 30ml", quantity: 1,
+          unit_price: 10000, line_amount: 10000 }] };
+      const imp = await bff(page.request).post("/orders/imports", { channel_account_id: account.id, orders: [order] }, { "idempotency-key": `e2e-ord-o5-${k}-${RUN}` });
+      expect(imp.status()).toBe(200);
+      orderIds.push((await imp.json()).data.results[0].order_id);
+    }
+    const fos: { fo_no: string }[] = [];
+    for (const id of orderIds) {
+      await expect.poll(async () => (await (await bff(page.request).get(`/fulfillment-orders?order_id=${id}`)).json()).data[0]?.status ?? "NONE", { timeout: 30_000 })
+        .toBe("ACCEPTED");
+      fos.push((await (await bff(page.request).get(`/fulfillment-orders?order_id=${id}`)).json()).data[0]);
+    }
+
+    // 화면에서 출고 확정·송장 입력
+    await page.getByRole("link", { name: "출고", exact: true }).click();
+    await page.getByRole("row", { name: new RegExp(fos[0].fo_no) }).click();
+    const fd = page.getByRole("dialog", { name: /^출고지시 F/ });
+    await fd.getByRole("button", { name: "출고 확정·송장 입력" }).click();
+    const m = page.getByRole("alertdialog");
+    await expect(m).toContainText("판매 가능 재고 변화 없음");
+    await m.getByLabel("택배사 1").selectOption({ label: "CJ대한통운" });
+    await m.getByLabel("송장번호 1").fill(`6${RUN.replace(/\D/g, "").padEnd(11, "7").slice(0, 11)}`);
+    await m.getByRole("button", { name: "출고 확정" }).click();
+    await expect(fd.getByText("출고 완료", { exact: true })).toBeVisible();
+    await expect(fd.getByRole("row", { name: /CJ대한통운/ })).toContainText("송장 등록");
+    await fd.getByRole("button", { name: "닫기", exact: true }).click();
+
+    // 배송: 판매채널 연결이 없으면 수동 발송처리 필요
+    await page.getByRole("link", { name: "배송", exact: true }).click();
+    const row = page.getByRole("row", { name: new RegExp(fos[0].fo_no) });
+    await expect(row).toContainText("송장 등록");
+    await expect.poll(async () => { await page.reload(); return (await page.getByRole("row", { name: new RegExp(fos[0].fo_no) }).textContent()) ?? ""; },
+      { timeout: 30_000 }).toContain("수동 발송처리 필요");
+    await page.getByRole("row", { name: new RegExp(fos[0].fo_no) }).click();
+    const sd = page.getByRole("dialog", { name: /^송장 / });
+    await sd.getByRole("button", { name: "배송 단계 기록" }).click();
+    let r = page.getByRole("alertdialog");
+    await r.getByLabel("배송 단계").selectOption({ label: "배송완료" });
+    await r.getByRole("button", { name: "기록" }).click();
+    await expect(sd.getByText("배송완료", { exact: true }).first()).toBeVisible();
+    await expect(sd.getByRole("button", { name: "배송 단계 기록" })).toBeHidden(); // 배송완료는 최종
+    await sd.getByRole("button", { name: "채널 발송처리 완료" }).click();
+    r = page.getByRole("alertdialog");
+    await r.getByLabel("메모").fill("판매자센터 발송처리");
+    await r.getByRole("button", { name: "완료 기록" }).click();
+    await expect(sd).toContainText("수동 발송처리 완료");
+    await sd.getByRole("button", { name: "닫기", exact: true }).click();
+
+    // 송장 파일: 두 번째 출고지시 + 잘못된 행
+    await page.getByRole("button", { name: "송장 파일 올리기" }).click();
+    const ud = page.getByRole("dialog", { name: "송장 파일 올리기" });
+    const csv = `출고번호,택배사,송장번호,출고일시\r\n${fos[1].fo_no},한진택배,5${Date.now().toString().slice(-11)},\r\nF-NOPE-${RUN},한진택배,500000000001,\r\n`;
+    await ud.getByLabel("파일(.xlsx·.csv)").setInputFiles({ name: "invoices.csv", mimeType: "text/csv", buffer: Buffer.from(csv, "utf-8") });
+    await ud.getByRole("button", { name: "반영" }).click();
+    await expect(ud).toContainText("출고 확정 1 · 이미 반영 0 · 실패 1");
+    await expect(ud.getByRole("row", { name: /F-NOPE/ })).toContainText("출고번호를 찾을 수 없거나 권한 밖입니다.");
+    await ud.getByRole("button", { name: "닫기", exact: true }).first().click();
+    await expect(page.getByRole("row", { name: new RegExp(fos[1].fo_no) })).toContainText("한진택배");
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");

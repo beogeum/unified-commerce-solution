@@ -88,6 +88,14 @@ public class MockChannelConnector implements ChannelConnector {
     }
 
     @Override
+    public ConnectorEnvelope<Map<String, Object>> dispatchShipment(ConnectorContext ctx, Map<String, Object> command, String idempotencyKey) {
+        control.apply(ctx);
+        String ref = control.dispatchChannel(ctx.connectionId(), idempotencyKey);
+        return new ConnectorEnvelope<>(CODE, ctx.externalAccountKey(), null, ref, List.of(Map.of("dispatch_ref", ref)), "mock-dispatch-v1", Instant.now(),
+                Instant.now(), 1, null);
+    }
+
+    @Override
     public ConnectorEnvelope<Map<String, Object>> processClaimAction(ConnectorContext ctx, Map<String, Object> command, String idempotencyKey) {
         throw unsupported("CLAIM_* WRITE");
     }

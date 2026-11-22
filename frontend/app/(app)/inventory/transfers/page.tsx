@@ -56,7 +56,8 @@ function CreateTransfer({ onClose, onDone }: { onClose: () => void; onDone: () =
   const { entities } = useSession();
   const nodes = useApi<Node[]>("/fulfillment-nodes");
   const active = (nodes.data ?? []).filter((n) => n.status === "ACTIVE");
-  const [be, setBe] = useState(entities[0]?.id ?? "");
+  const [beSel, setBe] = useState("");
+  const be = beSel || entities[0]?.id || "";
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [lines, setLines] = useState<{ sku: Sku; quantity: number }[]>([]);

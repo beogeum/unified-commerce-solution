@@ -218,6 +218,15 @@ public class ReservationService {
     /** 출고 실물확정: 판매가능 실물 −Q(유통기한 빠른 LOT 부터), 확보 −Q. ATP 는 변하지 않는다. */
     @Transactional
     public ReservationView consume(UUID id, Transition t) {
+        return consumeAt(id, t, null);
+    }
+
+    /**
+     * 출고 실물확정 — 실물이 나간 시각(물류사 출고 시각)을 함께 남긴다(M4 O5). 외부 재고 스냅샷은 이 시각과 기준시각을 비교해
+     * '이미 출고분이 반영된 외부 수량'에서 다시 빼지 않는다(CLAUDE.md 3PL 이중 차감 금지, DLG-130). 미래 시각은 지금으로 맞춘다.
+     */
+    @Transactional
+    public ReservationView consumeAt(UUID id, Transition t, Instant physicalAt) {
         guard.requirePermission(Perm.INVENTORY_OPERATE);
         CurrentActor a = guard.actor();
         Row row = lockRow(a.workspaceId(), id);
@@ -249,8 +258,10 @@ public class ReservationService {
             throw Errors.conflict("STOCK_BUCKET_MISMATCH", "판매가능 버킷 수량이 확보수량보다 적습니다. 재고 검증 후 다시 시도하세요.",
                     Map.of("quantity", r.quantity(), "shortage", remaining));
         }
-        jdbc.sql("update inventory_reservation set state = 'CONSUMED', consumed_at = now(), version = version + 1, updated_at = now() where id = :id")
-                .param("id", id).update();
+        Instant now = clock.instant();
+        Instant at = physicalAt == null || physicalAt.isAfter(now) ? now : physicalAt;
+        jdbc.sql("update inventory_reservation set state = 'CONSUMED', consumed_at = :at, version = version + 1, updated_at = now() where id = :id")
+                .param("at", Db.ts(at)).param("id", id).update();
         Position cur = p;
         boolean first = true;
         String reason = InventoryService.trimOrNull(t == null ? null : t.reason());

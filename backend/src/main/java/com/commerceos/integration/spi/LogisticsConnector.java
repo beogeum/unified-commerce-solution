@@ -14,6 +14,19 @@ public interface LogisticsConnector extends Connector {
     /** 타임아웃 후 외부 접수 여부 사후 조회(docs/04 §9). */
     ConnectorEnvelope<Map<String, Object>> checkFulfillment(ConnectorContext ctx, String externalRef);
 
+    /**
+     * 출고 진행 상태(OUTBOUND_STATUS/READ, M4 O5). 행: {dispatch_key, external_ref, status(PICKING·PACKING·SHIPPED), occurred_at,
+     * parcels[{carrier_code, tracking_no, items?[{sku_code, quantity}]}]}. 기간은 물류사 갱신 시각 기준.
+     */
+    default ConnectorEnvelope<Map<String, Object>> fetchOutboundStatus(ConnectorContext ctx, String cursor, java.time.Instant from, java.time.Instant to) {
+        throw unsupported("OUTBOUND_STATUS");
+    }
+
+    /** 송장 배송 단계(TRACKING/READ, M4 O5). 행: {carrier_code, tracking_no, status, occurred_at, description, location, code}. */
+    default ConnectorEnvelope<Map<String, Object>> fetchTracking(ConnectorContext ctx, String cursor, java.time.Instant from, java.time.Instant to) {
+        throw unsupported("TRACKING");
+    }
+
     ConnectorEnvelope<Map<String, Object>> cancelFulfillment(ConnectorContext ctx, String externalRef, String idempotencyKey);
 
     ConnectorEnvelope<Map<String, Object>> fetchReturnInspections(ConnectorContext ctx, String cursor);

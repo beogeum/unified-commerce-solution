@@ -60,7 +60,8 @@ function CreateCount({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const nodes = useApi<Node[]>("/fulfillment-nodes");
   const people = useApi<Assignee[]>("/inventory/count-assignees");
   const internal = (nodes.data ?? []).filter((n) => n.inventory_source === "INTERNAL" && n.status === "ACTIVE");
-  const [be, setBe] = useState(entities[0]?.id ?? "");
+  const [beSel, setBe] = useState("");
+  const be = beSel || entities[0]?.id || "";
   const [node, setNode] = useState("");
   const [scope, setScope] = useState("ALL");
   const [zone, setZone] = useState("");

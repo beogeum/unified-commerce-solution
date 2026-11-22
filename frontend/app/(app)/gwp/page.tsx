@@ -70,7 +70,8 @@ export default function GwpPage() {
 
 function CampaignForm({ initial, onClose, onSaved }: { initial: Campaign | null; onClose: () => void; onSaved: (id: string) => void }) {
   const { entities } = useSession();
-  const [be, setBe] = useState(initial?.business_entity_id ?? entities[0]?.id ?? "");
+  const [beSel, setBe] = useState(initial?.business_entity_id ?? "");
+  const be = beSel || entities[0]?.id || "";
   const accounts = useApi<Account[]>(be ? `/channel-accounts${qs({ business_entity_id: be })}` : null);
   const [accountIds, setAccountIds] = useState<string[]>(initial?.channel_account_ids ?? []);
   const [required, setRequired] = useState<{ id: string; code: string; qty: number }[]>(initial?.required_skus.map((s) => ({ id: s.sku_id, code: s.sku_code, qty: s.quantity })) ?? []);
@@ -198,7 +199,8 @@ function CampaignDrawer({ id, onClose, onChanged, onEdit }: { id: string; onClos
 
 function PreviewDrawer({ onClose }: { onClose: () => void }) {
   const { entities } = useSession();
-  const [be, setBe] = useState(entities[0]?.id ?? "");
+  const [beSel, setBe] = useState("");
+  const be = beSel || entities[0]?.id || "";
   const accounts = useApi<Account[]>(be ? `/channel-accounts${qs({ business_entity_id: be })}` : null);
   const [account, setAccount] = useState("");
   const [lines, setLines] = useState<{ sku: Sku; qty: number; amount: string }[]>([]);

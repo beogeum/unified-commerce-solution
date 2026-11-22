@@ -47,14 +47,15 @@ public class NodeService {
     public record NodeView(UUID id, String code, String name, String logisticsProviderCode, String providerKind, String providerName,
                            String inventorySource, LocalTime cutoffTime, String addressNote, String status, List<ShipperLink> shippers,
                            int locationCount, String quantitySemantic, String quantitySemanticEvidence, java.time.Instant quantitySemanticVerifiedAt,
-                           int restrictedSellBuffer, int snapshotMaxAgeMinutes, int routingPriority, int version) {
+                           int restrictedSellBuffer, int snapshotMaxAgeMinutes, int routingPriority, int trackingSlaHours, int version) {
     }
 
     public record Create(String code, String name, String logisticsProviderCode, String inventorySource, LocalTime cutoffTime, String addressNote) {
     }
 
     public record Patch(String name, LocalTime cutoffTime, String addressNote, String status, String quantitySemantic, String quantitySemanticEvidence,
-                        Integer restrictedSellBuffer, Integer snapshotMaxAgeMinutes, Integer routingPriority) {
+                        Integer restrictedSellBuffer, Integer snapshotMaxAgeMinutes, Integer routingPriority,
+                        Integer trackingSlaHours) {
     }
 
     static final Set<String> SEMANTICS = Set.of("UNKNOWN", "ON_HAND", "AVAILABLE", "POST_OUTBOUND_ESTIMATE");
@@ -150,6 +151,9 @@ public class NodeService {
         if (p.routingPriority() != null && (p.routingPriority() < 0 || p.routingPriority() > 10_000)) {
             throw Errors.validation("routing_priority", "출고 배정 우선순위는 0~10000 사이입니다(작을수록 먼저).");
         }
+        if (p.trackingSlaHours() != null && (p.trackingSlaHours() < 1 || p.trackingSlaHours() > 720)) {
+            throw Errors.validation("tracking_sla_hours", "송장 수신 기준 시간은 1~720시간입니다.");
+        }
         if ("CLOSED".equals(p.status())) {
             int stock = jdbc.sql("select coalesce(sum(on_hand), 0) from inventory_stock where node_id = :id").param("id", id).query(Integer.class).single();
             int active = jdbc.sql("select count(*) from inventory_reservation where node_id = :id and state in ('RESERVED','ALLOCATED','PICKING')")
@@ -162,9 +166,10 @@ public class NodeService {
                 update fulfillment_node set name = coalesce(:n, name), cutoff_time = coalesce(:cut, cutoff_time), address_note = coalesce(:addr, address_note),
                        status = coalesce(:st, status), restricted_sell_buffer = coalesce(:buf, restricted_sell_buffer),
                        snapshot_max_age_minutes = coalesce(:age, snapshot_max_age_minutes),
-                       routing_priority = coalesce(:rp, routing_priority), version = version + 1, updated_at = now() where id = :id
+                       routing_priority = coalesce(:rp, routing_priority),
+                       tracking_sla_hours = coalesce(:sla, tracking_sla_hours), version = version + 1, updated_at = now() where id = :id
                 """).param("n", p.name()).param("cut", p.cutoffTime()).param("addr", p.addressNote()).param("st", p.status())
-                .param("buf", p.restrictedSellBuffer()).param("age", p.snapshotMaxAgeMinutes()).param("rp", p.routingPriority()).param("id", id).update();
+                .param("buf", p.restrictedSellBuffer()).param("age", p.snapshotMaxAgeMinutes()).param("rp", p.routingPriority()).param("sla", p.trackingSlaHours()).param("id", id).update();
         if (p.quantitySemantic() != null && !p.quantitySemantic().equals(before.quantitySemantic())) {
             boolean unknown = "UNKNOWN".equals(p.quantitySemantic());
             jdbc.sql("""
@@ -179,6 +184,7 @@ public class NodeService {
         beforeMap.put("restricted_sell_buffer", before.restrictedSellBuffer());
         beforeMap.put("snapshot_max_age_minutes", before.snapshotMaxAgeMinutes());
         beforeMap.put("routing_priority", before.routingPriority());
+        beforeMap.put("tracking_sla_hours", before.trackingSlaHours());
         Map<String, Object> afterMap = new java.util.LinkedHashMap<>();
         afterMap.put("status", String.valueOf(p.status()));
         afterMap.put("quantity_semantic", String.valueOf(p.quantitySemantic()));
@@ -186,6 +192,7 @@ public class NodeService {
         afterMap.put("restricted_sell_buffer", String.valueOf(p.restrictedSellBuffer()));
         afterMap.put("snapshot_max_age_minutes", String.valueOf(p.snapshotMaxAgeMinutes()));
         afterMap.put("routing_priority", String.valueOf(p.routingPriority()));
+        afterMap.put("tracking_sla_hours", String.valueOf(p.trackingSlaHours()));
         audit.record(AuditEntry.builder(a.workspaceId(), "FULFILLMENT_NODE_UPDATED", "FULFILLMENT_NODE", id)
                 .actor(ActorType.USER, a.memberId(), a.displayName()).before(beforeMap).after(afterMap).build());
         return get(id);
@@ -283,7 +290,7 @@ public class NodeService {
                 .stream().filter(l -> visible.contains(l.businessEntityId())).toList();
         return new NodeView(n.id(), n.code(), n.name(), n.logisticsProviderCode(), n.providerKind(), n.providerName(), n.inventorySource(), n.cutoffTime(),
                 n.addressNote(), n.status(), links, n.locationCount(), n.quantitySemantic(), n.quantitySemanticEvidence(), n.quantitySemanticVerifiedAt(),
-                n.restrictedSellBuffer(), n.snapshotMaxAgeMinutes(), n.routingPriority(), n.version());
+                n.restrictedSellBuffer(), n.snapshotMaxAgeMinutes(), n.routingPriority(), n.trackingSlaHours(), n.version());
     }
 
     private NodeView map(ResultSet rs, int i) throws SQLException {
@@ -292,7 +299,7 @@ public class NodeService {
                 rs.getString("provider_name"), rs.getString("inventory_source"), cut == null ? null : cut.toLocalTime(), rs.getString("address_note"),
                 rs.getString("status"), List.of(), rs.getInt("location_count"), rs.getString("quantity_semantic"), rs.getString("quantity_semantic_evidence"),
                 Db.instant(rs, "quantity_semantic_verified_at"), rs.getInt("restricted_sell_buffer"), rs.getInt("snapshot_max_age_minutes"),
-                rs.getInt("routing_priority"), rs.getInt("version"));
+                rs.getInt("routing_priority"), rs.getInt("tracking_sla_hours"), rs.getInt("version"));
     }
 
     private UUID ws() {

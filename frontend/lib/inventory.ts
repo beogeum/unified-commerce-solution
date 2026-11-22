@@ -2,7 +2,7 @@ export type Node = { id: string; code: string; name: string; logistics_provider_
   inventory_source: "INTERNAL" | "EXTERNAL"; cutoff_time: string | null; address_note: string | null; status: string;
   shippers: { shipper_account_id: string; shipper_name: string; business_entity_id: string; business_entity_name: string }[]; location_count: number;
   quantity_semantic: string; quantity_semantic_evidence: string | null; quantity_semantic_verified_at: string | null; restricted_sell_buffer: number;
-  snapshot_max_age_minutes: number; routing_priority: number; version: number };
+  snapshot_max_age_minutes: number; routing_priority: number; tracking_sla_hours: number; version: number };
 export type Position = { id: string; business_entity_id: string; business_entity_name: string; sku_id: string; sku_code: string; sku_name: string | null;
   node_id: string; node_code: string; node_name: string; inventory_source: string; sellable_on_hand: number; committed: number; reserved: number;
   allocated: number; picking: number; atp: number; non_sellable_on_hand: number; restricted: boolean; restriction_reason: string | null;

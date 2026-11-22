@@ -21,6 +21,14 @@ public interface ChannelConnector extends Connector {
     ConnectorEnvelope<Map<String, Object>> fetchSettlement(ConnectorContext ctx, LocalDate periodStart, LocalDate periodEnd);
 
     /** 클레임 승인·거부 등 쓰기. 멱등키로 중복 실행을 막고 타임아웃 시 사후 조회한다. */
+    /**
+     * 발송처리·송장 전송(SHIPMENT_DISPATCH/WRITE, M4 O5). command: {external_order_key, sales_unit_key, items[{external_item_key, quantity}],
+     * carrier_code, tracking_no, shipped_at}. 같은 idempotencyKey 재호출은 중복 발송처리가 되면 안 된다(이미 처리됨 = 성공).
+     */
+    default ConnectorEnvelope<Map<String, Object>> dispatchShipment(ConnectorContext ctx, Map<String, Object> command, String idempotencyKey) {
+        throw unsupported("SHIPMENT_DISPATCH");
+    }
+
     ConnectorEnvelope<Map<String, Object>> processClaimAction(ConnectorContext ctx, Map<String, Object> command, String idempotencyKey);
 
     default ConnectorException unsupported(String feature) {

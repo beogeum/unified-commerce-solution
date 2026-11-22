@@ -57,6 +57,48 @@ public class MockScenarioControl {
         return outbound.remove(connectionId + ":" + key) != null;
     }
 
+    private final Map<UUID, java.util.List<Map<String, Object>>> outboundStatus = new ConcurrentHashMap<>();
+    private final Map<UUID, java.util.List<Map<String, Object>>> tracking = new ConcurrentHashMap<>();
+    private final Map<String, AtomicInteger> channelDispatches = new ConcurrentHashMap<>();
+    private final Map<UUID, AtomicInteger> channelDispatchFailures = new ConcurrentHashMap<>();
+
+    /** 모의 3PL 출고 상태 행 추가(OUTBOUND_STATUS). */
+    public void addOutboundStatus(UUID connectionId, Map<String, Object> row) {
+        outboundStatus.computeIfAbsent(connectionId, k -> new java.util.concurrent.CopyOnWriteArrayList<>()).add(row);
+    }
+
+    /** 모의 송장 배송 단계 행 추가(TRACKING). */
+    public void addTracking(UUID connectionId, Map<String, Object> row) {
+        tracking.computeIfAbsent(connectionId, k -> new java.util.concurrent.CopyOnWriteArrayList<>()).add(row);
+    }
+
+    java.util.List<Map<String, Object>> outboundStatus(UUID connectionId) {
+        return outboundStatus.getOrDefault(connectionId, java.util.List.of());
+    }
+
+    java.util.List<Map<String, Object>> tracking(UUID connectionId) {
+        return tracking.getOrDefault(connectionId, java.util.List.of());
+    }
+
+    /** 다음 n 번의 채널 발송처리를 일시 오류로 만든다. */
+    public void failChannelDispatch(UUID connectionId, int times) {
+        channelDispatchFailures.put(connectionId, new AtomicInteger(times));
+    }
+
+    /** 이 연결·멱등 키로 채널에 실제 발송처리가 반영된 횟수(같은 키 재호출은 다시 세지 않는다). */
+    public int channelDispatches(UUID connectionId, String key) {
+        return channelDispatches.getOrDefault(connectionId + ":" + key, new AtomicInteger()).get();
+    }
+
+    String dispatchChannel(UUID connectionId, String key) {
+        AtomicInteger f = channelDispatchFailures.get(connectionId);
+        if (f != null && f.getAndDecrement() > 0) {
+            throw new ConnectorException(ConnectorException.Kind.TRANSIENT, "mock: channel dispatch timeout", null);
+        }
+        channelDispatches.computeIfAbsent(connectionId + ":" + key, k -> new AtomicInteger()).compareAndSet(0, 1);
+        return "MOCK-DSP-" + Math.abs((connectionId + key).hashCode() % 100000);
+    }
+
     /** 모의 판매채널 주문 응답(표준 필드 형태). */
     public void setOrders(UUID connectionId, java.util.List<Map<String, Object>> rows) {
         orders.put(connectionId, rows);

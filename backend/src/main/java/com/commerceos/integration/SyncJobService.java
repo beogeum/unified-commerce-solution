@@ -26,10 +26,12 @@ public class SyncJobService {
             "CLAIM_FETCH", new String[]{"CLAIM_RETURN", "READ", "M4"},
             "SETTLEMENT_FETCH", new String[]{"SETTLEMENT", "READ", "M5"},
             "INVENTORY_FETCH", new String[]{"INVENTORY_QUERY", "READ", "M3"},
+            "SHIPMENT_SYNC", new String[]{"OUTBOUND_STATUS", "READ", "M4"},
             "RETURN_INSPECTION_FETCH", new String[]{"RETURN_INSPECTION", "READ", "M4"});
 
     /** 처리기가 있는 데이터 수집 유형. */
-    static final java.util.Set<String> IMPLEMENTED_DATA_JOBS = java.util.Set.of(InventoryFetchJobHandler.TYPE, OrderFetchJobHandler.TYPE);
+    static final java.util.Set<String> IMPLEMENTED_DATA_JOBS = java.util.Set.of(InventoryFetchJobHandler.TYPE, OrderFetchJobHandler.TYPE,
+            ShipmentSyncJobHandler.TYPE);
 
     private final ConnectionService connections;
     private final CapabilityService capabilities;
@@ -58,7 +60,11 @@ public class SyncJobService {
             if (cap == null) {
                 throw Errors.validation("job_type", "알 수 없는 작업 유형입니다.");
             }
-            capabilities.require(connectionId, cap[0], cap[1]);
+            // 출고상태·송장 수신은 출고상태 또는 송장(배송 단계) 중 하나만 확인돼도 실행할 수 있다
+            boolean trackingOnly = ShipmentSyncJobHandler.TYPE.equals(type) && capabilities.executableSystem(a.workspaceId(), connectionId, "TRACKING", "READ");
+            if (!trackingOnly) {
+                capabilities.require(connectionId, cap[0], cap[1]);
+            }
             if (!IMPLEMENTED_DATA_JOBS.contains(type)) {
                 throw Errors.unprocessable("JOB_TYPE_NOT_IMPLEMENTED",
                         "이 작업 유형은 아직 제공되지 않습니다(" + cap[2] + " 단계에서 제공 예정).", Map.of("job_type", type));

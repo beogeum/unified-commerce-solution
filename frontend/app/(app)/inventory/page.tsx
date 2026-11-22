@@ -192,7 +192,8 @@ function QualityModal({ stock, external, committedGuard, onClose, onDone }: { st
 
 function ReceiptDrawer({ nodes, onClose, onDone }: { nodes: Node[]; onClose: () => void; onDone: () => void }) {
   const { entities } = useSession();
-  const [be, setBe] = useState(entities[0]?.id ?? "");
+  const [beSel, setBe] = useState("");
+  const be = beSel || entities[0]?.id || "";
   const [node, setNode] = useState(nodes.find((n) => n.inventory_source === "INTERNAL" && n.status === "ACTIVE")?.id ?? "");
   const [sku, setSku] = useState<Sku | null>(null);
   const [f, setF] = useState({ quantity: 1, quality_status: "SELLABLE", lot_code: "", expires_on: "", location_code: "", reference_type: "", reference_id: "", reason: "" });
