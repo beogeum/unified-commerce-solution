@@ -5,7 +5,7 @@ import { DataTable } from "@/components/DataTable";
 import { ConfirmModal, Drawer } from "@/components/Overlay";
 import { Empty, ErrorState, Forbidden, Loading } from "@/components/States";
 import { api, ApiError, qs } from "@/lib/api";
-import { Node, PROVIDER_KIND_KO, SOURCE_KO } from "@/lib/inventory";
+import { Node, PROVIDER_KIND_KO, SEMANTIC_KO, SOURCE_KO } from "@/lib/inventory";
 import { useSession } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
@@ -33,7 +33,8 @@ export default function NodesPage() {
             { key: "p", header: "운영", render: (r) => `${PROVIDER_KIND_KO[r.provider_kind]} · ${r.provider_name}` },
             { key: "s", header: "사용 사업자 · 화주계정", render: (r) => r.provider_kind === "SELF_WMS" ? <span className="ctx">모든 사업자(재고는 사업자별 집계)</span>
               : r.shippers.length ? r.shippers.map((s) => `${s.business_entity_name}(${s.shipper_name})`).join(", ") : <Chip kind="warn">화주계정 미연결</Chip> },
-            { key: "src", header: "재고 원본", render: (r) => SOURCE_KO[r.inventory_source] },
+            { key: "src", header: "재고 원본", render: (r) => <>{SOURCE_KO[r.inventory_source]}{r.inventory_source === "EXTERNAL" &&
+              <span className="ctx"> · {SEMANTIC_KO[r.quantity_semantic]}</span>}</> },
             { key: "c", header: "마감", render: (r) => r.cutoff_time?.slice(0, 5) ?? "—" },
             { key: "st", header: "상태", render: (r) => <StatusChip status={r.status} /> },
           ]} />
@@ -90,7 +91,7 @@ function NodeDrawer({ id, onClose, onChanged }: { id: string; onClose: () => voi
   const [loc, setLoc] = useState({ code: "", zone: "" });
   const [err, setErr] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
-  if (node.loading) return <Drawer title="출고거점" onClose={onClose}><Loading /></Drawer>;
+  if (node.loading && !node.data) return <Drawer title="출고거점" onClose={onClose}><Loading /></Drawer>;
   if (node.error || !n) return <Drawer title="출고거점" onClose={onClose}>{node.error && <ErrorState error={node.error} onRetry={node.reload} />}</Drawer>;
   const linked = new Set(n.shippers.map((s) => s.shipper_account_id));
   const candidates = (shippers.data ?? []).filter((s) => !linked.has(s.id) && s.status === "ACTIVE");
@@ -118,6 +119,7 @@ function NodeDrawer({ id, onClose, onChanged }: { id: string; onClose: () => voi
       <div className="kv"><span>출고 마감</span><span>{n.cutoff_time?.slice(0, 5) ?? "—"}</span></div>
       <div className="kv"><span>주소·메모</span><span>{n.address_note ?? "—"}</span></div>
       <div className="kv"><span>상태</span><span><StatusChip status={n.status} /></span></div>
+      {n.inventory_source === "EXTERNAL" && <ExternalRules node={n} manage={manage} onSaved={() => { node.reload(); onChanged(); }} />}
       {n.provider_kind === "SELF_WMS" ? (
         <>
           <h3 style={{ fontSize: 14 }}>로케이션</h3>
@@ -148,5 +150,46 @@ function NodeDrawer({ id, onClose, onChanged }: { id: string; onClose: () => voi
         impact={[["거점", `${n.name} (${n.code})`], ["조건", "남은 재고 0, 진행 중 확보 0 일 때만 닫힙니다"], ["되돌리기", "닫은 거점은 다시 열 수 없습니다"]]}
         onConfirm={() => { setClosing(false); run(() => api(`/fulfillment-nodes/${id}`, { method: "PATCH", ifMatch: n.version, body: { status: "CLOSED" } })); }} />}
     </Drawer>
+  );
+}
+
+function ExternalRules({ node, manage, onSaved }: { node: Node; manage: boolean; onSaved: () => void }) {
+  const [f, setF] = useState({ quantity_semantic: node.quantity_semantic, quantity_semantic_evidence: node.quantity_semantic_evidence ?? "",
+    restricted_sell_buffer: node.restricted_sell_buffer, snapshot_max_age_minutes: node.snapshot_max_age_minutes });
+  const [err, setErr] = useState<string | null>(null);
+  const [ok, setOk] = useState(false);
+  const save = async () => {
+    setErr(null);
+    setOk(false);
+    try {
+      await api(`/fulfillment-nodes/${node.id}`, { method: "PATCH", ifMatch: node.version, body: { ...f,
+        quantity_semantic_evidence: f.quantity_semantic === "UNKNOWN" ? undefined : f.quantity_semantic_evidence } });
+      setOk(true);
+      onSaved();
+    } catch (x) {
+      setErr(x instanceof ApiError ? x.message : "저장하지 못했습니다.");
+    }
+  };
+  return (
+    <section aria-label="외부 재고 해석" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <h3 style={{ fontSize: 14, margin: 0 }}>외부 재고 해석</h3>
+      {err && <div className="note n-err" role="alert">{err}</div>}
+      {ok && <div className="note n-ok">저장했습니다. 다음 재고 자료부터 적용됩니다.</div>}
+      {node.quantity_semantic === "UNKNOWN" && <div className="note n-warn">수량 의미가 확인되지 않아 이 거점의 재고는 항상 보수적으로 판매 제한됩니다.</div>}
+      <label className="fld">물류사 재고 수량 의미<select className="inp" value={f.quantity_semantic} disabled={!manage}
+        onChange={(e) => setF({ ...f, quantity_semantic: e.target.value })}>
+        {Object.entries(SEMANTIC_KO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+      {f.quantity_semantic !== "UNKNOWN" && <label className="fld">확인 근거(필수)<input className="inp" value={f.quantity_semantic_evidence} disabled={!manage} maxLength={500}
+        onChange={(e) => setF({ ...f, quantity_semantic_evidence: e.target.value })} placeholder="물류사 API 문서 위치·테스트 계정 응답 캡처 등" /></label>}
+      {node.quantity_semantic_verified_at && <p className="ctx" style={{ margin: 0 }}>확인 기록: {node.quantity_semantic_evidence}</p>}
+      <div className="row-gap">
+        <label className="fld">판매 제한 때 보류 수량<input className="inp" type="number" min={0} value={f.restricted_sell_buffer} disabled={!manage}
+          onChange={(e) => setF({ ...f, restricted_sell_buffer: Number(e.target.value) || 0 })} /></label>
+        <label className="fld">자료 유효 시간(분)<input className="inp" type="number" min={5} max={10080} value={f.snapshot_max_age_minutes} disabled={!manage}
+          onChange={(e) => setF({ ...f, snapshot_max_age_minutes: Number(e.target.value) || 60 })} /></label>
+      </div>
+      {manage && <button className="btn" type="button" onClick={save} style={{ alignSelf: "flex-start" }}
+        disabled={f.quantity_semantic !== "UNKNOWN" && !f.quantity_semantic_evidence.trim()}>해석 규칙 저장</button>}
+    </section>
   );
 }

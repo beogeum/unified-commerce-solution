@@ -65,7 +65,8 @@ public class InventoryService {
 
     public record PositionView(UUID id, UUID businessEntityId, String businessEntityName, UUID skuId, String skuCode, String skuName, UUID nodeId, String nodeCode,
                                String nodeName, String inventorySource, int sellableOnHand, int committed, int reserved, int allocated, int picking, int atp,
-                               int nonSellableOnHand, Instant updatedAt) {
+                               int nonSellableOnHand, boolean restricted, String restrictionReason, int restrictedHold, Instant externalAsOf,
+                               Instant updatedAt) {
     }
 
     public record TxnView(UUID id, Instant occurredAt, String txnType, UUID businessEntityId, String businessEntityName, UUID skuId, String skuCode, UUID nodeId,
@@ -73,11 +74,12 @@ public class InventoryService {
                           String reservationStateFrom, String reservationStateTo, String referenceType, String referenceId, String reason, String actorName) {
     }
 
-    public record NodeAvailability(UUID nodeId, String nodeCode, String nodeName, int sellableOnHand, int committed, int atp) {
+    public record NodeAvailability(UUID nodeId, String nodeCode, String nodeName, int sellableOnHand, int committed, int atp, boolean restricted,
+                                   String restrictionReason, int restrictedHold, Instant externalAsOf) {
     }
 
     public record Availability(UUID businessEntityId, UUID skuId, String skuCode, int safetyStock, int sellableOnHand, int committed, int atp,
-                               List<NodeAvailability> nodes) {
+                               boolean restricted, List<NodeAvailability> nodes) {
     }
 
     public record Filter(List<String> businessEntityIds, UUID nodeId, UUID skuId, String q, String qualityStatus, String txnType, Boolean nonZero) {
@@ -143,8 +145,9 @@ public class InventoryService {
         Position p = ledger.lockPosition(a.workspaceId(), owner, (UUID) head.get("sku_id"), (UUID) head.get("node_id"));
         Stock s = ledger.lockStock(a.workspaceId(), c.stockId());
         NodeService.NodeView node = nodes.find(s.bucket().nodeId()).orElseThrow();
-        if ("EXTERNAL".equals(node.inventorySource())) {
-            throw Errors.unprocessable("NODE_INVENTORY_EXTERNAL", "물류사 재고가 기준인 거점은 물류사 동기화로만 품질이 바뀝니다.");
+        // 물류사 재고 기준 거점: 판매가능 ↔ 비가용 전환은 물류사 동기화로만. 비가용 안의 세부분류(내부 보완정보)는 담당자가 바꿀 수 있다(I4)
+        if ("EXTERNAL".equals(node.inventorySource()) && ("SELLABLE".equals(s.bucket().quality()) || "SELLABLE".equals(c.toQualityStatus()))) {
+            throw Errors.unprocessable("NODE_INVENTORY_EXTERNAL", "물류사 재고가 기준인 거점은 판매가능·비가용 전환을 물류사 동기화로만 반영합니다. 비가용 안의 세부분류만 바꿀 수 있습니다.");
         }
         if (qty > s.onHand()) {
             throw Errors.unprocessable("STOCK_INSUFFICIENT", "버킷 수량보다 많이 옮길 수 없습니다.", Map.of("on_hand", s.onHand(), "requested", qty));
@@ -210,8 +213,8 @@ public class InventoryService {
         return jdbc.sql(sql.toString()).params(params).query((rs, i) -> new PositionView(Db.uuid(rs, "id"), Db.uuid(rs, "owner_business_entity_id"),
                 rs.getString("be_name"), Db.uuid(rs, "sku_id"), rs.getString("sku_code"), rs.getString("sku_name"), Db.uuid(rs, "node_id"), rs.getString("node_code"),
                 rs.getString("node_name"), rs.getString("inventory_source"), rs.getInt("sellable_on_hand"), rs.getInt("committed"), rs.getInt("q_reserved"),
-                rs.getInt("q_allocated"), rs.getInt("q_picking"), rs.getInt("sellable_on_hand") - rs.getInt("committed"), rs.getInt("non_sellable"),
-                Db.instant(rs, "updated_at"))).list();
+                rs.getInt("q_allocated"), rs.getInt("q_picking"), atpOf(rs), rs.getInt("non_sellable"), rs.getBoolean("restricted"),
+                rs.getString("restriction_reason"), rs.getInt("restricted_hold"), Db.instant(rs, "external_as_of"), Db.instant(rs, "updated_at"))).list();
     }
 
     public List<StockView> stocks(Filter f) {
@@ -279,14 +282,17 @@ public class InventoryService {
     Availability availabilityOf(UUID ws, UUID businessEntityId, UUID skuId, String skuCode) {
         int safety = safetyStock(ws, businessEntityId, skuId);
         List<NodeAvailability> per = jdbc.sql("""
-                select p.node_id, n.code, n.name, p.sellable_on_hand, p.committed from inventory_position p join fulfillment_node n on n.id = p.node_id
+                select p.node_id, n.code, n.name, p.sellable_on_hand, p.committed, p.restricted, p.restriction_reason, p.restricted_hold, p.external_as_of
+                  from inventory_position p join fulfillment_node n on n.id = p.node_id
                  where p.workspace_id = :ws and p.owner_business_entity_id = :o and p.sku_id = :s order by n.code
                 """).param("ws", ws).param("o", businessEntityId).param("s", skuId).query((rs, i) -> new NodeAvailability(Db.uuid(rs, "node_id"),
-                rs.getString("code"), rs.getString("name"), rs.getInt("sellable_on_hand"), rs.getInt("committed"),
-                rs.getInt("sellable_on_hand") - rs.getInt("committed"))).list();
+                rs.getString("code"), rs.getString("name"), rs.getInt("sellable_on_hand"), rs.getInt("committed"), atpOf(rs),
+                rs.getBoolean("restricted"), rs.getString("restriction_reason"), rs.getInt("restricted_hold"), Db.instant(rs, "external_as_of"))).list();
         int sellable = per.stream().mapToInt(NodeAvailability::sellableOnHand).sum();
         int committed = per.stream().mapToInt(NodeAvailability::committed).sum();
-        return new Availability(businessEntityId, skuId, skuCode, safety, sellable, committed, Math.max(0, sellable - committed - safety), per);
+        int atp = per.stream().mapToInt(NodeAvailability::atp).sum();
+        return new Availability(businessEntityId, skuId, skuCode, safety, sellable, committed, Math.max(0, atp - safety),
+                per.stream().anyMatch(NodeAvailability::restricted), per);
     }
 
     int safetyStock(UUID ws, UUID businessEntityId, UUID skuId) {
@@ -494,6 +500,10 @@ public class InventoryService {
             params.put("q", "%" + f.q().trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%");
             params.put("qe", f.q().trim());
         }
+    }
+
+    private static int atpOf(java.sql.ResultSet rs) throws java.sql.SQLException {
+        return Math.max(0, rs.getInt("sellable_on_hand") - rs.getInt("committed") - rs.getInt("restricted_hold"));
     }
 
     private static Mismatch mismatch(java.sql.ResultSet rs, String check, long expected, long actual, String msg) throws java.sql.SQLException {

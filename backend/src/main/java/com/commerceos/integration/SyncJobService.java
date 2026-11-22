@@ -28,6 +28,9 @@ public class SyncJobService {
             "INVENTORY_FETCH", new String[]{"INVENTORY_QUERY", "READ", "M3"},
             "RETURN_INSPECTION_FETCH", new String[]{"RETURN_INSPECTION", "READ", "M4"});
 
+    /** 처리기가 있는 데이터 수집 유형. */
+    static final java.util.Set<String> IMPLEMENTED_DATA_JOBS = java.util.Set.of(InventoryFetchJobHandler.TYPE);
+
     private final ConnectionService connections;
     private final CapabilityService capabilities;
     private final JobService jobs;
@@ -56,8 +59,10 @@ public class SyncJobService {
                 throw Errors.validation("job_type", "알 수 없는 작업 유형입니다.");
             }
             capabilities.require(connectionId, cap[0], cap[1]);
-            throw Errors.unprocessable("JOB_TYPE_NOT_IMPLEMENTED",
-                    "이 작업 유형은 아직 제공되지 않습니다(" + cap[2] + " 단계에서 제공 예정).", Map.of("job_type", type));
+            if (!IMPLEMENTED_DATA_JOBS.contains(type)) {
+                throw Errors.unprocessable("JOB_TYPE_NOT_IMPLEMENTED",
+                        "이 작업 유형은 아직 제공되지 않습니다(" + cap[2] + " 단계에서 제공 예정).", Map.of("job_type", type));
+            }
         }
         if ("PAUSED".equals(c.status())) {
             throw Errors.conflict("CONNECTION_PAUSED", "일시중지된 연결입니다. 재개한 뒤 점검하세요.");

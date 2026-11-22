@@ -143,9 +143,9 @@ class IntegrationIsolationTest extends IntegrationTest {
             }
         }
         assertThat(invRead.get("executable").asBoolean()).isTrue();
-        // 가드를 통과해도 처리기가 없는 단계의 작업은 명시적으로 거부(구현 완료로 가장하지 않음)
-        Api.Res notYet = ws.owner().post("/api/v1/integrations/" + conn + "/sync-jobs", Map.of("job_type", "INVENTORY_FETCH"));
-        assertThat(notYet.errorCode()).isEqualTo("JOB_TYPE_NOT_IMPLEMENTED");
+        // 가드를 통과하면 처리기가 있는 유형(M3 I4 재고 조회)은 접수된다. 처리기가 없는 유형의 거부는 SyncJobService.IMPLEMENTED_DATA_JOBS 가 맡는다
+        Api.Res accepted = ws.owner().post("/api/v1/integrations/" + conn + "/sync-jobs", Map.of("job_type", "INVENTORY_FETCH"));
+        assertThat(accepted.status()).as(accepted.body().toString()).isEqualTo(202);
     }
 
     @Test

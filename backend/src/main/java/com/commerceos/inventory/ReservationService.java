@@ -7,6 +7,9 @@ import com.commerceos.identity.access.Perm;
 import com.commerceos.inventory.InventoryLedger.Position;
 import com.commerceos.inventory.InventoryLedger.Stock;
 import com.commerceos.inventory.InventoryLedger.Txn;
+import com.commerceos.platform.audit.ActorType;
+import com.commerceos.platform.audit.AuditEntry;
+import com.commerceos.platform.audit.AuditService;
 import com.commerceos.shared.db.Db;
 import com.commerceos.shared.db.TenantContext;
 import com.commerceos.shared.error.Errors;
@@ -42,8 +45,11 @@ public class ReservationService {
     private final InventoryService inventory;
     private final Clock clock;
     private final TransactionTemplate tx;
+    private final AuditService audit;
 
-    public ReservationService(JdbcClient jdbc, AccessGuard guard, InventoryLedger ledger, InventoryService inventory, Clock clock, PlatformTransactionManager tm) {
+    public ReservationService(JdbcClient jdbc, AccessGuard guard, InventoryLedger ledger, InventoryService inventory, Clock clock, PlatformTransactionManager tm,
+                              AuditService audit) {
+        this.audit = audit;
         this.jdbc = jdbc;
         this.guard = guard;
         this.ledger = ledger;
@@ -61,12 +67,15 @@ public class ReservationService {
     public record Transition(String reason, Boolean pickReturnConfirmed) {
     }
 
+    public record ExternalAck(Instant acknowledgedAt, String externalRef) {
+    }
+
     public record ReleaseByDemand(String demandType, String demandRef, String reason, Boolean pickReturnConfirmed) {
     }
 
     public record ReservationView(UUID id, UUID groupId, UUID businessEntityId, String businessEntityName, UUID skuId, String skuCode, UUID nodeId, String nodeCode,
-                                  int quantity, String state, String demandType, String demandRef, Instant expiresAt, Instant createdAt, Instant updatedAt,
-                                  int version) {
+                                  int quantity, String state, String demandType, String demandRef, Instant expiresAt, Instant externalAckAt,
+                                  String externalRef, Instant consumedAt, Instant createdAt, Instant updatedAt, int version) {
     }
 
     public record Filter(List<String> businessEntityIds, UUID nodeId, UUID skuId, String state, String demandType, String demandRef) {
@@ -218,7 +227,8 @@ public class ReservationService {
             throw Errors.conflict("STOCK_BUCKET_MISMATCH", "판매가능 버킷 수량이 확보수량보다 적습니다. 재고 검증 후 다시 시도하세요.",
                     Map.of("quantity", r.quantity(), "shortage", remaining));
         }
-        jdbc.sql("update inventory_reservation set state = 'CONSUMED', version = version + 1, updated_at = now() where id = :id").param("id", id).update();
+        jdbc.sql("update inventory_reservation set state = 'CONSUMED', consumed_at = now(), version = version + 1, updated_at = now() where id = :id")
+                .param("id", id).update();
         Position cur = p;
         boolean first = true;
         String reason = InventoryService.trimOrNull(t == null ? null : t.reason());
@@ -233,6 +243,47 @@ public class ReservationService {
                     first ? "CONSUMED" : null, r.demandType(), r.demandRef(), reason, a.memberId()));
             first = false;
         }
+        return get(id);
+    }
+
+    /**
+     * 물류사가 출고지시를 접수한 시각 기록(I4). 외부 재고 스냅샷의 기준시각(워터마크)과 비교해, 그 전에 접수된 확보는
+     * 물류사 '가용' 수량에 이미 반영된 것으로 본다(T08). 할당·피킹 단계에서 한 번만 기록하며 바꾸지 않는다.
+     * M4 출고요청 연동이 이 값을 채우고, 그 전에는 물류사 화면·파일로 확인한 담당자가 기록한다.
+     */
+    @Transactional
+    public ReservationView acknowledgeExternal(UUID id, ExternalAck ack) {
+        guard.requirePermission(Perm.INVENTORY_OPERATE);
+        CurrentActor a = guard.actor();
+        if (ack == null || ack.acknowledgedAt() == null) {
+            throw Errors.validation("acknowledged_at", "물류사 접수 시각을 입력하세요.");
+        }
+        if (ack.acknowledgedAt().isAfter(clock.instant().plusSeconds(300))) {
+            throw Errors.validation("acknowledged_at", "접수 시각이 현재보다 미래일 수 없습니다.");
+        }
+        String ref = InventoryService.trimOrNull(ack.externalRef());
+        if (ref != null && ref.length() > 200) {
+            throw Errors.validation("external_ref", "외부 참조는 200자 이내입니다.");
+        }
+        Row row = lockRow(a.workspaceId(), id);
+        Position p = ledger.lockPositionById(a.workspaceId(), row.positionId());
+        Row r = lockReservation(a.workspaceId(), id);
+        ReservationView cur = get(id);
+        if (cur.externalAckAt() != null) {
+            if (cur.externalAckAt().equals(ack.acknowledgedAt()) && java.util.Objects.equals(cur.externalRef(), ref)) {
+                return cur;
+            }
+            throw Errors.conflict("EXTERNAL_ACK_EXISTS", "이미 물류사 접수 시각이 기록되어 있습니다(바꿀 수 없음).",
+                    Map.of("external_ack_at", cur.externalAckAt().toString()));
+        }
+        if (!"ALLOCATED".equals(r.state()) && !"PICKING".equals(r.state())) {
+            throw invalidState(r.state(), "EXTERNAL_ACK");
+        }
+        jdbc.sql("update inventory_reservation set external_ack_at = :at, external_ref = :ref, version = version + 1, updated_at = now() where id = :id")
+                .param("at", Db.ts(ack.acknowledgedAt())).param("ref", ref).param("id", id).update();
+        audit.record(AuditEntry.builder(a.workspaceId(), "INVENTORY_RESERVATION_EXTERNAL_ACK", "INVENTORY_RESERVATION", id)
+                .actor(ActorType.USER, a.memberId(), a.displayName()).scope(p.ownerId(), null)
+                .after(Map.of("external_ack_at", ack.acknowledgedAt().toString(), "external_ref", String.valueOf(ref), "state", r.state())).build());
         return get(id);
     }
 
@@ -449,7 +500,7 @@ public class ReservationService {
     private static ReservationView view(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new ReservationView(Db.uuid(rs, "id"), Db.uuid(rs, "group_id"), Db.uuid(rs, "owner_business_entity_id"), rs.getString("be_name"),
                 Db.uuid(rs, "sku_id"), rs.getString("sku_code"), Db.uuid(rs, "node_id"), rs.getString("node_code"), rs.getInt("quantity"), rs.getString("state"),
-                rs.getString("demand_type"), rs.getString("demand_ref"), Db.instant(rs, "expires_at"), Db.instant(rs, "created_at"), Db.instant(rs, "updated_at"),
-                rs.getInt("version"));
+                rs.getString("demand_type"), rs.getString("demand_ref"), Db.instant(rs, "expires_at"), Db.instant(rs, "external_ack_at"),
+                rs.getString("external_ref"), Db.instant(rs, "consumed_at"), Db.instant(rs, "created_at"), Db.instant(rs, "updated_at"), rs.getInt("version"));
     }
 }

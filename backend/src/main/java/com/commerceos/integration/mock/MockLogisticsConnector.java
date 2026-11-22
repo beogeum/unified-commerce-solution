@@ -64,7 +64,14 @@ public class MockLogisticsConnector implements LogisticsConnector {
 
     @Override
     public ConnectorEnvelope<Map<String, Object>> fetchInventory(ConnectorContext ctx, String cursor) {
-        return empty(ctx);
+        control.apply(ctx);
+        MockScenarioControl.InventoryFeed feed = control.inventory(ctx.connectionId());
+        // 한 쪽에 2행씩 나눠 커서 동작도 흉내 낸다
+        int from = cursor == null ? 0 : Integer.parseInt(cursor);
+        int to = Math.min(feed.rows().size(), from + 2);
+        String next = to < feed.rows().size() ? String.valueOf(to) : null;
+        return new ConnectorEnvelope<>(CODE, ctx.externalAccountKey(), "mock://inventory/" + ctx.connectionId() + "/" + from, null,
+                List.copyOf(feed.rows().subList(from, to)), "mock-inventory-mapping-v1", feed.asOf(), Instant.now(), 1, next);
     }
 
     @Override

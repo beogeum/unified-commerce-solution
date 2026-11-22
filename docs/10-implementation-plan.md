@@ -158,6 +158,7 @@ M0 설계 정리 ─▶ M1 Foundation ─▶ M2 Catalog ─▶ M3 Inventory ─�
 - 테스트: T04, T12(가용수량 계산부), T13, BOM 순환 거부, 매핑 충돌.
 
 ### 12.5 M3 — Inventory
+- **I4 완료(2026-11-22)**: `V14`, 거점 외부 재고 해석 규칙(수량 의미·근거·버퍼·유효 시간), 확보 물류사 접수 시각, 외부 재고 스냅샷(직접 입력·파일·연동 조회 `INVENTORY_FETCH`) + 워터마크·멱등·보수적 판매 제한·과확보·비가용 대사·미연결 SKU 업무함, 오래된 자료 감시, 화면(외부 재고 동기화·거점 해석 규칙·물류사 접수 기록), ExternalInventoryTest 7개(T08·T09·T38) + E2E 1개. 결정 DLG-096~102.
 - **I1~I3 완료(2026-11-22)**: `V13`, 출고거점·화주계정 연결·로케이션(`/fulfillment-nodes`), 재고 버킷·집계·원장·ATP·검증(`/inventory/positions|stocks|transactions|availability|verification`), 입고·품질 변경, 확보 lifecycle(`/inventory/reservations`), 만료 자동 해제, 화면(물류센터·출고거점, 통합재고·재고원장·예약·할당), InventoryTest 7개(T05·T06·T07 포함) + E2E 1개. 결정 DLG-087~095.
 - **착수 게이트:** CHG-009(예약 단위), OQ-006(3PL 수량 의미) 임시 규칙 확정, OQ-010.
 - PR: I1 물류센터·출고거점(Provider→Center→Node, 화주계정 연결) → I2 재고 버킷·원장(append-only, 버킷=원장 합 검증) → I3 예약 lifecycle·원자적 확보(행 잠금, 동시성) → I4 외부 재고 스냅샷·수량 의미·워터마크·보수적 제한 → I5 실사(Blind)·조정 승인·이동 → I6 재고 검증센터.

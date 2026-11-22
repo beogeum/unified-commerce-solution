@@ -25,9 +25,10 @@ class InventoryLedger {
         this.jdbc = jdbc;
     }
 
-    record Position(UUID id, UUID ownerId, UUID skuId, UUID nodeId, int sellableOnHand, int committed) {
+    /** restrictedHold: 외부 재고 판매 제한 중 판매에서 빼 둔 수량(품절 버퍼). ATP 는 0 아래로 내려가지 않는다. */
+    record Position(UUID id, UUID ownerId, UUID skuId, UUID nodeId, int sellableOnHand, int committed, int restrictedHold) {
         int atp() {
-            return sellableOnHand - committed;
+            return Math.max(0, sellableOnHand - committed - restrictedHold);
         }
     }
 
@@ -82,7 +83,7 @@ class InventoryLedger {
             throw Errors.conflict("INSUFFICIENT_AVAILABLE_STOCK", "판매 가능 재고가 확보수량보다 적어질 수 없습니다.",
                     Map.of("sellable_on_hand", p.sellableOnHand(), "committed", p.committed()));
         }
-        return new Position(p.id(), p.ownerId(), p.skuId(), p.nodeId(), p.sellableOnHand() + sellableDelta, p.committed() + committedDelta);
+        return new Position(p.id(), p.ownerId(), p.skuId(), p.nodeId(), p.sellableOnHand() + sellableDelta, p.committed() + committedDelta, p.restrictedHold());
     }
 
     /** 버킷에 수량을 더한다(없으면 만든다). @return 버킷 id */
@@ -145,7 +146,7 @@ class InventoryLedger {
 
     private Position position(java.sql.ResultSet rs, int i) throws java.sql.SQLException {
         return new Position(Db.uuid(rs, "id"), Db.uuid(rs, "owner_business_entity_id"), Db.uuid(rs, "sku_id"), Db.uuid(rs, "node_id"),
-                rs.getInt("sellable_on_hand"), rs.getInt("committed"));
+                rs.getInt("sellable_on_hand"), rs.getInt("committed"), rs.getInt("restricted_hold"));
     }
 
     private Stock stock(java.sql.ResultSet rs) throws java.sql.SQLException {

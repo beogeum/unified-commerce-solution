@@ -44,14 +44,18 @@ public class NodeService {
 
     public record NodeView(UUID id, String code, String name, String logisticsProviderCode, String providerKind, String providerName,
                            String inventorySource, LocalTime cutoffTime, String addressNote, String status, List<ShipperLink> shippers,
-                           int locationCount, int version) {
+                           int locationCount, String quantitySemantic, String quantitySemanticEvidence, java.time.Instant quantitySemanticVerifiedAt,
+                           int restrictedSellBuffer, int snapshotMaxAgeMinutes, int version) {
     }
 
     public record Create(String code, String name, String logisticsProviderCode, String inventorySource, LocalTime cutoffTime, String addressNote) {
     }
 
-    public record Patch(String name, LocalTime cutoffTime, String addressNote, String status) {
+    public record Patch(String name, LocalTime cutoffTime, String addressNote, String status, String quantitySemantic, String quantitySemanticEvidence,
+                        Integer restrictedSellBuffer, Integer snapshotMaxAgeMinutes) {
     }
+
+    static final Set<String> SEMANTICS = Set.of("UNKNOWN", "ON_HAND", "AVAILABLE", "POST_OUTBOUND_ESTIMATE");
 
     public record LocationView(UUID id, String code, String zone, String status) {
     }
@@ -115,6 +119,25 @@ public class NodeService {
         if (p.status() != null && !Set.of("ACTIVE", "SUSPENDED", "CLOSED").contains(p.status())) {
             throw Errors.validation("status", "상태 값이 올바르지 않습니다.");
         }
+        String evidence = p.quantitySemanticEvidence() == null || p.quantitySemanticEvidence().isBlank() ? null : p.quantitySemanticEvidence().trim();
+        if (p.quantitySemantic() != null) {
+            if (!SEMANTICS.contains(p.quantitySemantic())) {
+                throw Errors.validation("quantity_semantic", "수량 의미 값이 올바르지 않습니다.");
+            }
+            if (!"EXTERNAL".equals(before.inventorySource())) {
+                throw Errors.unprocessable("NODE_INVENTORY_INTERNAL", "내부 원장 거점에는 외부 수량 의미를 설정하지 않습니다.");
+            }
+            // 확인 안 된 수량 의미를 확인된 것처럼 두지 않는다(CLAUDE.md): UNKNOWN 이 아니면 실제 계정 확인 근거 필수
+            if (!"UNKNOWN".equals(p.quantitySemantic()) && (evidence == null || evidence.length() > 500)) {
+                throw Errors.validation("quantity_semantic_evidence", "수량 의미를 확인한 근거(물류사 문서·테스트 계정 응답 등)를 500자 이내로 입력하세요.");
+            }
+        }
+        if (p.restrictedSellBuffer() != null && (p.restrictedSellBuffer() < 0 || p.restrictedSellBuffer() > 100_000)) {
+            throw Errors.validation("restricted_sell_buffer", "판매 제한 버퍼는 0 이상입니다.");
+        }
+        if (p.snapshotMaxAgeMinutes() != null && (p.snapshotMaxAgeMinutes() < 5 || p.snapshotMaxAgeMinutes() > 10080)) {
+            throw Errors.validation("snapshot_max_age_minutes", "스냅샷 유효 시간은 5분~7일 사이입니다.");
+        }
         if ("CLOSED".equals(p.status())) {
             int stock = jdbc.sql("select coalesce(sum(on_hand), 0) from inventory_stock where node_id = :id").param("id", id).query(Integer.class).single();
             int active = jdbc.sql("select count(*) from inventory_reservation where node_id = :id and state in ('RESERVED','ALLOCATED','PICKING')")
@@ -125,10 +148,31 @@ public class NodeService {
         }
         jdbc.sql("""
                 update fulfillment_node set name = coalesce(:n, name), cutoff_time = coalesce(:cut, cutoff_time), address_note = coalesce(:addr, address_note),
-                       status = coalesce(:st, status), version = version + 1, updated_at = now() where id = :id
-                """).param("n", p.name()).param("cut", p.cutoffTime()).param("addr", p.addressNote()).param("st", p.status()).param("id", id).update();
+                       status = coalesce(:st, status), restricted_sell_buffer = coalesce(:buf, restricted_sell_buffer),
+                       snapshot_max_age_minutes = coalesce(:age, snapshot_max_age_minutes), version = version + 1, updated_at = now() where id = :id
+                """).param("n", p.name()).param("cut", p.cutoffTime()).param("addr", p.addressNote()).param("st", p.status())
+                .param("buf", p.restrictedSellBuffer()).param("age", p.snapshotMaxAgeMinutes()).param("id", id).update();
+        if (p.quantitySemantic() != null && !p.quantitySemantic().equals(before.quantitySemantic())) {
+            boolean unknown = "UNKNOWN".equals(p.quantitySemantic());
+            jdbc.sql("""
+                    update fulfillment_node set quantity_semantic = :q, quantity_semantic_evidence = cast(:e as text), quantity_semantic_verified_by = cast(:by as uuid),
+                           quantity_semantic_verified_at = case when :unknown then null else now() end where id = :id
+                    """).param("q", p.quantitySemantic()).param("e", unknown ? null : evidence).param("by", unknown ? null : a.memberId())
+                    .param("unknown", unknown).param("id", id).update();
+        }
+        Map<String, Object> beforeMap = new java.util.LinkedHashMap<>();
+        beforeMap.put("status", before.status());
+        beforeMap.put("quantity_semantic", before.quantitySemantic());
+        beforeMap.put("restricted_sell_buffer", before.restrictedSellBuffer());
+        beforeMap.put("snapshot_max_age_minutes", before.snapshotMaxAgeMinutes());
+        Map<String, Object> afterMap = new java.util.LinkedHashMap<>();
+        afterMap.put("status", String.valueOf(p.status()));
+        afterMap.put("quantity_semantic", String.valueOf(p.quantitySemantic()));
+        afterMap.put("quantity_semantic_evidence", String.valueOf(evidence));
+        afterMap.put("restricted_sell_buffer", String.valueOf(p.restrictedSellBuffer()));
+        afterMap.put("snapshot_max_age_minutes", String.valueOf(p.snapshotMaxAgeMinutes()));
         audit.record(AuditEntry.builder(a.workspaceId(), "FULFILLMENT_NODE_UPDATED", "FULFILLMENT_NODE", id)
-                .actor(ActorType.USER, a.memberId(), a.displayName()).before(Map.of("status", before.status())).after(Map.of("status", String.valueOf(p.status()))).build());
+                .actor(ActorType.USER, a.memberId(), a.displayName()).before(beforeMap).after(afterMap).build());
         return get(id);
     }
 
@@ -221,14 +265,16 @@ public class NodeService {
                 Db.uuid(rs, "business_entity_id"), rs.getString("be_name"))).list()
                 .stream().filter(l -> visible.contains(l.businessEntityId())).toList();
         return new NodeView(n.id(), n.code(), n.name(), n.logisticsProviderCode(), n.providerKind(), n.providerName(), n.inventorySource(), n.cutoffTime(),
-                n.addressNote(), n.status(), links, n.locationCount(), n.version());
+                n.addressNote(), n.status(), links, n.locationCount(), n.quantitySemantic(), n.quantitySemanticEvidence(), n.quantitySemanticVerifiedAt(),
+                n.restrictedSellBuffer(), n.snapshotMaxAgeMinutes(), n.version());
     }
 
     private NodeView map(ResultSet rs, int i) throws SQLException {
         java.sql.Time cut = rs.getTime("cutoff_time");
         return new NodeView(Db.uuid(rs, "id"), rs.getString("code"), rs.getString("name"), rs.getString("logistics_provider_code"), rs.getString("provider_kind"),
                 rs.getString("provider_name"), rs.getString("inventory_source"), cut == null ? null : cut.toLocalTime(), rs.getString("address_note"),
-                rs.getString("status"), List.of(), rs.getInt("location_count"), rs.getInt("version"));
+                rs.getString("status"), List.of(), rs.getInt("location_count"), rs.getString("quantity_semantic"), rs.getString("quantity_semantic_evidence"),
+                Db.instant(rs, "quantity_semantic_verified_at"), rs.getInt("restricted_sell_buffer"), rs.getInt("snapshot_max_age_minutes"), rs.getInt("version"));
     }
 
     private UUID ws() {

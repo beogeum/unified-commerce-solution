@@ -28,8 +28,11 @@ public class InventoryController {
     private final ReservationService reservations;
     private final IdempotencyService idempotency;
     private final AccessGuard guard;
+    private final ExternalSnapshotService snapshots;
 
-    public InventoryController(InventoryService inventory, ReservationService reservations, IdempotencyService idempotency, AccessGuard guard) {
+    public InventoryController(InventoryService inventory, ReservationService reservations, IdempotencyService idempotency, AccessGuard guard,
+                               ExternalSnapshotService snapshots) {
+        this.snapshots = snapshots;
         this.inventory = inventory;
         this.reservations = reservations;
         this.idempotency = idempotency;
@@ -121,6 +124,53 @@ public class InventoryController {
         };
         CurrentActor a = guard.actor();
         return idempotency.execute(a.workspaceId(), a.memberId(), key, "POST", http.getRequestURI(), t, () -> ResponseEntity.ok(ApiResponse.of(work.get())));
+    }
+
+    @PostMapping("/reservations/{id}/external-ack")
+    public ResponseEntity<?> externalAck(@PathVariable UUID id, @RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                         @RequestBody ReservationService.ExternalAck req, HttpServletRequest http) {
+        CurrentActor a = guard.actor();
+        return idempotency.execute(a.workspaceId(), a.memberId(), key, "POST", http.getRequestURI(), req,
+                () -> ResponseEntity.ok(ApiResponse.of(reservations.acknowledgeExternal(id, req))));
+    }
+
+    // ---------------------------------------------------------------- 외부 재고 스냅샷(I4)
+
+    @GetMapping("/external-snapshots")
+    public ApiResponse<List<ExternalSnapshotService.SnapshotView>> snapshots(@RequestParam(name = "business_entity_id", required = false) List<String> be,
+                                                                            @RequestParam(name = "node_id", required = false) UUID node) {
+        return ApiResponse.of(snapshots.list(be, node));
+    }
+
+    @GetMapping("/external-snapshots/{id}")
+    public ApiResponse<ExternalSnapshotService.SnapshotDetail> snapshot(@PathVariable UUID id) {
+        return ApiResponse.of(snapshots.get(id));
+    }
+
+    @PostMapping("/external-snapshots")
+    public ResponseEntity<?> submitSnapshot(@RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                            @RequestBody ExternalSnapshotService.Submit req, HttpServletRequest http) {
+        return idem(key, http, req, () -> snapshots.submit(req));
+    }
+
+    @PostMapping(value = "/external-snapshots/upload", consumes = "multipart/form-data")
+    public ResponseEntity<ApiResponse<ExternalSnapshotService.SnapshotDetail>> uploadSnapshot(
+            @RequestParam(name = "node_id") UUID node, @RequestParam(name = "business_entity_id") UUID be,
+            @RequestParam(name = "as_of", required = false) String asOf, @RequestParam(required = false) Boolean complete,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
+        java.time.Instant at = null;
+        if (asOf != null && !asOf.isBlank()) {
+            try {
+                at = java.time.OffsetDateTime.parse(asOf.trim()).toInstant();
+            } catch (java.time.format.DateTimeParseException e) {
+                throw com.commerceos.shared.error.Errors.validation("as_of", "기준시각은 2026-11-22T09:00:00+09:00 형식입니다.");
+            }
+        }
+        if (file.getSize() > com.commerceos.operations.imports.TabularReader.MAX_BYTES) {
+            throw com.commerceos.shared.error.Errors.validation("file", "파일은 10MB 이하여야 합니다.");
+        }
+        var d = snapshots.upload(node, be, at, Boolean.TRUE.equals(complete), file.getOriginalFilename(), file.getContentType(), file.getBytes());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.of(d));
     }
 
     @PostMapping("/reservations/release-by-demand")

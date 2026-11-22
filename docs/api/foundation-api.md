@@ -74,7 +74,7 @@
 | | `POST /integrations/connections/{id}/credentials` [추가] | `integration.credential.manage` | WRITE | 교체(이전 것은 ROTATED) |
 | | `GET /integrations/capabilities?connection_id=` | `integration.read` | READ | `executable`, `blocked_reasons` |
 | | `PUT /integrations/connections/{id}/capabilities/{feature}/{operation}` [추가] | `integration.capability.verify` | WRITE | VERIFIED 는 근거 필수·커넥터 구현 필수 |
-| | `POST /integrations/{id}/sync-jobs` | `integration.sync` | WRITE | `{id}`=연결 ID. `job_type` 기본 `INTEGRATION_HEALTH_CHECK`. 데이터 수집 유형은 지원 기능 가드 후 `JOB_TYPE_NOT_IMPLEMENTED` |
+| | `POST /integrations/{id}/sync-jobs` | `integration.sync` | WRITE | `{id}`=연결 ID. `job_type` 기본 `INTEGRATION_HEALTH_CHECK`. 데이터 수집 유형은 지원 기능 가드 후, 처리기가 있는 유형(`INVENTORY_FETCH`, M3 I4 — inventory-api.md §5)만 접수하고 나머지는 `JOB_TYPE_NOT_IMPLEMENTED` |
 | 업무함 | `GET /work-items`, `GET /work-items/{id}` [추가] | `work_item.read` | READ | `status`, `item_type` |
 | | `PATCH /work-items/{id}` | `work_item.update` | WRITE | 상태 전이 표(DEC-F09) |
 | 작업 | `GET /jobs/{id}` | 요청자 본인 또는 작업의 사업자 READ | | |

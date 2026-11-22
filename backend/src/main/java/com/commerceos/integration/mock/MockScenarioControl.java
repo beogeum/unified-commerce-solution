@@ -15,6 +15,19 @@ import org.springframework.stereotype.Component;
 public class MockScenarioControl {
     private final Map<UUID, MockScenario> overrides = new ConcurrentHashMap<>();
     private final Map<UUID, AtomicInteger> calls = new ConcurrentHashMap<>();
+    private final Map<UUID, InventoryFeed> inventory = new ConcurrentHashMap<>();
+
+    /** 모의 3PL 재고 응답. asOf 가 null 이면 기준시각 없는 응답(워터마크 미제공 물류사)을 흉내 낸다. */
+    public record InventoryFeed(java.time.Instant asOf, java.util.List<Map<String, Object>> rows) {
+    }
+
+    public void setInventory(UUID connectionId, java.time.Instant asOf, java.util.List<Map<String, Object>> rows) {
+        inventory.put(connectionId, new InventoryFeed(asOf, rows));
+    }
+
+    InventoryFeed inventory(UUID connectionId) {
+        return inventory.getOrDefault(connectionId, new InventoryFeed(java.time.Instant.now(), java.util.List.of()));
+    }
 
     public void set(UUID connectionId, MockScenario scenario) {
         overrides.put(connectionId, scenario);

@@ -10,7 +10,7 @@ import { Empty, ErrorState, Forbidden, Loading } from "@/components/States";
 import { api, ApiError, newIdempotencyKey, qs } from "@/lib/api";
 import { Sku } from "@/lib/catalog";
 import { formatDateTime } from "@/lib/format";
-import { Mismatch, Node, num, Position, QUALITY_KO, SOURCE_KO, Stock, Txn } from "@/lib/inventory";
+import { ago, Mismatch, Node, num, Position, QUALITY_KO, RESTRICTION_KO, SOURCE_KO, Stock, Txn } from "@/lib/inventory";
 import { useSession } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
@@ -55,13 +55,16 @@ export default function InventoryPage() {
           empty={<Empty title="재고가 없습니다." hint="출고거점을 등록하고 입고를 기록하면 여기에 표시됩니다." />}
           columns={[
             { key: "s", header: "소유 사업자 · SKU", render: (r) => <><b>{r.business_entity_name}</b> · {r.sku_name ?? ""} <span className="mono">({r.sku_code})</span></> },
-            { key: "n", header: "거점 · 재고 원본", render: (r) => <>{r.node_name} <span className="ctx">{SOURCE_KO[r.inventory_source]}</span></> },
+            { key: "n", header: "거점 · 재고 원본", render: (r) => <>{r.node_name} <span className="ctx">{SOURCE_KO[r.inventory_source]}
+              {r.inventory_source === "EXTERNAL" ? ` · ${ago(r.external_as_of)}` : ""}</span>
+              {r.restricted && <> <Chip kind="warn">판매 제한 · {RESTRICTION_KO[r.restriction_reason ?? ""] ?? r.restriction_reason}</Chip></>}</> },
             { key: "o", header: "정상", num: true, render: (r) => num(r.sellable_on_hand) },
             { key: "rv", header: "예약", num: true, render: (r) => num(r.reserved) },
             { key: "al", header: "할당", num: true, render: (r) => num(r.allocated) },
             { key: "pk", header: "피킹", num: true, render: (r) => num(r.picking) },
             { key: "ns", header: "비가용·불용", num: true, render: (r) => num(r.non_sellable_on_hand) },
-            { key: "atp", header: "추가 판매가능", num: true, render: (r) => r.atp <= 0 ? <Chip kind="err">0</Chip> : <b>{num(r.atp)}</b> },
+            { key: "atp", header: "추가 판매가능", num: true, render: (r) => <>{r.atp <= 0 ? <Chip kind="err">0</Chip> : <b>{num(r.atp)}</b>}
+              {r.restricted_hold > 0 && <span className="ctx"> (보류 {num(r.restricted_hold)})</span>}</> },
             { key: "u", header: "최근 변경", render: (r) => <span className="ctx">{formatDateTime(r.updated_at)}</span> },
           ]} />
       )}
@@ -81,6 +84,8 @@ function PositionDrawer({ p, onClose, onChanged }: { p: Position; onClose: () =>
     <Drawer title={`${p.sku_code} · ${p.node_name}`} onClose={onClose}>
       <div className="kv"><span>소유 사업자</span><span>{p.business_entity_name}</span></div>
       <div className="kv"><span>판매가능 실물 / 확보 / ATP</span><span>{num(p.sellable_on_hand)} / {num(p.committed)} / <b>{num(p.atp)}</b></span></div>
+      {p.inventory_source === "EXTERNAL" && <div className="kv"><span>물류사 자료 기준시각</span><span>{p.external_as_of ? `${formatDateTime(p.external_as_of)} (${ago(p.external_as_of)})` : "기준시각 없음"}</span></div>}
+      {p.restricted && <div className="note n-warn">판매 제한 중 — {RESTRICTION_KO[p.restriction_reason ?? ""] ?? p.restriction_reason}. 보수적으로 계산한 수량만 판매하고{p.restricted_hold > 0 ? ` 버퍼 ${num(p.restricted_hold)}개를 보류합니다` : " 있습니다"}. 업무함의 확인 업무를 처리하세요.</div>}
       <h3 style={{ fontSize: 14 }}>재고 버킷(로케이션·LOT·품질)</h3>
       {stocks.loading ? <Loading /> : stocks.error ? <ErrorState error={stocks.error} onRetry={stocks.reload} /> : (
         <DataTable caption="재고 버킷" rows={stocks.data ?? []} rowKey={(s) => s.id} empty={<Empty title="수량이 있는 버킷이 없습니다." />}
@@ -89,20 +94,20 @@ function PositionDrawer({ p, onClose, onChanged }: { p: Position; onClose: () =>
             { key: "lot", header: "LOT · 유통기한", render: (s) => s.lot_code ? <><span className="mono">{s.lot_code}</span> <span className="ctx">{s.expires_on ?? ""}</span></> : "—" },
             { key: "q", header: "품질", render: (s) => <Chip kind={s.quality_status === "SELLABLE" ? "ok" : "warn"}>{QUALITY_KO[s.quality_status]}{s.hold_reason ? ` · ${s.hold_reason}` : ""}</Chip> },
             { key: "n", header: "수량", num: true, render: (s) => num(s.on_hand) },
-            { key: "a", header: "", render: (s) => can("inventory.operate") && p.inventory_source === "INTERNAL"
+            { key: "a", header: "", render: (s) => can("inventory.operate") && (p.inventory_source === "INTERNAL" || s.quality_status !== "SELLABLE")
               ? <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); setMoving(s); }}>품질 변경</button> : null },
           ]} />)}
       <h3 style={{ fontSize: 14 }}>최근 원장</h3>
       {txns.loading ? <Loading /> : txns.error ? <ErrorState error={txns.error} onRetry={txns.reload} /> : <TxnList rows={txns.data ?? []} />}
-      {moving && <QualityModal stock={moving} committedGuard={p.sellable_on_hand - p.committed} onClose={() => setMoving(null)}
+      {moving && <QualityModal stock={moving} external={p.inventory_source === "EXTERNAL"} committedGuard={p.sellable_on_hand - p.committed} onClose={() => setMoving(null)}
         onDone={() => { setMoving(null); stocks.reload(); txns.reload(); onChanged(); }} />}
     </Drawer>
   );
 }
 
-function QualityModal({ stock, committedGuard, onClose, onDone }: { stock: Stock; committedGuard: number; onClose: () => void; onDone: () => void }) {
+function QualityModal({ stock, external, committedGuard, onClose, onDone }: { stock: Stock; external: boolean; committedGuard: number; onClose: () => void; onDone: () => void }) {
   const [qty, setQty] = useState(1);
-  const [to, setTo] = useState(stock.quality_status === "SELLABLE" ? "PENDING_INSPECTION" : "SELLABLE");
+  const [to, setTo] = useState(stock.quality_status === "SELLABLE" || external ? (stock.quality_status === "DEFECTIVE" ? "DAMAGED" : stock.quality_status === "SELLABLE" ? "PENDING_INSPECTION" : "DEFECTIVE") : "SELLABLE");
   const [hold, setHold] = useState("");
   const [reason, setReason] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -128,8 +133,9 @@ function QualityModal({ stock, committedGuard, onClose, onDone }: { stock: Stock
         ["판매 가능 재고 영향", leavingSellable ? `−${num(qty)} (확보되지 않은 수량 ${num(Math.max(0, committedGuard))}개까지)` : to === "SELLABLE" ? `+${num(qty)}` : "변화 없음"]]}>
       {err && <div className="note n-err" role="alert">{err}</div>}
       <label className="fld">수량<input className="inp" type="number" min={1} max={stock.on_hand} value={qty} onChange={(e) => setQty(Number(e.target.value) || 1)} /></label>
+      {external && <p className="ctx" style={{ margin: 0 }}>물류사 재고 기준 거점은 비가용 안의 세부분류만 바꿀 수 있습니다(판매가능 전환은 물류사 동기화로).</p>}
       <label className="fld">변경할 품질<select className="inp" value={to} onChange={(e) => setTo(e.target.value)}>
-        {Object.entries(QUALITY_KO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+        {Object.entries(QUALITY_KO).filter(([k]) => !external || k !== "SELLABLE").map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
       {to !== "SELLABLE" && <label className="fld">보류 사유 코드(선택)<input className="inp mono" value={hold} onChange={(e) => setHold(e.target.value.toUpperCase())} placeholder="예: SUPPLIER_CLAIM" /></label>}
       <label className="fld">사유(필수)<input className="inp" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} /></label>
     </ConfirmModal>

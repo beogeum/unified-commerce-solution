@@ -356,6 +356,71 @@ test.describe.serial("Foundation", () => {
     }
   });
 
+  test("관리자: 3PL 거점 재고 파일 → 수량 의미 미확인 판매 제한 → 확인 후 해제 (M3 I4, T09)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    const sa = await bff(page.request).post("/shipper-accounts", { business_entity_id: ids.a, logistics_provider_code: "FASSTO",
+      display_name: `파스토 화주 ${RUN}`, external_shipper_key: `FS-${RUN}` }, { "idempotency-key": `e2e-sa-${RUN}` });
+    expect(sa.status()).toBe(201);
+
+    const nodeName = `파스토 용인 ${RUN}`;
+    await page.getByRole("link", { name: "물류·3PL" }).click();
+    await page.getByRole("button", { name: "거점 추가" }).click();
+    const nd = page.getByRole("dialog", { name: "출고거점 추가" });
+    await nd.getByLabel("거점 코드").fill(`FASSTO-${RUN}`.toUpperCase());
+    await nd.getByLabel("거점 이름").fill(nodeName);
+    await nd.getByLabel("물류사업자").selectOption({ label: "파스토 · 3PL" });
+    await nd.getByLabel("출고 마감 시각").fill("15:00");
+    await page.getByRole("button", { name: "저장" }).click();
+    const drawer = page.getByRole("dialog", { name: nodeName });
+    await expect(drawer).toContainText("수량 의미가 확인되지 않아");
+    await drawer.getByLabel("화주계정 연결").selectOption({ label: `${NAMES.a} · 파스토 화주 ${RUN}` });
+    await drawer.getByRole("button", { name: "연결", exact: true }).click();
+    await expect(drawer).toContainText(`파스토 화주 ${RUN}`);
+    await drawer.getByRole("button", { name: "닫기", exact: true }).click();
+
+    // 브라우저는 Asia/Seoul(playwright.config) — datetime-local 값도 KST 로 만든다
+    const local = (d: Date) => new Date(d.getTime() + 9 * 3600000).toISOString().slice(0, 16);
+    const uploadCsv = async (qty: number, minutesAgo: number) => {
+      await page.getByRole("button", { name: "재고 파일 올리기" }).click();
+      const up = page.getByRole("dialog", { name: "물류사 재고 파일 올리기" });
+      await up.getByLabel("출고거점").selectOption({ label: `${nodeName} (${`FASSTO-${RUN}`.toUpperCase()})` });
+      await up.getByLabel("물류사 자료 기준시각").fill(local(new Date(Date.now() - minutesAgo * 60000)));
+      await up.getByLabel("파일(.xlsx·.csv)").setInputFiles({ name: `fassto-${qty}.csv`, mimeType: "text/csv",
+        buffer: Buffer.from(`SKU 코드,수량,판매가능\r\nAMP-30-${RUN},${qty},Y\r\n`, "utf8") });
+      await up.getByRole("button", { name: "반영" }).click();
+      return page.getByRole("dialog", { name: "외부 재고 자료" });
+    };
+    await page.goto("/inventory/external");
+    let detail = await uploadCsv(7, 10);
+    await expect(detail).toContainText("판매 제한 · 수량 의미 미확인");
+    await detail.getByRole("button", { name: "닫기", exact: true }).click();
+    await page.getByRole("link", { name: "통합재고" }).click();
+    await expect(page.getByRole("row", { name: new RegExp(`AMP-30-${RUN}`) }).filter({ hasText: nodeName })).toContainText("판매 제한");
+
+    await page.getByRole("link", { name: "물류·3PL" }).click();
+    await page.getByRole("row", { name: new RegExp(nodeName) }).click();
+    const d2 = page.getByRole("dialog", { name: nodeName });
+    await d2.getByLabel("물류사 재고 수량 의미").selectOption({ label: "가용(접수된 출고지시 제외)" });
+    await d2.getByLabel("확인 근거(필수)").fill("파스토 Open API 재고 조회 응답(테스트 계정) 캡처");
+    await d2.getByRole("button", { name: "해석 규칙 저장" }).click();
+    await expect(d2).toContainText("저장했습니다");
+    await d2.getByRole("button", { name: "닫기", exact: true }).click();
+
+    await page.goto("/inventory/external");
+    detail = await uploadCsv(6, 2);
+    await expect(detail.getByRole("cell", { name: "확인" })).toBeVisible();
+    await detail.getByRole("button", { name: "닫기", exact: true }).click();
+    await page.getByRole("link", { name: "통합재고" }).click();
+    const extRow = page.getByRole("row", { name: new RegExp(`AMP-30-${RUN}`) }).filter({ hasText: nodeName });
+    await expect(extRow).not.toContainText("판매 제한");
+    await expect(extRow.getByRole("cell").nth(7)).toHaveText("6");
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");

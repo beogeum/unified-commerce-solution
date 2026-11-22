@@ -11,7 +11,7 @@ import { num, Reservation, RES_STATE } from "@/lib/inventory";
 import { useSession } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
-type Action = "allocate" | "pick" | "consume" | "release";
+type Action = "allocate" | "pick" | "consume" | "release" | "external-ack";
 const NEXT: Record<string, [Action, string][]> = {
   RESERVED: [["allocate", "할당"], ["release", "해제"]],
   ALLOCATED: [["pick", "피킹 시작"], ["release", "해제"]],
@@ -22,6 +22,7 @@ const IMPACT: Record<Action, string> = {
   pick: "단계만 바뀝니다. 판매 가능 재고(ATP) 변화 없음.",
   consume: "실물 재고 −수량(유통기한 빠른 LOT 부터), 확보 −수량. ATP 변화 없음.",
   release: "확보 −수량, 판매 가능 재고(ATP) +수량.",
+  "external-ack": "수량 변화 없음. 이후 받는 물류사 '가용' 재고에서 이 확보가 이미 빠진 것으로 보고 다시 빼지 않습니다.",
 };
 
 export default function ReservationsPage() {
@@ -50,11 +51,13 @@ export default function ReservationsPage() {
             { key: "s", header: "사업자 · SKU", render: (r) => <>{r.business_entity_name} · <span className="mono">{r.sku_code}</span></> },
             { key: "n", header: "거점", render: (r) => r.node_code },
             { key: "q", header: "수량", num: true, render: (r) => num(r.quantity) },
-            { key: "st", header: "단계", render: (r) => <Chip kind={RES_STATE[r.state][0]}>{RES_STATE[r.state][1]}</Chip> },
+            { key: "st", header: "단계", render: (r) => <><Chip kind={RES_STATE[r.state][0]}>{RES_STATE[r.state][1]}</Chip>
+              {r.external_ack_at && <span className="ctx"> 물류사 접수 {formatDateTime(r.external_ack_at)}</span>}</> },
             { key: "e", header: "만료", render: (r) => <span className="ctx">{r.expires_at ? formatDateTime(r.expires_at) : "—"}</span> },
             { key: "u", header: "변경", render: (r) => <span className="ctx">{formatDateTime(r.updated_at)}</span> },
             { key: "a", header: "처리", render: (r) => can("inventory.operate") ? <span className="row-gap" style={{ gap: 4 }}>
-              {(NEXT[r.state] ?? []).map(([a, label]) => <button key={a} className={`btn ${a === "release" ? "" : "pri"}`} type="button"
+              {[...(NEXT[r.state] ?? []), ...((r.state === "ALLOCATED" || r.state === "PICKING") && !r.external_ack_at ? [["external-ack", "물류사 접수 기록"] as [Action, string]] : [])]
+                .map(([a, label]) => <button key={a} className={`btn ${a === "release" || a === "external-ack" ? "" : "pri"}`} type="button"
                 onClick={() => setPending({ r, action: a, label })}>{label}</button>)}</span> : null },
           ]} />
       )}
@@ -65,6 +68,7 @@ export default function ReservationsPage() {
 
 function ActionModal({ r, action, label, onClose, onDone }: { r: Reservation; action: Action; label: string; onClose: () => void; onDone: () => void }) {
   const [reason, setReason] = useState("");
+  const [ackAt, setAckAt] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -74,7 +78,9 @@ function ActionModal({ r, action, label, onClose, onDone }: { r: Reservation; ac
     setBusy(true);
     setErr(null);
     try {
-      await api(`/inventory/reservations/${r.id}/${action}`, { method: "POST", idempotencyKey: key, body: { reason: reason || undefined, pick_return_confirmed: needsReturn ? confirmed : undefined } });
+      const body = action === "external-ack" ? { acknowledged_at: ackAt ? new Date(ackAt).toISOString() : undefined, external_ref: reason || undefined }
+        : { reason: reason || undefined, pick_return_confirmed: needsReturn ? confirmed : undefined };
+      await api(`/inventory/reservations/${r.id}/${action}`, { method: "POST", idempotencyKey: key, body });
       onDone();
     } catch (x) {
       setErr(x instanceof ApiError ? x.message : "처리하지 못했습니다.");
@@ -84,11 +90,15 @@ function ActionModal({ r, action, label, onClose, onDone }: { r: Reservation; ac
   };
   return (
     <ConfirmModal title={`${label} — ${r.sku_code} ${num(r.quantity)}개`} confirmLabel={label} danger={action === "release"} busy={busy} onClose={onClose} onConfirm={run}
-      confirmDisabled={needsReturn && !confirmed}
+      confirmDisabled={(needsReturn && !confirmed) || (action === "external-ack" && !ackAt)}
       impact={[["수요", `${r.demand_type} ${r.demand_ref}`], ["현재 단계", RES_STATE[r.state][1]], ["재고 영향", IMPACT[action]]]}>
       {err && <div className="note n-err" role="alert">{err}</div>}
       {needsReturn && <label><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} /> 피킹 작업이 중지되고 물건이 제자리로 돌아온 것을 확인했습니다</label>}
-      <label className="fld">사유(선택)<input className="inp" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} /></label>
+      {action === "external-ack" ? <>
+        <label className="fld">물류사 접수 시각<input className="inp" type="datetime-local" value={ackAt} onChange={(e) => setAckAt(e.target.value)} /></label>
+        <label className="fld">물류사 출고 번호(선택)<input className="inp mono" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={200} /></label>
+        <p className="ctx" style={{ margin: 0 }}>물류사 화면·파일에서 접수를 확인한 경우에만 기록하세요. 한 번 기록하면 바꿀 수 없습니다.</p>
+      </> : <label className="fld">사유(선택)<input className="inp" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} /></label>}
     </ConfirmModal>
   );
 }
