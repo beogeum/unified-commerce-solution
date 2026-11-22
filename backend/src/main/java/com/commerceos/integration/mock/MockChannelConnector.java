@@ -64,7 +64,12 @@ public class MockChannelConnector implements ChannelConnector {
 
     @Override
     public ConnectorEnvelope<Map<String, Object>> fetchOrders(ConnectorContext ctx, String cursor, Window window) {
-        return empty(ctx);
+        control.apply(ctx);
+        List<Map<String, Object>> rows = control.orders(ctx.connectionId());
+        int from = cursor == null ? 0 : Integer.parseInt(cursor);
+        int to = Math.min(rows.size(), from + 2);
+        return new ConnectorEnvelope<>(CODE, ctx.externalAccountKey(), "mock://orders/" + ctx.connectionId() + "/" + from, null,
+                List.copyOf(rows.subList(from, to)), "mock-order-mapping-v1", Instant.now(), Instant.now(), 1, to < rows.size() ? String.valueOf(to) : null);
     }
 
     @Override

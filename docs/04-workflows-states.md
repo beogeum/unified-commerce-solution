@@ -94,3 +94,4 @@ OrderReceived, OrderNormalized, OrderItemMapped, GwpApplied, BomExpanded, StockR
 - CHG-009: 예약은 항상 (소유 사업자, SKU, 거점) 재고 버킷 단위이며, `ALLOCATED`는 출고 지시와 결합된 상태로 정의한다.
 - CHG-010: 반품 검수 판정 어휘는 docs/13 §5 기준 한 벌의 enum으로 통일한다: 정상 `SELLABLE` · 검수대기 `PENDING_INSPECTION` · 재포장 `REPACK` · 불량 `DEFECTIVE` · 파손 `DAMAGED` · 만료 `EXPIRED` · 폐기대기 `DISPOSAL_PENDING` · 미확정 `UNDETERMINED`.
 - DLG-040: 미결제 예약 만료 72시간, 반품 검수 기한 입고 후 2영업일(설정값).
+- DLG-113~115(2026-11-22): 주문 상태는 주문상품에서 파생(전부 취소 → CANCELLED, 구매확정 또는 배송완료 + 구매확정 기간 경과 + 열린 클레임 없음 → COMPLETED), 보류는 상태가 아닌 별도 표시. 출고 상태에 CANCEL_REQUESTED·CANCELLED, 배송 상태에 RETURNED_TO_SENDER·LABEL_CANCELLED·LOST 추가. 클레임은 클레임·회수·환불·재출고 4개 축으로 병렬 표현, 환불에 PARTIALLY_CONFIRMED·CANCELLED 추가.

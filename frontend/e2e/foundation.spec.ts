@@ -504,6 +504,52 @@ test.describe.serial("Foundation", () => {
     await expect(page.getByText("이상이 없습니다.")).toBeVisible();
   });
 
+  test("관리자: 주문 수집 → 미연결 보류 → 개인정보 원문 열람(사유) → SKU 연결 후 재검증 (M4 O1~O2)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    const accounts = await (await bff(page.request).get(`/channel-accounts?q=${encodeURIComponent(RUN)}`)).json();
+    const account = accounts.data.find((a: { display_name: string }) => a.display_name === `A 공식스토어 ${RUN}`);
+    const now = new Date().toISOString();
+    const order = { external_order_key: `NV-${RUN}`, ordered_at: now, paid_at: now, external_updated_at: now, external_status: "PAYED", shipping_fee: 3000,
+      total_amount: 23000, buyer: { name: "김구매", phone: "010-2222-3333" },
+      recipient: { name: "김수령", phone: "010-2222-3333", postal_code: "06236", address1: "서울특별시 강남구 테헤란로 152", address2: "10층" },
+      items: [{ external_item_key: `NV-${RUN}-1`, external_product_id: `PRD-${RUN}`, external_option_id: "", product_name: "비타 앰플 30ml", quantity: 2,
+        unit_price: 10000, line_amount: 20000 }] };
+    const imp = await bff(page.request).post("/orders/imports", { channel_account_id: account.id, orders: [order] }, { "idempotency-key": `e2e-ord-${RUN}` });
+    expect(imp.status()).toBe(200);
+    expect((await imp.json()).data.created).toBe(1);
+
+    await page.getByRole("link", { name: "주문", exact: true }).click();
+    const row = page.getByRole("row", { name: new RegExp(`NV-${RUN}`) });
+    await expect(row).toContainText("보류 · 상품 미연결");
+    await expect(row).toContainText("김*령");
+    await expect(row).toContainText("23,000원");
+    await row.click();
+    const drawer = page.getByRole("dialog", { name: /^주문 O/ });
+    await expect(drawer).toContainText("서울특별시 강남구 ***");
+    await drawer.getByRole("button", { name: "원문 보기" }).click();
+    const m = page.getByRole("alertdialog");
+    await m.getByLabel("열람 사유(필수)").fill("배송지 확인 문의");
+    await m.getByRole("button", { name: "열람" }).click();
+    await expect(drawer).toContainText("테헤란로 152");
+
+    // 주문에서 만들어진 미연결 채널상품을 SKU 에 연결 → 재검증으로 보류 해제
+    const listings = await (await bff(page.request).get(`/channel-listings?channel_account_id=${account.id}&mapping=UNMAPPED`)).json();
+    const listing = listings.data.find((l: { external_product_id: string }) => l.external_product_id === `PRD-${RUN}`);
+    const skus = await (await bff(page.request).get(`/skus?q=AMP-30-${RUN}`)).json();
+    const mapped = await bff(page.request).post(`/channel-listings/${listing.id}/mapping`, { sku_id: skus.data[0].id }, { "idempotency-key": `e2e-map-${RUN}` });
+    expect(mapped.status()).toBe(200);
+    await drawer.getByRole("button", { name: "다시 연결·검증" }).click();
+    await expect(drawer).not.toContainText("보류 중");
+    await expect(drawer.getByRole("row", { name: /비타 앰플 30ml/ })).toContainText(`AMP-30-${RUN}`);
+    await drawer.getByRole("button", { name: "변경 이력" }).click();
+    await expect(drawer).toContainText("SKU 연결");
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");

@@ -25,6 +25,8 @@ public final class Perm {
     public static final String FILE_UPLOAD = "file.upload";
     public static final String FILE_READ = "file.read";
     public static final String PII_READ = "pii.read";
+    public static final String ORDER_READ = "order.read";
+    public static final String ORDER_UPDATE = "order.update";
     public static final String CATALOG_READ = "catalog.read";
     public static final String CATALOG_MANAGE = "catalog.manage";
     public static final String COST_READ = "cost.read";

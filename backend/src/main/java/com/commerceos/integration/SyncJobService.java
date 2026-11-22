@@ -29,7 +29,7 @@ public class SyncJobService {
             "RETURN_INSPECTION_FETCH", new String[]{"RETURN_INSPECTION", "READ", "M4"});
 
     /** 처리기가 있는 데이터 수집 유형. */
-    static final java.util.Set<String> IMPLEMENTED_DATA_JOBS = java.util.Set.of(InventoryFetchJobHandler.TYPE);
+    static final java.util.Set<String> IMPLEMENTED_DATA_JOBS = java.util.Set.of(InventoryFetchJobHandler.TYPE, OrderFetchJobHandler.TYPE);
 
     private final ConnectionService connections;
     private final CapabilityService capabilities;

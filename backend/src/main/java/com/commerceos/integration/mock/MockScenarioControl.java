@@ -25,6 +25,17 @@ public class MockScenarioControl {
         inventory.put(connectionId, new InventoryFeed(asOf, rows));
     }
 
+    private final Map<UUID, java.util.List<Map<String, Object>>> orders = new ConcurrentHashMap<>();
+
+    /** 모의 판매채널 주문 응답(표준 필드 형태). */
+    public void setOrders(UUID connectionId, java.util.List<Map<String, Object>> rows) {
+        orders.put(connectionId, rows);
+    }
+
+    java.util.List<Map<String, Object>> orders(UUID connectionId) {
+        return orders.getOrDefault(connectionId, java.util.List.of());
+    }
+
     InventoryFeed inventory(UUID connectionId) {
         return inventory.getOrDefault(connectionId, new InventoryFeed(java.time.Instant.now(), java.util.List.of()));
     }
