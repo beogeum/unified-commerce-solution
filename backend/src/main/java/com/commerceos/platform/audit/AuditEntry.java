@@ -48,7 +48,8 @@ public record AuditEntry(
         }
 
         public Builder actor(ActorType type, UUID memberId, String label) {
-            this.actorType = type;
+            // 사용자 경로를 시스템 자동 처리 주체(구성원 없음)가 실행하면 SYSTEM 으로 남긴다
+            this.actorType = type == ActorType.USER && memberId == null ? ActorType.SYSTEM : type;
             this.actorMemberId = memberId;
             this.actorLabel = label;
             return this;

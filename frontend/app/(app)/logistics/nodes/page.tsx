@@ -119,6 +119,7 @@ function NodeDrawer({ id, onClose, onChanged }: { id: string; onClose: () => voi
       <div className="kv"><span>출고 마감</span><span>{n.cutoff_time?.slice(0, 5) ?? "—"}</span></div>
       <div className="kv"><span>주소·메모</span><span>{n.address_note ?? "—"}</span></div>
       <div className="kv"><span>상태</span><span><StatusChip status={n.status} /></span></div>
+      <RoutingPriority node={n} manage={manage} onSaved={() => { node.reload(); onChanged(); }} />
       {n.inventory_source === "EXTERNAL" && <ExternalRules node={n} manage={manage} onSaved={() => { node.reload(); onChanged(); }} />}
       {n.provider_kind === "SELF_WMS" ? (
         <>
@@ -190,6 +191,32 @@ function ExternalRules({ node, manage, onSaved }: { node: Node; manage: boolean;
       </div>
       {manage && <button className="btn" type="button" onClick={save} style={{ alignSelf: "flex-start" }}
         disabled={f.quantity_semantic !== "UNKNOWN" && !f.quantity_semantic_evidence.trim()}>해석 규칙 저장</button>}
+    </section>
+  );
+}
+
+function RoutingPriority({ node, manage, onSaved }: { node: Node; manage: boolean; onSaved: () => void }) {
+  const [p, setP] = useState(node.routing_priority);
+  const [err, setErr] = useState<string | null>(null);
+  const save = async () => {
+    setErr(null);
+    try {
+      await api(`/fulfillment-nodes/${node.id}`, { method: "PATCH", ifMatch: node.version, body: { routing_priority: p } });
+      onSaved();
+    } catch (x) {
+      setErr(x instanceof ApiError ? x.message : "저장하지 못했습니다.");
+    }
+  };
+  return (
+    <section aria-label="출고 배정" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <h3 style={{ fontSize: 14, margin: 0 }}>출고 배정</h3>
+      {err && <div className="note n-err" role="alert">{err}</div>}
+      <p className="ctx" style={{ margin: 0 }}>주문 전체를 채울 수 있는 거점 중 우선순위 숫자가 작은 거점에 먼저 배정합니다. 같으면 거점 코드 순입니다.</p>
+      <div className="row-gap">
+        <label className="fld">출고 배정 우선순위<input className="inp" type="number" min={0} max={10000} value={p} disabled={!manage}
+          onChange={(e) => setP(Math.min(10000, Math.max(0, Number(e.target.value) || 0)))} /></label>
+        {manage && <button className="btn" type="button" onClick={save} disabled={p === node.routing_priority} style={{ alignSelf: "flex-end" }}>우선순위 저장</button>}
+      </div>
     </section>
   );
 }

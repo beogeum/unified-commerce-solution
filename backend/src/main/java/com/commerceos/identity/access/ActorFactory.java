@@ -2,6 +2,7 @@ package com.commerceos.identity.access;
 
 import com.commerceos.shared.db.Db;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,14 @@ public class ActorFactory {
     public ActorFactory(JdbcClient jdbc, PermissionLoader permissions) {
         this.jdbc = jdbc;
         this.permissions = permissions;
+    }
+
+    /** 시스템 자동 처리 주체(자동 출고 배정·출고 전송 등). HTTP 로는 만들 수 없고, 정해진 재고·주문 권한만 가지며 범위 제한이 없다. */
+    public static final Set<String> SYSTEM_AUTOMATION_PERMISSIONS = Set.of(Perm.INVENTORY_READ, Perm.INVENTORY_OPERATE, Perm.ORDER_READ, Perm.ORDER_UPDATE,
+            Perm.LOGISTICS_ACCOUNT_READ);
+
+    public CurrentActor systemAutomation(UUID workspaceId) {
+        return new CurrentActor(workspaceId, null, null, "시스템 자동 처리", SYSTEM_AUTOMATION_PERMISSIONS, Set.of(), 0, null, "NOT_REQUIRED");
     }
 
     public Optional<CurrentActor> forMember(UUID workspaceId, UUID memberId) {

@@ -79,7 +79,7 @@ public class OrderService {
     public record OrderDetail(OrderRow order, Instant paidAt, String externalStatus, Instant externalUpdatedAt, BigDecimal itemsAmount, BigDecimal sellerDiscount,
                               BigDecimal channelDiscount, BigDecimal shippingFee, String buyerNameMasked, String recipientPhoneMasked, String addressMasked,
                               String holdNote, List<ItemView> items, List<EventView> events, List<RawView> raws, String piiState, String compositionStatus,
-                              List<ComponentView> components, JsonNode gwpResult, int version) {
+                              List<ComponentView> components, JsonNode gwpResult, String allocationStatus, int version) {
     }
 
     public record ComponentView(UUID orderItemId, UUID skuId, String skuCode, int quantityPerUnit, int requiredQuantity, String source, UUID bomId,
@@ -165,7 +165,8 @@ public class OrderService {
                 (BigDecimal) o.get("seller_discount"), (BigDecimal) o.get("channel_discount"), (BigDecimal) o.get("shipping_fee"), (String) o.get("buyer_name_masked"),
                 (String) o.get("recipient_phone_masked"), (String) o.get("address_masked"), (String) o.get("hold_note"), items, events, raws,
                 (String) o.get("pii_state"), (String) o.get("composition_status"), components(id),
-                o.get("gwp_result") == null ? null : json.read(o.get("gwp_result").toString()), ((Number) o.get("version")).intValue());
+                o.get("gwp_result") == null ? null : json.read(o.get("gwp_result").toString()), (String) o.get("allocation_status"),
+                ((Number) o.get("version")).intValue());
     }
 
     private List<ComponentView> components(UUID orderId) {

@@ -26,6 +26,36 @@ public class MockScenarioControl {
     }
 
     private final Map<UUID, java.util.List<Map<String, Object>>> orders = new ConcurrentHashMap<>();
+    private final Map<String, String> outbound = new ConcurrentHashMap<>();
+    private final Map<String, AtomicInteger> outboundRequests = new ConcurrentHashMap<>();
+    private final Map<UUID, Boolean> timeoutAfterAccept = new ConcurrentHashMap<>();
+
+    /** 다음 출고지시 한 번은 물류사가 접수하고도 응답이 끊긴 것처럼(타임아웃) 만든다(T11). */
+    public void timeoutAfterAcceptOnce(UUID connectionId) {
+        timeoutAfterAccept.put(connectionId, true);
+    }
+
+    /** 이 연결·출고 키로 물류사에 실제 출고지시가 몇 번 들어왔는지. */
+    public int outboundRequests(UUID connectionId, String key) {
+        return outboundRequests.getOrDefault(connectionId + ":" + key, new AtomicInteger()).get();
+    }
+
+    String acceptOutbound(UUID connectionId, String key) {
+        outboundRequests.computeIfAbsent(connectionId + ":" + key, k -> new AtomicInteger()).incrementAndGet();
+        String ref = outbound.computeIfAbsent(connectionId + ":" + key, k -> "MOCK-OUT-" + Math.abs(k.hashCode() % 100000));
+        if (Boolean.TRUE.equals(timeoutAfterAccept.remove(connectionId))) {
+            throw new ConnectorException(ConnectorException.Kind.TRANSIENT, "mock: timeout after accept", null);
+        }
+        return ref;
+    }
+
+    String findOutbound(UUID connectionId, String key) {
+        return outbound.get(connectionId + ":" + key);
+    }
+
+    boolean cancelOutbound(UUID connectionId, String key) {
+        return outbound.remove(connectionId + ":" + key) != null;
+    }
 
     /** 모의 판매채널 주문 응답(표준 필드 형태). */
     public void setOrders(UUID connectionId, java.util.List<Map<String, Object>> rows) {

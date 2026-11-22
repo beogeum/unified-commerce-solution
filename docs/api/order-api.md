@@ -43,3 +43,21 @@
 | `PUT /orders/privacy-policies/{businessEntityId}` | `access.manage` | `If-Match`(설정 후). 30~3650일, 1~10년 |
 - 상세 `pii_state`: `ACTIVE` → (주문 종료 + 운영 열람 기간) `ARCHIVED` → (주문 시각 + 보존기간) `PURGED`.
 - `POST /orders/{id}/pii`: `ARCHIVED` 는 `access.manage` + `purpose`(DISPUTE·LEGAL_REQUEST·TAX_AUDIT) 필수(`PII_ARCHIVED`), `PURGED` 는 `409 PII_PURGED`.
+
+## 6. 출고 배정·출고지시 (O4, DLG-123~128)
+출고지시(`fulfillment_order`) = (주문, 출고거점) 단위. 재고 소유 = 주문 사업자. 확보(I3)는 출고지시마다 하나의 수요(`FULFILLMENT_ORDER`, 출고지시 id)로 묶이고, 배정 즉시 `ALLOCATED`(출고지시 결합)로 전환된다 — 예약→할당 단계에서 같은 수량을 두 번 차감하지 않는다.
+
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `POST /orders/{id}/allocate` | `order.update` + `inventory.operate`, 사업자·판매계정 쓰기 범위 | `{outcome: ALLOCATED·FAILED·NOTHING_TO_ALLOCATE·NOT_REQUIRED, fulfillment_order_id, node_name, shortages[]}`. 보류 중 `409 ORDER_ON_HOLD`, 구성 확정 전 `409 ORDER_NOT_READY` |
+| `GET /fulfillment-orders?business_entity_id&status&node_id&order_id` | `order.read` + 사업자·판매계정·출고거점 읽기 범위 | 최신순 300건 |
+| `GET /fulfillment-orders/{id}` | 같음 | 범위 밖·다른 워크스페이스는 `404` |
+| `POST /fulfillment-orders/{id}/dispatch` | `order.update` + `inventory.operate` + 거점 쓰기 범위 | `FAILED → ALLOCATED` 후 재전송 |
+| `POST /fulfillment-orders/{id}/manual-accept {external_ref, accepted_at?}` | 같음 | 수동 전달분 물류사 접수 기록, 전달 업무 종료 |
+| `POST /fulfillment-orders/{id}/cancel {reason, pick_return_confirmed?}` | 같음 | 전송 전: 즉시 취소·확보 해제. 전송 후: `CANCEL_REQUESTED`(확보 유지 + 업무 `FULFILLMENT_CANCEL_CONFIRM`) → `pick_return_confirmed: true` 로 확정. `SHIPPED` 는 `409 FULFILLMENT_ALREADY_SHIPPED`(반품으로 처리, O6) |
+
+- 상태: `ALLOCATED → REQUESTED → ACCEPTED → (PICKING → PACKING → SHIPPED: O5·O7)`, `FAILED`, `CANCEL_REQUESTED → CANCELLED`. 변경은 `fulfillment_event`(추가 전용)와 감사로그에 남는다.
+- 주문 상세 `allocation_status`: `PENDING · ALLOCATED · FAILED · NOT_REQUIRED(플랫폼 물류)`. 배정되면 주문 상태 `CONFIRMED → PROCESSING`, 모든 출고지시가 취소되면 되돌아간다.
+- 자동 배정: 출고 구성 확정(`OrderComposed` outbox) 뒤 시스템 자동 처리 주체로 같은 배정 로직을 실행(`commerce.fulfillment.auto-allocate`, 기본 켬).
+- 출고지시 전송(`FULFILLMENT_DISPATCH` 작업, 최대 6회): 자체 WMS → `INTERNAL` 즉시 접수. 3PL → 사업자 화주계정 연결 + 지원 기능 `OUTBOUND_REQUEST/WRITE` 확인 시 API(멱등 키 = `dispatch_key`), 아니면 `MANUAL` + 업무 `FULFILLMENT_DISPATCH_MANUAL`. 재시도는 먼저 같은 키로 사후조회(T11). 5회 연속 응답 불명 → `DISPATCH_UNKNOWN` 검토 업무.
+- 출고거점 `routing_priority`(0~10000, 작을수록 먼저, 기본 100): `PATCH /fulfillment-nodes/{id} {routing_priority}`.

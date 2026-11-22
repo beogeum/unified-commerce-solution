@@ -7,6 +7,7 @@ import { Empty, ErrorState, Forbidden, Loading } from "@/components/States";
 import { api, ApiError, qs } from "@/lib/api";
 import { formatDateTime, formatWon } from "@/lib/format";
 import { EVENT_KO, GWP_SKIP_KO, HOLD_KO, ORDER_STATUS, OrderDetail, OrderRow, PAYMENT_KO, PII_STATE_KO, RAW_RESULT_KO, SOURCE_TYPE_KO } from "@/lib/orders";
+import { ALLOCATION_KO, AllocationResult, DISPATCH_MODE_KO, FO_STATUS, FulfillmentOrder } from "@/lib/fulfillment";
 import { useSession } from "@/lib/session";
 
 export default function OrdersPage() {
@@ -82,10 +83,28 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
   const [revealing, setRevealing] = useState(false);
   const [reason, setReason] = useState("");
   const [pii, setPii] = useState<{ buyer: Record<string, string | null>; recipient: Record<string, string | null> } | null>(null);
-  const [tab, setTab] = useState<"items" | "components" | "events" | "raws">("items");
+  const [tab, setTab] = useState<"items" | "components" | "fulfillment" | "events" | "raws">("items");
+  const [fos, setFos] = useState<FulfillmentOrder[] | null>(null);
+  const [allocMsg, setAllocMsg] = useState<string | null>(null);
   const [purpose, setPurpose] = useState("DISPUTE");
   const load = () => api<OrderDetail>(`/orders/${id}`).then((r) => setD(r.data)).catch((e) => setLoadErr(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "불러오지 못했습니다.")));
-  useEffect(() => { load(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadFos = () => api<FulfillmentOrder[]>(`/fulfillment-orders?order_id=${id}`).then((r) => setFos(r.data)).catch(() => setFos([]));
+  useEffect(() => { load(); loadFos(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const allocate = async () => {
+    setErr(null);
+    setAllocMsg(null);
+    try {
+      const r = await api<AllocationResult>(`/orders/${id}/allocate`, { method: "POST", body: {} });
+      const a = r.data;
+      setAllocMsg(a.outcome === "ALLOCATED" ? `${a.node_name} 거점에 배정했습니다.` : a.outcome === "NOTHING_TO_ALLOCATE" ? "배정할 수량이 남아 있지 않습니다."
+        : `한 거점에서 주문 전체를 채울 재고가 없습니다: ${a.shortages.map((x) => `${x.sku_code} 필요 ${x.required} / 전체 거점 가용 ${x.available_all_nodes}`).join(", ")}`);
+      load();
+      loadFos();
+      onChanged();
+    } catch (x) {
+      setErr(x instanceof ApiError ? x.message : "배정하지 못했습니다.");
+    }
+  };
   const run = async (path: string, body: unknown, ifMatch?: number) => {
     setErr(null);
     try {
@@ -112,9 +131,12 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
   return (
     <Drawer title={`주문 ${o.order_no}`} onClose={onClose} footer={can("order.update") ? <>
       <button className="btn" type="button" onClick={() => run(`/orders/${id}/revalidate`, {})}>다시 연결·검증</button>
+      {can("inventory.operate") && !o.on_hold && d.composition_status === "FIXED" && ["PENDING", "FAILED"].includes(d.allocation_status) && o.status !== "CANCELLED"
+        && <button className="btn" type="button" onClick={allocate}>출고 배정</button>}
       {manual ? <button className="btn" type="button" onClick={() => run(`/orders/${id}/release-hold`, {}, d.version)}>직접 보류 해제</button>
         : <button className="btn dan" type="button" onClick={() => setHolding(true)}>보류</button>}</> : undefined}>
       {err && <div className="note n-err" role="alert">{err}</div>}
+      {allocMsg && <div className="note n-info" role="status">{allocMsg}</div>}
       {o.on_hold && <div className="note n-warn">보류 중 — {o.hold_reasons.map((h) => HOLD_KO[h] ?? h).join(", ")}{d.hold_note ? ` · ${d.hold_note}` : ""}.
         {o.hold_reasons.includes("UNMAPPED_ITEM") && " 상품 > 채널상품·연결에서 SKU 를 연결하면 자동으로 다시 검증됩니다."}</div>}
       <div className="kv"><span>외부 주문번호</span><span className="mono">{o.external_order_key}</span></div>
@@ -129,8 +151,9 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
         <span className="ctx"> · {PII_STATE_KO[d.pii_state]}</span></span></div>
       <div className="kv"><span>출고 구성</span><span>{d.composition_status === "FIXED" ? "확정(묶음 BOM 버전 고정)" : "확정 전"}
         {d.gwp_result && d.gwp_result.skipped.length > 0 && <span className="ctx"> · 미지급 행사: {d.gwp_result.skipped.map((x) => `${x.campaign_name}(${GWP_SKIP_KO[x.reason] ?? x.reason})`).join(", ")}</span>}</span></div>
+      <div className="kv"><span>출고 배정</span><span>{ALLOCATION_KO[d.allocation_status] ?? d.allocation_status}</span></div>
       <nav className="row-gap" aria-label="주문 상세">
-        {([["items", "주문상품"], ["components", "출고 구성"], ["events", "변경 이력"], ["raws", "원본 수집 이력"]] as const).map(([k, l]) =>
+        {([["items", "주문상품"], ["components", "출고 구성"], ["fulfillment", "출고"], ["events", "변경 이력"], ["raws", "원본 수집 이력"]] as const).map(([k, l]) =>
           <button key={k} className="btn" type="button" aria-current={tab === k ? "page" : undefined} onClick={() => setTab(k)}>{l}</button>)}
       </nav>
       {tab === "items" && <DataTable caption="주문상품" rows={d.items} rowKey={(i) => i.id} empty={<Empty title="주문상품이 없습니다." />} columns={[
@@ -146,6 +169,14 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
         { key: "q", header: "필요 수량", num: true, render: (c) => `${c.required_quantity} (단위당 ${c.quantity_per_unit})` },
         { key: "src", header: "근거", render: (c) => c.source === "BOM" ? `묶음 BOM v${c.bom_version}${c.split_shipment_allowed ? " · 분할 출고 허용" : ""}` : c.source === "GIFT" ? "사은품" : "직접" },
       ]} />}
+      {tab === "fulfillment" && (fos === null ? <Loading /> : <DataTable caption="출고지시" rows={fos} rowKey={(f) => f.id}
+        empty={<Empty title="출고지시가 없습니다." hint="출고 구성이 확정되면 자동으로 배정됩니다. 배정에 실패했다면 재고를 확보한 뒤 출고 배정을 다시 실행하세요." />} columns={[
+        { key: "no", header: "출고번호", render: (f) => <a className="mono" href={`/fulfillment?open=${f.id}`}>{f.fo_no}</a> },
+        { key: "n", header: "출고거점", render: (f) => f.node_name },
+        { key: "q", header: "SKU · 수량", render: (f) => f.lines.map((l) => `${l.sku_code} ×${l.quantity}`).join(", ") },
+        { key: "m", header: "전달", render: (f) => f.dispatch_mode ? DISPATCH_MODE_KO[f.dispatch_mode] : "—" },
+        { key: "s", header: "상태", render: (f) => <Chip kind={FO_STATUS[f.status][0]}>{FO_STATUS[f.status][1]}</Chip> },
+      ]} />)}
       {tab === "events" && <DataTable caption="변경 이력" rows={d.events} rowKey={(e) => e.id} empty={<Empty title="이력이 없습니다." />} columns={[
         { key: "t", header: "시각", render: (e) => <span className="ctx">{formatDateTime(e.occurred_at)}</span> },
         { key: "e", header: "내용", render: (e) => `${EVENT_KO[e.event_type] ?? e.event_type}${e.from_value || e.to_value ? ` (${e.from_value ?? "—"} → ${e.to_value ?? "—"})` : ""}` },

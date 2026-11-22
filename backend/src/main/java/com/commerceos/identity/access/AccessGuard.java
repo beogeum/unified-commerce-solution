@@ -54,10 +54,12 @@ public class AccessGuard {
         }
     }
 
-    private record JobScope(UUID memberId, ResolvedScope scope) {
+    private record JobScope(UUID workspaceId, UUID memberId, ResolvedScope scope) {
     }
 
     private static final ThreadLocal<JobScope> JOB_SCOPE = new ThreadLocal<>();
+    /** runAs 안에서만 범위를 캐시한다(작업 스레드 재사용 시 다른 워크스페이스·주체의 범위가 남지 않도록). */
+    private static final ThreadLocal<Integer> RUN_AS_DEPTH = ThreadLocal.withInitial(() -> 0);
 
     /**
      * 백그라운드 작업이 요청한 사용자의 권한·범위로 도메인 서비스를 호출할 때 쓴다(예: 일괄 가져오기 실행).
@@ -71,9 +73,11 @@ public class AccessGuard {
                 org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated(actor, null, java.util.List.of()));
         com.commerceos.shared.db.TenantContext.setWorkspace(actor.workspaceId());
         JOB_SCOPE.remove();
+        RUN_AS_DEPTH.set(RUN_AS_DEPTH.get() + 1);
         try {
             return work.get();
         } finally {
+            RUN_AS_DEPTH.set(RUN_AS_DEPTH.get() - 1);
             SecurityContextHolder.getContext().setAuthentication(previousAuth);
             restoreTenant.run();
             if (previousScope == null) {
@@ -84,24 +88,30 @@ public class AccessGuard {
         }
     }
 
-    /** 현재 요청 사용자의 범위. 한 요청(또는 runAs 실행) 안에서는 한 번만 계산한다. */
+    /**
+     * 현재 주체의 범위. 한 요청(또는 runAs 실행) 안에서는 한 번만 계산한다.
+     * 캐시는 (워크스페이스, 구성원) 키가 같을 때만 재사용한다 — runAs 로 주체를 바꾼 경우(시스템 자동 처리 등)
+     * 바깥 요청에 캐시된 다른 주체·워크스페이스의 범위를 쓰지 않는다.
+     */
     public ResolvedScope scope() {
-        RequestAttributes attrs = RequestContextHolder.getRequestAttributes();
-        if (attrs == null && JOB_SCOPE.get() != null && JOB_SCOPE.get().memberId().equals(actor().memberId())) {
-            return JOB_SCOPE.get().scope();
-        }
-        if (attrs != null) {
-            Object cached = attrs.getAttribute(SCOPE_ATTR, RequestAttributes.SCOPE_REQUEST);
-            if (cached instanceof ResolvedScope s) {
-                return s;
-            }
-        }
         CurrentActor a = actor();
+        boolean inRunAs = RUN_AS_DEPTH.get() > 0;
+        RequestAttributes attrs = inRunAs ? null : RequestContextHolder.getRequestAttributes();
+        JobScope cached = null;
+        if (inRunAs) {
+            cached = JOB_SCOPE.get();
+        } else if (attrs != null && attrs.getAttribute(SCOPE_ATTR, RequestAttributes.SCOPE_REQUEST) instanceof JobScope js) {
+            cached = js;
+        }
+        if (cached != null && cached.workspaceId().equals(a.workspaceId()) && java.util.Objects.equals(cached.memberId(), a.memberId())) {
+            return cached.scope();
+        }
         ResolvedScope s = scopes.resolve(a.workspaceId(), a.memberId());
-        if (attrs != null) {
-            attrs.setAttribute(SCOPE_ATTR, s, RequestAttributes.SCOPE_REQUEST);
-        } else {
-            JOB_SCOPE.set(new JobScope(a.memberId(), s));
+        JobScope entry = new JobScope(a.workspaceId(), a.memberId(), s);
+        if (inRunAs) {
+            JOB_SCOPE.set(entry);
+        } else if (attrs != null) {
+            attrs.setAttribute(SCOPE_ATTR, entry, RequestAttributes.SCOPE_REQUEST);
         }
         return s;
     }

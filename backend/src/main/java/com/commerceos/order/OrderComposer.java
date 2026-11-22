@@ -35,8 +35,10 @@ public class OrderComposer {
     private final JdbcClient jdbc;
     private final GwpService gwp;
     private final Json json;
+    private final com.commerceos.platform.outbox.OutboxPublisher outbox;
 
-    public OrderComposer(JdbcClient jdbc, GwpService gwp, Json json) {
+    public OrderComposer(JdbcClient jdbc, GwpService gwp, Json json, com.commerceos.platform.outbox.OutboxPublisher outbox) {
+        this.outbox = outbox;
         this.jdbc = jdbc;
         this.gwp = gwp;
         this.json = json;
@@ -158,6 +160,8 @@ public class OrderComposer {
         jdbc.sql("update sales_order set composition_status = 'FIXED', composed_at = now(), gwp_hold = false, version = version + 1 where id = :id")
                 .param("id", orderId).update();
         rules.event(ws, orderId, null, "COMPOSITION_FIXED", null, String.valueOf(merged.size()), Map.of(), actor);
+        // 출고 배정(O4) 신호 — 자동 배정 구독자가 받는다
+        outbox.publish(ws, be, "SALES_ORDER", orderId, "OrderComposed", Map.of("order_id", orderId.toString()));
         return Outcome.FIXED;
     }
 

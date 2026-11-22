@@ -15,7 +15,7 @@ export type OrderDetail = { order: OrderRow; paid_at: string | null; external_st
   address_masked: string | null; hold_note: string | null; items: OrderItem[]; events: OrderEvent[]; raws: OrderRaw[]; pii_state: string;
   composition_status: string; components: { order_item_id: string; sku_id: string; sku_code: string; quantity_per_unit: number; required_quantity: number;
     source: string; bom_id: string | null; bom_version: number | null; split_shipment_allowed: boolean }[];
-  gwp_result: { awards: { campaign_name: string; quantity: number }[]; skipped: { campaign_name: string; reason: string }[] } | null; version: number };
+  gwp_result: { awards: { campaign_name: string; quantity: number }[]; skipped: { campaign_name: string; reason: string }[] } | null; allocation_status: string; version: number };
 
 export const ORDER_STATUS: Record<string, ["info" | "ok" | "warn" | "mute" | "err", string]> = {
   RECEIVED: ["info", "결제 대기"], CONFIRMED: ["ok", "주문 확인"], PROCESSING: ["warn", "출고 진행"], COMPLETED: ["ok", "완료"], CANCELLED: ["mute", "취소"],
@@ -28,7 +28,7 @@ export const EVENT_KO: Record<string, string> = {
   ORDER_CREATED: "주문 수집", PAYMENT_CONFIRMED: "결제 확인", EXTERNAL_STATUS_CHANGED: "외부 상태 변경", RECIPIENT_CHANGED: "수령인 변경",
   ITEM_ADDED: "상품주문 추가", ITEM_CANCELED: "취소 수량 반영", ITEM_MAPPED: "SKU 연결", HOLD_CHANGED: "보류 사유 변경", HOLD_RELEASED: "보류 해제",
   HOLD_MANUAL: "직접 보류", HOLD_MANUAL_RELEASED: "직접 보류 해제", COMPOSITION_FIXED: "출고 구성 확정", GWP_AWARDED: "사은품 지급",
-  GWP_HOLD: "사은품 재고 보류", BOM_MISSING: "묶음 구성 없음", STATUS_CHANGED: "상태 변경", RAW_IGNORED_STALE: "오래된 원본 무시",
+  GWP_HOLD: "사은품 재고 보류", BOM_MISSING: "묶음 구성 없음", FULFILLMENT_ALLOCATED: "출고 배정", ALLOCATION_FAILED: "출고 배정 실패", FULFILLMENT_CANCELLED: "출고 취소", STATUS_CHANGED: "상태 변경", RAW_IGNORED_STALE: "오래된 원본 무시",
 };
 export const RAW_RESULT_KO: Record<string, string> = { CREATED: "생성", UPDATED: "갱신", IGNORED_STALE: "역순 도착 · 미반영", REJECTED: "거절" };
 export const SOURCE_TYPE_KO: Record<string, string> = { ORDER: "일반", PLATFORM_FULFILLMENT: "플랫폼 물류", MANUAL: "수동" };

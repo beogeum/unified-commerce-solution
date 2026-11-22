@@ -76,12 +76,18 @@ public class MockLogisticsConnector implements LogisticsConnector {
 
     @Override
     public ConnectorEnvelope<Map<String, Object>> requestFulfillment(ConnectorContext ctx, Map<String, Object> command, String idempotencyKey) {
-        return empty(ctx);
+        control.apply(ctx);
+        String ref = control.acceptOutbound(ctx.connectionId(), idempotencyKey);
+        return new ConnectorEnvelope<>(CODE, ctx.externalAccountKey(), null, ref, List.of(Map.of("external_ref", ref)), "mock-outbound-v1", Instant.now(),
+                Instant.now(), 1, null);
     }
 
     @Override
     public ConnectorEnvelope<Map<String, Object>> checkFulfillment(ConnectorContext ctx, String externalRef) {
-        return empty(ctx);
+        control.apply(ctx);
+        String ref = control.findOutbound(ctx.connectionId(), externalRef);
+        return new ConnectorEnvelope<>(CODE, ctx.externalAccountKey(), null, ref, ref == null ? List.of() : List.of(Map.of("external_ref", ref)),
+                "mock-outbound-v1", Instant.now(), Instant.now(), 1, null);
     }
 
     @Override

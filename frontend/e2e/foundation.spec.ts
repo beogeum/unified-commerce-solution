@@ -550,6 +550,76 @@ test.describe.serial("Foundation", () => {
     await expect(drawer).toContainText("SKU 연결");
   });
 
+  test("관리자: 거점 우선순위 → 주문 자동 출고 배정·확보 → 자체 WMS 접수 → 출고 취소(물류사 확인) (M4 O4)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+
+    // 자체창고를 가장 먼저 배정되도록
+    await page.getByRole("link", { name: "물류·3PL" }).click();
+    await page.getByRole("row", { name: new RegExp(`화성 자체창고 ${RUN}`) }).click();
+    const nd = page.getByRole("dialog", { name: `화성 자체창고 ${RUN}` });
+    await nd.getByLabel("출고 배정 우선순위").fill("0");
+    await nd.getByRole("button", { name: "우선순위 저장" }).click();
+    await expect(nd.getByRole("button", { name: "우선순위 저장" })).toBeDisabled();
+    await nd.getByRole("button", { name: "닫기", exact: true }).click();
+
+    const skus = await (await bff(page.request).get(`/skus?q=AMP-30-${RUN}`)).json();
+    const nodes = await (await bff(page.request).get("/fulfillment-nodes")).json();
+    const nodeId = nodes.data.find((n: { code: string }) => n.code === `SELF-${RUN}`.toUpperCase()).id;
+    const rec = await bff(page.request).post("/inventory/receipts", { business_entity_id: ids.a, sku_id: skus.data[0].id, node_id: nodeId, quantity: 5,
+      reference_type: "PO", reference_id: `PO-O4-${RUN}` }, { "idempotency-key": `e2e-rec-o4-${RUN}` });
+    expect(rec.status()).toBe(201);
+    const accounts = await (await bff(page.request).get(`/channel-accounts?q=${encodeURIComponent(RUN)}`)).json();
+    const account = accounts.data.find((a: { display_name: string }) => a.display_name === `A 공식스토어 ${RUN}`);
+    const now = new Date().toISOString();
+    const order = { external_order_key: `NV-O4-${RUN}`, ordered_at: now, paid_at: now, external_updated_at: now, total_amount: 10000,
+      recipient: { name: "이수령", phone: "010-3333-4444", postal_code: "06236", address1: "서울특별시 강남구 테헤란로 152" },
+      items: [{ external_item_key: `NV-O4-${RUN}-1`, external_product_id: `PRD-${RUN}`, external_option_id: "", product_name: "비타 앰플 30ml", quantity: 1,
+        unit_price: 10000, line_amount: 10000 }] };
+    const imp = await bff(page.request).post("/orders/imports", { channel_account_id: account.id, orders: [order] }, { "idempotency-key": `e2e-ord-o4-${RUN}` });
+    expect(imp.status()).toBe(200);
+    const orderId = (await imp.json()).data.results[0].order_id;
+    // 출고 구성 확정 → 자동 배정은 비동기(outbox)
+    await expect.poll(async () => (await (await bff(page.request).get(`/fulfillment-orders?order_id=${orderId}`)).json()).data[0]?.status ?? "NONE",
+      { timeout: 30_000 }).toBe("ACCEPTED");
+
+    await page.getByRole("link", { name: "주문", exact: true }).click();
+    await page.getByRole("row", { name: new RegExp(`NV-O4-${RUN}`) }).click();
+    const od = page.getByRole("dialog", { name: /^주문 O/ });
+    await expect(od).toContainText("배정 완료");
+    await od.getByRole("button", { name: "출고", exact: true }).click();
+    const foRow = od.getByRole("row", { name: new RegExp(`AMP-30-${RUN}`) });
+    await expect(foRow).toContainText(`화성 자체창고 ${RUN}`);
+    await expect(foRow).toContainText("자체 WMS 작업지시");
+    await od.getByRole("button", { name: "닫기", exact: true }).click();
+
+    await page.getByRole("link", { name: "출고", exact: true }).click();
+    const row = page.getByRole("row", { name: new RegExp(`AMP-30-${RUN} ×1`) }).first();
+    await expect(row).toContainText("물류사 접수");
+    await row.click();
+    const fd = page.getByRole("dialog", { name: /^출고지시 F/ });
+    await expect(fd.getByRole("row", { name: new RegExp(`AMP-30-${RUN}`) })).toContainText("할당");
+    await expect(fd).toContainText("시스템 자동 처리");
+    await fd.getByRole("button", { name: "출고 취소" }).click();
+    let m = page.getByRole("alertdialog");
+    await expect(m).toContainText("물류사 확인 전까지 확보 유지");
+    await m.getByLabel("취소 사유(필수)").fill("고객 요청 취소");
+    await m.getByRole("button", { name: "취소 요청" }).click();
+    await expect(fd).toContainText("취소 확인 대기");
+    await fd.getByRole("button", { name: "취소 확정" }).click();
+    m = page.getByRole("alertdialog");
+    await m.getByLabel("취소 사유(필수)").fill("물류사 출고 중지 확인");
+    await m.getByLabel("물류사에서 출고 중지·피킹분 원위치를 확인했습니다").check();
+    await expect(m).toContainText("확보 해제");
+    await m.getByRole("button", { name: "취소 확정" }).click();
+    await expect(fd.getByText("취소", { exact: true })).toBeVisible();
+    await expect(fd.getByRole("row", { name: new RegExp(`AMP-30-${RUN}`) })).toContainText("해제");
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");

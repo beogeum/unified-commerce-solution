@@ -187,6 +187,22 @@ public class ReservationService {
         return ids.stream().map(this::get).toList();
     }
 
+    /**
+     * 재고가 모자라면 예외 대신 빈 값(출고 배정이 다음 거점을 시도할 수 있게). 같은 빈 안에서 reserve 를 직접 불러
+     * 트랜잭션 프록시를 거치지 않으므로, 실패해도 바깥 트랜잭션이 롤백 전용으로 표시되지 않는다.
+     */
+    @Transactional
+    public java.util.Optional<List<ReservationView>> tryReserve(Reserve r) {
+        try {
+            return java.util.Optional.of(reserve(r));
+        } catch (com.commerceos.shared.error.ApiException e) {
+            if ("INSUFFICIENT_AVAILABLE_STOCK".equals(e.code()) || "STOCK_COUNT_LOCKED".equals(e.code())) {
+                return java.util.Optional.empty();
+            }
+            throw e;
+        }
+    }
+
     // ---------------------------------------------------------------- 단계 전환
 
     @Transactional

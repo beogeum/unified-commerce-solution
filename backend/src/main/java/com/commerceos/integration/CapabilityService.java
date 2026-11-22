@@ -130,6 +130,12 @@ public class CapabilityService {
         }
     }
 
+    /** 시스템 작업용 실행 가능 여부(권한 검사 없음, 호출자가 문맥을 보장). */
+    public boolean executableSystem(UUID ws, UUID connectionId, String feature, String operation) {
+        return connections.findSystem(ws, connectionId).map(c -> load(c).stream()
+                .anyMatch(x -> x.featureCode().equals(feature) && x.operation().equals(operation) && x.executable())).orElse(false);
+    }
+
     private List<CapabilityView> load(ConnectionService.ConnectionView c) {
         Set<FeatureOp> implemented = connections.implemented(c.connectorCode());
         return jdbc.sql("""

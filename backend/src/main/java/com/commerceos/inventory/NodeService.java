@@ -47,14 +47,14 @@ public class NodeService {
     public record NodeView(UUID id, String code, String name, String logisticsProviderCode, String providerKind, String providerName,
                            String inventorySource, LocalTime cutoffTime, String addressNote, String status, List<ShipperLink> shippers,
                            int locationCount, String quantitySemantic, String quantitySemanticEvidence, java.time.Instant quantitySemanticVerifiedAt,
-                           int restrictedSellBuffer, int snapshotMaxAgeMinutes, int version) {
+                           int restrictedSellBuffer, int snapshotMaxAgeMinutes, int routingPriority, int version) {
     }
 
     public record Create(String code, String name, String logisticsProviderCode, String inventorySource, LocalTime cutoffTime, String addressNote) {
     }
 
     public record Patch(String name, LocalTime cutoffTime, String addressNote, String status, String quantitySemantic, String quantitySemanticEvidence,
-                        Integer restrictedSellBuffer, Integer snapshotMaxAgeMinutes) {
+                        Integer restrictedSellBuffer, Integer snapshotMaxAgeMinutes, Integer routingPriority) {
     }
 
     static final Set<String> SEMANTICS = Set.of("UNKNOWN", "ON_HAND", "AVAILABLE", "POST_OUTBOUND_ESTIMATE");
@@ -147,6 +147,9 @@ public class NodeService {
         if (p.snapshotMaxAgeMinutes() != null && (p.snapshotMaxAgeMinutes() < 5 || p.snapshotMaxAgeMinutes() > 10080)) {
             throw Errors.validation("snapshot_max_age_minutes", "스냅샷 유효 시간은 5분~7일 사이입니다.");
         }
+        if (p.routingPriority() != null && (p.routingPriority() < 0 || p.routingPriority() > 10_000)) {
+            throw Errors.validation("routing_priority", "출고 배정 우선순위는 0~10000 사이입니다(작을수록 먼저).");
+        }
         if ("CLOSED".equals(p.status())) {
             int stock = jdbc.sql("select coalesce(sum(on_hand), 0) from inventory_stock where node_id = :id").param("id", id).query(Integer.class).single();
             int active = jdbc.sql("select count(*) from inventory_reservation where node_id = :id and state in ('RESERVED','ALLOCATED','PICKING')")
@@ -158,9 +161,10 @@ public class NodeService {
         jdbc.sql("""
                 update fulfillment_node set name = coalesce(:n, name), cutoff_time = coalesce(:cut, cutoff_time), address_note = coalesce(:addr, address_note),
                        status = coalesce(:st, status), restricted_sell_buffer = coalesce(:buf, restricted_sell_buffer),
-                       snapshot_max_age_minutes = coalesce(:age, snapshot_max_age_minutes), version = version + 1, updated_at = now() where id = :id
+                       snapshot_max_age_minutes = coalesce(:age, snapshot_max_age_minutes),
+                       routing_priority = coalesce(:rp, routing_priority), version = version + 1, updated_at = now() where id = :id
                 """).param("n", p.name()).param("cut", p.cutoffTime()).param("addr", p.addressNote()).param("st", p.status())
-                .param("buf", p.restrictedSellBuffer()).param("age", p.snapshotMaxAgeMinutes()).param("id", id).update();
+                .param("buf", p.restrictedSellBuffer()).param("age", p.snapshotMaxAgeMinutes()).param("rp", p.routingPriority()).param("id", id).update();
         if (p.quantitySemantic() != null && !p.quantitySemantic().equals(before.quantitySemantic())) {
             boolean unknown = "UNKNOWN".equals(p.quantitySemantic());
             jdbc.sql("""
@@ -174,12 +178,14 @@ public class NodeService {
         beforeMap.put("quantity_semantic", before.quantitySemantic());
         beforeMap.put("restricted_sell_buffer", before.restrictedSellBuffer());
         beforeMap.put("snapshot_max_age_minutes", before.snapshotMaxAgeMinutes());
+        beforeMap.put("routing_priority", before.routingPriority());
         Map<String, Object> afterMap = new java.util.LinkedHashMap<>();
         afterMap.put("status", String.valueOf(p.status()));
         afterMap.put("quantity_semantic", String.valueOf(p.quantitySemantic()));
         afterMap.put("quantity_semantic_evidence", String.valueOf(evidence));
         afterMap.put("restricted_sell_buffer", String.valueOf(p.restrictedSellBuffer()));
         afterMap.put("snapshot_max_age_minutes", String.valueOf(p.snapshotMaxAgeMinutes()));
+        afterMap.put("routing_priority", String.valueOf(p.routingPriority()));
         audit.record(AuditEntry.builder(a.workspaceId(), "FULFILLMENT_NODE_UPDATED", "FULFILLMENT_NODE", id)
                 .actor(ActorType.USER, a.memberId(), a.displayName()).before(beforeMap).after(afterMap).build());
         return get(id);
@@ -277,7 +283,7 @@ public class NodeService {
                 .stream().filter(l -> visible.contains(l.businessEntityId())).toList();
         return new NodeView(n.id(), n.code(), n.name(), n.logisticsProviderCode(), n.providerKind(), n.providerName(), n.inventorySource(), n.cutoffTime(),
                 n.addressNote(), n.status(), links, n.locationCount(), n.quantitySemantic(), n.quantitySemanticEvidence(), n.quantitySemanticVerifiedAt(),
-                n.restrictedSellBuffer(), n.snapshotMaxAgeMinutes(), n.version());
+                n.restrictedSellBuffer(), n.snapshotMaxAgeMinutes(), n.routingPriority(), n.version());
     }
 
     private NodeView map(ResultSet rs, int i) throws SQLException {
@@ -285,7 +291,8 @@ public class NodeService {
         return new NodeView(Db.uuid(rs, "id"), rs.getString("code"), rs.getString("name"), rs.getString("logistics_provider_code"), rs.getString("provider_kind"),
                 rs.getString("provider_name"), rs.getString("inventory_source"), cut == null ? null : cut.toLocalTime(), rs.getString("address_note"),
                 rs.getString("status"), List.of(), rs.getInt("location_count"), rs.getString("quantity_semantic"), rs.getString("quantity_semantic_evidence"),
-                Db.instant(rs, "quantity_semantic_verified_at"), rs.getInt("restricted_sell_buffer"), rs.getInt("snapshot_max_age_minutes"), rs.getInt("version"));
+                Db.instant(rs, "quantity_semantic_verified_at"), rs.getInt("restricted_sell_buffer"), rs.getInt("snapshot_max_age_minutes"),
+                rs.getInt("routing_priority"), rs.getInt("version"));
     }
 
     private UUID ws() {
