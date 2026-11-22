@@ -32,8 +32,10 @@ public class NodeService {
     private final JdbcClient jdbc;
     private final AccessGuard guard;
     private final AuditService audit;
+    private final com.commerceos.identity.access.ScopeAutoInclusion autoInclusion;
 
-    public NodeService(JdbcClient jdbc, AccessGuard guard, AuditService audit) {
+    public NodeService(JdbcClient jdbc, AccessGuard guard, AuditService audit, com.commerceos.identity.access.ScopeAutoInclusion autoInclusion) {
+        this.autoInclusion = autoInclusion;
         this.jdbc = jdbc;
         this.guard = guard;
         this.audit = audit;
@@ -62,12 +64,16 @@ public class NodeService {
 
     public List<NodeView> list() {
         guard.requirePermission(Perm.LOGISTICS_ACCOUNT_READ);
-        return jdbc.sql(SELECT + " where n.workspace_id = :ws order by n.code").param("ws", ws()).query(this::map).list().stream().map(this::withParts).toList();
+        var visible = guard.nodeFilter(AccessKind.READ, null);
+        return jdbc.sql(SELECT + " where n.workspace_id = :ws order by n.code").param("ws", ws()).query(this::map).list().stream()
+                .filter(n -> visible.contains(n.id())).map(this::withParts).toList();
     }
 
     public NodeView get(UUID id) {
         guard.requirePermission(Perm.LOGISTICS_ACCOUNT_READ);
-        return find(id).orElseThrow(() -> Errors.notFound("FULFILLMENT_NODE"));
+        NodeView n = find(id).orElseThrow(() -> Errors.notFound("FULFILLMENT_NODE"));
+        guard.checkNode(AccessKind.READ, "FULFILLMENT_NODE", id, id);
+        return n;
     }
 
     @Transactional
@@ -100,6 +106,9 @@ public class NodeService {
         } catch (DuplicateKeyException e) {
             throw Errors.conflict("FULFILLMENT_NODE_DUPLICATE", "같은 코드의 출고거점이 이미 있습니다.");
         }
+        // 새 거점을 자동 포함하도록 설정한 사용자 범위에 넣고(사업자·판매계정과 같은 규칙), 이 요청의 범위 캐시를 비운다
+        autoInclusion.onTargetCreated(a.workspaceId(), com.commerceos.identity.access.ScopeDimension.FULFILLMENT_NODE, id, a.memberId());
+        guard.invalidateScope();
         audit.record(AuditEntry.builder(a.workspaceId(), "FULFILLMENT_NODE_CREATED", "FULFILLMENT_NODE", id)
                 .actor(ActorType.USER, a.memberId(), a.displayName()).after(Map.of("code", code, "provider", c.logisticsProviderCode(), "source", source)).build());
         return get(id);
@@ -218,6 +227,7 @@ public class NodeService {
         guard.requirePermission(Perm.LOGISTICS_ACCOUNT_MANAGE);
         CurrentActor a = guard.actor();
         NodeView n = get(nodeId);
+        guard.checkNode(AccessKind.WRITE, "FULFILLMENT_NODE", nodeId, nodeId);
         if (!"SELF_WMS".equals(n.providerKind())) {
             throw Errors.unprocessable("NODE_LOCATION_NOT_APPLICABLE", "로케이션은 자체 WMS 거점에서만 관리합니다(3PL 은 물류사가 관리).");
         }
@@ -246,6 +256,7 @@ public class NodeService {
             """;
 
     private NodeView lock(UUID id) {
+        guard.checkNode(AccessKind.WRITE, "FULFILLMENT_NODE", id, id);
         jdbc.sql("select id from fulfillment_node where workspace_id = :ws and id = :id for update").param("ws", ws()).param("id", id).query(UUID.class)
                 .optional().orElseThrow(() -> Errors.notFound("FULFILLMENT_NODE"));
         return find(id).orElseThrow();

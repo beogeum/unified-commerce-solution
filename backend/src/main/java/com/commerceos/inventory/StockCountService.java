@@ -113,6 +113,7 @@ public class StockCountService {
             throw Errors.validation("zone", "Zone 재정의는 거점과 함께 지정하세요.");
         }
         if (p.nodeId() != null) {
+            guard.checkNode(AccessKind.WRITE, "FULFILLMENT_NODE", p.nodeId(), p.nodeId());
             String source = jdbc.sql("select inventory_source from fulfillment_node where workspace_id = :ws and id = :id").param("ws", a.workspaceId())
                     .param("id", p.nodeId()).query(String.class).optional().orElseThrow(() -> Errors.notFound("FULFILLMENT_NODE"));
             if ("EXTERNAL".equals(source)) {
@@ -227,6 +228,7 @@ public class StockCountService {
     public Map<String, Object> preview(Create c) {
         guard.requirePermission(Perm.INVENTORY_OPERATE);
         guard.checkWrite("BUSINESS_ENTITY", c.businessEntityId(), c.businessEntityId(), null);
+        guard.checkNode(AccessKind.WRITE, "FULFILLMENT_NODE", c.nodeId(), c.nodeId());
         Scope s = scope(c);
         List<Map<String, Object>> buckets = bucketsInScope(ws(), c.businessEntityId(), c.nodeId(), s);
         return impact(ws(), c.businessEntityId(), c.nodeId(), s, buckets);
@@ -240,6 +242,7 @@ public class StockCountService {
             throw Errors.validation("node_id", "소유 사업자와 거점을 지정하세요.");
         }
         guard.checkWrite("BUSINESS_ENTITY", c.businessEntityId(), c.businessEntityId(), null);
+        guard.checkNode(AccessKind.WRITE, "FULFILLMENT_NODE", c.nodeId(), c.nodeId());
         Map<String, Object> node = jdbc.sql("select inventory_source, status, logistics_provider_code from fulfillment_node where workspace_id = :ws and id = :id")
                 .param("ws", a.workspaceId()).param("id", c.nodeId()).query().listOfRows().stream().findFirst().orElseThrow(() -> Errors.notFound("FULFILLMENT_NODE"));
         if ("EXTERNAL".equals(node.get("inventory_source"))) {
@@ -542,12 +545,8 @@ public class StockCountService {
         if (bes.isEmpty()) {
             return List.of();
         }
-        StringBuilder sql = new StringBuilder(COUNT_SELECT + " where c.workspace_id = :ws and c.business_entity_id in (:bes)");
-        Map<String, Object> params = new LinkedHashMap<>(Map.of("ws", ws(), "bes", bes));
-        if (nodeId != null) {
-            sql.append(" and c.node_id = :n");
-            params.put("n", nodeId);
-        }
+        StringBuilder sql = new StringBuilder(COUNT_SELECT + " where c.workspace_id = :ws and c.business_entity_id in (:bes) and c.node_id in (:nodes)");
+        Map<String, Object> params = new LinkedHashMap<>(Map.of("ws", ws(), "bes", bes, "nodes", inventory.visibleNodes(nodeId)));
         if (status != null && !status.isBlank()) {
             sql.append(" and c.status = :st");
             params.put("st", status);
@@ -561,6 +560,7 @@ public class StockCountService {
         CountView v = jdbc.sql(COUNT_SELECT + " where c.workspace_id = :ws and c.id = :id").param("ws", ws()).param("id", id).query((rs, i) -> countView(rs))
                 .optional().orElseThrow(() -> Errors.notFound("STOCK_COUNT"));
         guard.checkRead("STOCK_COUNT", id, v.businessEntityId(), null);
+        guard.checkNode(AccessKind.READ, "STOCK_COUNT", id, v.nodeId());
         // 블라인드 실사는 카운트 중에 시스템 수량·차이를 누구에게도 보여 주지 않는다
         boolean hide = v.blind() && "COUNTING".equals(v.status());
         List<LineView> lines = jdbc.sql("""
@@ -815,6 +815,7 @@ public class StockCountService {
                         rs.getString("status"), rs.getInt("round"), rs.getBoolean("blind"), Db.uuid(rs, "policy_id"), Db.uuid(rs, "requested_by")))
                 .optional().orElseThrow(() -> Errors.notFound("STOCK_COUNT"));
         guard.checkWrite("STOCK_COUNT", id, c.businessEntityId(), null);
+        guard.checkNode(AccessKind.WRITE, "STOCK_COUNT", id, c.nodeId());
         return c;
     }
 

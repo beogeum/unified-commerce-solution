@@ -317,6 +317,7 @@ public class ReservationService {
         for (UUID id : ids) {
             Row row = row(a.workspaceId(), id);
             guard.checkWrite("INVENTORY_RESERVATION", id, row.ownerId(), null);
+            guard.checkNode(AccessKind.WRITE, "INVENTORY_RESERVATION", id, row.nodeId());
             if ("PICKING".equals(row.state()) && !confirmed) {
                 throw pickReturnRequired();
             }
@@ -370,6 +371,7 @@ public class ReservationService {
         ReservationView v = jdbc.sql(SELECT + " where r.workspace_id = :ws and r.id = :id").param("ws", guard.actor().workspaceId()).param("id", id)
                 .query((rs, i) -> view(rs)).optional().orElseThrow(() -> Errors.notFound("INVENTORY_RESERVATION"));
         guard.checkRead("INVENTORY_RESERVATION", id, v.businessEntityId(), null);
+        guard.checkNode(AccessKind.READ, "INVENTORY_RESERVATION", id, v.nodeId());
         return v;
     }
 
@@ -379,14 +381,11 @@ public class ReservationService {
         if (bes.isEmpty()) {
             return List.of();
         }
-        StringBuilder sql = new StringBuilder(SELECT + " where r.workspace_id = :ws and r.owner_business_entity_id in (:bes)");
+        StringBuilder sql = new StringBuilder(SELECT + " where r.workspace_id = :ws and r.owner_business_entity_id in (:bes) and r.node_id in (:nodes)");
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("ws", guard.actor().workspaceId());
         params.put("bes", bes);
-        if (f.nodeId() != null) {
-            sql.append(" and r.node_id = :node");
-            params.put("node", f.nodeId());
-        }
+        params.put("nodes", inventory.visibleNodes(f.nodeId()));
         if (f.skuId() != null) {
             sql.append(" and r.sku_id = :sku");
             params.put("sku", f.skuId());
@@ -474,6 +473,7 @@ public class ReservationService {
             return row;
         }
         guard.checkWrite("INVENTORY_RESERVATION", id, row.ownerId(), null);
+        guard.checkNode(AccessKind.WRITE, "INVENTORY_RESERVATION", id, row.nodeId());
         return row;
     }
 

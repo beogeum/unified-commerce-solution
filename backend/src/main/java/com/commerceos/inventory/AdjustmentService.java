@@ -194,6 +194,7 @@ public class AdjustmentService implements ApprovalHandler {
             throw Errors.unprocessable("APPROVER_NEEDS_INVENTORY_ADJUST", "재고 조정 승인은 재고 조정 권한이 있는 승인자만 할 수 있습니다.");
         }
         Bucket b = bucket(r.payload());
+        guard.checkNode(com.commerceos.identity.access.AccessKind.WRITE, "FULFILLMENT_NODE", b.nodeId(), b.nodeId());
         int delta = r.payload().get("delta").asInt();
         locks.requireUnlocked(a.workspaceId(), b.ownerId(), b.nodeId(), b.skuId(), b.locationId(), "조정");
         Position p = ledger.lockPosition(a.workspaceId(), b.ownerId(), b.skuId(), b.nodeId());

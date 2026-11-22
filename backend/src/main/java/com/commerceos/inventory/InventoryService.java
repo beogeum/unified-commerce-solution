@@ -146,6 +146,7 @@ public class InventoryService {
                 .param("ws", a.workspaceId()).param("id", c.stockId()).query().listOfRows().stream().findFirst().orElseThrow(() -> Errors.notFound("INVENTORY_STOCK"));
         UUID owner = (UUID) head.get("owner_business_entity_id");
         guard.checkWrite("INVENTORY_STOCK", c.stockId(), owner, null);
+        guard.checkNode(AccessKind.WRITE, "INVENTORY_STOCK", c.stockId(), (UUID) head.get("node_id"));
         Position p = ledger.lockPosition(a.workspaceId(), owner, (UUID) head.get("sku_id"), (UUID) head.get("node_id"));
         Stock s = ledger.lockStock(a.workspaceId(), c.stockId());
         NodeService.NodeView node = nodes.find(s.bucket().nodeId()).orElseThrow();
@@ -289,8 +290,8 @@ public class InventoryService {
         List<NodeAvailability> per = jdbc.sql("""
                 select p.node_id, n.code, n.name, p.sellable_on_hand, p.committed, p.restricted, p.restriction_reason, p.restricted_hold, p.external_as_of
                   from inventory_position p join fulfillment_node n on n.id = p.node_id
-                 where p.workspace_id = :ws and p.owner_business_entity_id = :o and p.sku_id = :s order by n.code
-                """).param("ws", ws).param("o", businessEntityId).param("s", skuId).query((rs, i) -> new NodeAvailability(Db.uuid(rs, "node_id"),
+                 where p.workspace_id = :ws and p.owner_business_entity_id = :o and p.sku_id = :s and p.node_id in (:nodes) order by n.code
+                """).param("ws", ws).param("o", businessEntityId).param("s", skuId).param("nodes", visibleNodes(null)).query((rs, i) -> new NodeAvailability(Db.uuid(rs, "node_id"),
                 rs.getString("code"), rs.getString("name"), rs.getInt("sellable_on_hand"), rs.getInt("committed"), atpOf(rs),
                 rs.getBoolean("restricted"), rs.getString("restriction_reason"), rs.getInt("restricted_hold"), Db.instant(rs, "external_as_of"))).list();
         int sellable = per.stream().mapToInt(NodeAvailability::sellableOnHand).sum();
@@ -328,28 +329,28 @@ public class InventoryService {
                 select p.id, p.owner_business_entity_id, p.sku_id, p.node_id, p.sellable_on_hand,
                        coalesce((select sum(on_hand) from inventory_stock s where s.owner_business_entity_id = p.owner_business_entity_id and s.sku_id = p.sku_id
                                  and s.node_id = p.node_id and s.quality_status = 'SELLABLE'), 0) as bucket_sum
-                  from inventory_position p where p.workspace_id = :ws and p.owner_business_entity_id in (:bes)
-                """).param("ws", ws()).param("bes", bes).query((rs, i) -> mismatch(rs, "POSITION_VS_BUCKETS", rs.getLong("sellable_on_hand"), rs.getLong("bucket_sum"),
+                  from inventory_position p where p.workspace_id = :ws and p.owner_business_entity_id in (:bes) and p.node_id in (:nodes)
+                """).param("ws", ws()).param("bes", bes).param("nodes", visibleNodes(null)).query((rs, i) -> mismatch(rs, "POSITION_VS_BUCKETS", rs.getLong("sellable_on_hand"), rs.getLong("bucket_sum"),
                 "판매가능 집계와 판매가능 버킷 합계가 다릅니다.")).list().stream().filter(m -> m.expected() != m.actual()).toList());
         out.addAll(jdbc.sql("""
                 select p.id, p.owner_business_entity_id, p.sku_id, p.node_id, p.committed,
                        coalesce((select sum(quantity) from inventory_reservation r where r.position_id = p.id and r.state in ('RESERVED','ALLOCATED','PICKING')), 0) as active_sum
-                  from inventory_position p where p.workspace_id = :ws and p.owner_business_entity_id in (:bes)
-                """).param("ws", ws()).param("bes", bes).query((rs, i) -> mismatch(rs, "COMMITTED_VS_RESERVATIONS", rs.getLong("committed"), rs.getLong("active_sum"),
+                  from inventory_position p where p.workspace_id = :ws and p.owner_business_entity_id in (:bes) and p.node_id in (:nodes)
+                """).param("ws", ws()).param("bes", bes).param("nodes", visibleNodes(null)).query((rs, i) -> mismatch(rs, "COMMITTED_VS_RESERVATIONS", rs.getLong("committed"), rs.getLong("active_sum"),
                 "확보수량과 활성 예약 합계가 다릅니다.")).list().stream().filter(m -> m.expected() != m.actual()).toList());
         out.addAll(jdbc.sql("""
                 select p.id, p.owner_business_entity_id, p.sku_id, p.node_id,
                        coalesce((select sum(on_hand) from inventory_stock s where s.owner_business_entity_id = p.owner_business_entity_id and s.sku_id = p.sku_id
                                  and s.node_id = p.node_id), 0) as bucket_sum,
                        coalesce((select sum(on_hand_delta) from inventory_transaction t where t.position_id = p.id), 0) as ledger_sum
-                  from inventory_position p where p.workspace_id = :ws and p.owner_business_entity_id in (:bes)
-                """).param("ws", ws()).param("bes", bes).query((rs, i) -> mismatch(rs, "BUCKETS_VS_LEDGER", rs.getLong("ledger_sum"), rs.getLong("bucket_sum"),
+                  from inventory_position p where p.workspace_id = :ws and p.owner_business_entity_id in (:bes) and p.node_id in (:nodes)
+                """).param("ws", ws()).param("bes", bes).param("nodes", visibleNodes(null)).query((rs, i) -> mismatch(rs, "BUCKETS_VS_LEDGER", rs.getLong("ledger_sum"), rs.getLong("bucket_sum"),
                 "실물 버킷 합계와 원장 누적이 다릅니다.")).list().stream().filter(m -> m.expected() != m.actual()).toList());
         out.addAll(jdbc.sql("""
                 select p.id, p.owner_business_entity_id, p.sku_id, p.node_id, p.committed,
                        coalesce((select sum(committed_delta) from inventory_transaction t where t.position_id = p.id), 0) as ledger_sum
-                  from inventory_position p where p.workspace_id = :ws and p.owner_business_entity_id in (:bes)
-                """).param("ws", ws()).param("bes", bes).query((rs, i) -> mismatch(rs, "COMMITTED_VS_LEDGER", rs.getLong("ledger_sum"), rs.getLong("committed"),
+                  from inventory_position p where p.workspace_id = :ws and p.owner_business_entity_id in (:bes) and p.node_id in (:nodes)
+                """).param("ws", ws()).param("bes", bes).param("nodes", visibleNodes(null)).query((rs, i) -> mismatch(rs, "COMMITTED_VS_LEDGER", rs.getLong("ledger_sum"), rs.getLong("committed"),
                 "확보수량과 원장 누적이 다릅니다.")).list().stream().filter(m -> m.expected() != m.actual()).toList());
         return out;
     }
@@ -371,8 +372,12 @@ public class InventoryService {
         return new SkuInfo(skuId, (String) s.get("sku_code"), (Boolean) s.get("lot_managed"), (Boolean) s.get("expiry_managed"));
     }
 
+    /** 쓰기 작업용 거점 확인: 존재·출고거점 쓰기 범위·운영 상태·소유자 허용. */
     NodeService.NodeView requireUsableNode(UUID nodeId, UUID ownerId) {
         NodeService.NodeView node = nodes.find(nodeId).orElseThrow(() -> Errors.notFound("FULFILLMENT_NODE"));
+        if (!com.commerceos.shared.db.TenantContext.isSystem()) {
+            guard.checkNode(AccessKind.WRITE, "FULFILLMENT_NODE", nodeId, nodeId);
+        }
         if (!"ACTIVE".equals(node.status())) {
             throw Errors.unprocessable("NODE_NOT_ACTIVE", "운영 중인 거점이 아닙니다.");
         }
@@ -455,6 +460,12 @@ public class InventoryService {
         return h;
     }
 
+    /** 조회 가능한 거점(빈 집합이면 SQL 이 깨지지 않게 nil UUID 하나). */
+    Set<UUID> visibleNodes(UUID requested) {
+        Set<UUID> n = guard.nodeFilter(AccessKind.READ, requested);
+        return n.isEmpty() ? Set.of(new UUID(0, 0)) : n;
+    }
+
     static int positive(Integer q) {
         if (q == null || q < 1 || q > 10_000_000) {
             throw Errors.validation("quantity", "수량은 1 이상의 정수여야 합니다.");
@@ -499,11 +510,10 @@ public class InventoryService {
                 exp == null ? null : exp.toLocalDate(), rs.getString("quality_status"), rs.getString("hold_reason"), rs.getInt("on_hand"), Db.instant(rs, "updated_at"));
     }
 
-    private static void common(StringBuilder sql, Map<String, Object> params, Filter f, String alias) {
-        if (f.nodeId() != null) {
-            sql.append(" and ").append(alias).append(".node_id = :node");
-            params.put("node", f.nodeId());
-        }
+    private void common(StringBuilder sql, Map<String, Object> params, Filter f, String alias) {
+        // 출고거점 범위(I6): 허용 거점만, 지정 거점이 범위 밖이면 403
+        sql.append(" and ").append(alias).append(".node_id in (:nodes)");
+        params.put("nodes", visibleNodes(f.nodeId()));
         if (f.skuId() != null) {
             sql.append(" and ").append(alias).append(".sku_id = :sku");
             params.put("sku", f.skuId());

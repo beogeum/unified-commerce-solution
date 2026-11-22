@@ -13,7 +13,9 @@ public record ResolvedScope(
         Map<AccessKind, Set<UUID>> businessEntities,
         Map<AccessKind, Set<UUID>> channelAccounts,
         Map<AccessKind, Boolean> businessEntityUnrestricted,
-        Map<AccessKind, Boolean> channelAccountUnrestricted) {
+        Map<AccessKind, Boolean> channelAccountUnrestricted,
+        Map<AccessKind, Set<UUID>> fulfillmentNodes,
+        Map<AccessKind, Boolean> fulfillmentNodeUnrestricted) {
 
     public boolean allows(AccessKind kind, UUID businessEntityId, UUID channelAccountId) {
         if (businessEntityId != null && !businessEntities.get(kind).contains(businessEntityId)) {
@@ -30,8 +32,17 @@ public record ResolvedScope(
         return channelAccounts.get(kind);
     }
 
-    /** 제한이 전혀 없는지(모든 사업자·판매계정 ALL 이고 DENY 없음). 화면 표시용. */
+    /** 출고거점 범위(M3 I6). 거점이 있는 재고·물류 객체에만 적용한다(사업자 차원과 AND). */
+    public Set<UUID> fulfillmentNodeIds(AccessKind kind) {
+        return fulfillmentNodes.get(kind);
+    }
+
+    public boolean allowsNode(AccessKind kind, UUID nodeId) {
+        return nodeId == null || fulfillmentNodes.get(kind).contains(nodeId);
+    }
+
+    /** 제한이 전혀 없는지(모든 사업자·판매계정·거점 ALL 이고 DENY 없음). 화면 표시용. */
     public boolean unrestricted(AccessKind kind) {
-        return businessEntityUnrestricted.get(kind) && channelAccountUnrestricted.get(kind);
+        return businessEntityUnrestricted.get(kind) && channelAccountUnrestricted.get(kind) && fulfillmentNodeUnrestricted.get(kind);
     }
 }

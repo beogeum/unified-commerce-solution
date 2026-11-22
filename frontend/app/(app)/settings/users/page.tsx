@@ -45,27 +45,30 @@ function MemberDrawer({ member, canManage, onClose }: { member: Member; canManag
   const [confirmReset, setConfirmReset] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const scopesByKind = (p: Policy): Record<string, Scope> => Object.fromEntries(KINDS.map(([k]) => [k,
-    p.scopes.find((s) => s.dimension === "BUSINESS_ENTITY" && s.access_kind === k) ??
-      { dimension: "BUSINESS_ENTITY", access_kind: k, mode: "ALL", auto_include_new: null, entries: [] }]));
-  const current = draft ?? (policy.data ? scopesByKind(policy.data) : null);
-  const nameOf = (id: string) => entities.find((e) => e.id === id)?.display_name ?? "(범위 밖 사업자)";
+  const DIMS = ["BUSINESS_ENTITY", "FULFILLMENT_NODE"] as const;
+  const nodes = useApi<{ id: string; name: string; code: string }[]>("/fulfillment-nodes");
+  const kindsOf = (d: string) => (d === "FULFILLMENT_NODE" ? KINDS.filter(([k]) => k !== "EXPORT") : KINDS);
+  const scopesByKey = (p: Policy): Record<string, Scope> => Object.fromEntries(DIMS.flatMap((d) => kindsOf(d).map(([k]) => [`${d}/${k}`,
+    p.scopes.find((s) => s.dimension === d && s.access_kind === k) ?? { dimension: d, access_kind: k, mode: "ALL", auto_include_new: null, entries: [] }])));
+  const current = draft ?? (policy.data ? scopesByKey(policy.data) : null);
+  const nameOf = (id: string) => entities.find((e) => e.id === id)?.display_name ?? nodes.data?.find((n) => n.id === id)?.name ?? "(범위 밖 대상)";
 
-  const toggle = (kind: string, id: string) => {
+  const toggle = (key: string, id: string) => {
     if (!current) return;
-    const s = current[kind];
+    const s = current[key];
     const has = s.entries.some((e) => e.target_id === id && e.effect === "ALLOW");
     const entries = has ? s.entries.filter((e) => e.target_id !== id) : [...s.entries.filter((e) => e.target_id !== id), { target_id: id, effect: "ALLOW" as const }];
-    setDraft({ ...current, [kind]: { ...s, entries } });
+    setDraft({ ...current, [key]: { ...s, entries } });
   };
-  const setMode = (kind: string, mode: "ALL" | "SELECTED") => current && setDraft({ ...current, [kind]: { ...current[kind], mode, auto_include_new: mode === "SELECTED" ? false : null } });
+  const setMode = (key: string, mode: "ALL" | "SELECTED") => current && setDraft({ ...current, [key]: { ...current[key], mode, auto_include_new: mode === "SELECTED" ? false : null } });
+  const setAuto = (key: string, v: boolean) => current && setDraft({ ...current, [key]: { ...current[key], auto_include_new: v } });
 
   const save = async () => {
     if (!policy.data || !current) return;
     setBusy(true);
     setMsg(null);
     try {
-      const others = policy.data.scopes.filter((s) => s.dimension !== "BUSINESS_ENTITY");
+      const others = policy.data.scopes.filter((s) => !(DIMS as readonly string[]).includes(s.dimension));
       await api(`/users/${member.user_id}/access-policy`, { method: "PUT", ifMatch: policy.data.access_policy_version,
         body: { permission_overrides: policy.data.permission_overrides, scopes: [...others, ...Object.values(current)] } });
       setDraft(null);
@@ -99,20 +102,35 @@ function MemberDrawer({ member, canManage, onClose }: { member: Member; canManag
       <div className="kv"><span>이메일</span><span>{member.email}</span></div>
       <div className="kv"><span>역할</span><span>{member.role_codes.join(", ") || "—"}</span></div>
       <div className="kv"><span>상태</span><StatusChip status={member.status} /></div>
-      <h3 style={{ margin: "8px 0 0", fontSize: 14 }}>사업자 접근 범위</h3>
-      {policy.loading ? <Loading /> : policy.error ? <ErrorState error={policy.error} onRetry={policy.reload} /> : current && KINDS.map(([k, label]) => (
-        <fieldset key={k} className="card pad" style={{ display: "flex", flexDirection: "column", gap: 6 }} disabled={!canManage}>
-          <legend className="ctx">{label}</legend>
-          <div className="row-gap">
-            <label><input type="radio" name={`mode-${k}`} checked={current[k].mode === "ALL"} onChange={() => setMode(k, "ALL")} /> 전체 사업자(신규 포함)</label>
-            <label><input type="radio" name={`mode-${k}`} checked={current[k].mode === "SELECTED"} onChange={() => setMode(k, "SELECTED")} /> 선택한 사업자만</label>
-          </div>
-          {current[k].mode === "SELECTED" && entities.map((e) => (
-            <label key={e.id}><input type="checkbox" checked={current[k].entries.some((x) => x.target_id === e.id && x.effect === "ALLOW")}
-              onChange={() => toggle(k, e.id)} /> {e.display_name}</label>))}
-          {current[k].entries.filter((x) => x.effect === "DENY").map((x) => <Chip key={x.target_id} kind="err">거부: {nameOf(x.target_id)}</Chip>)}
-        </fieldset>
-      ))}
+      {policy.loading ? <Loading /> : policy.error ? <ErrorState error={policy.error} onRetry={policy.reload} /> : current && DIMS.map((d) => {
+        const targets = d === "BUSINESS_ENTITY" ? entities.map((e) => ({ id: e.id, name: e.display_name })) : (nodes.data ?? []).map((n) => ({ id: n.id, name: n.name }));
+        const noun = d === "BUSINESS_ENTITY" ? "사업자" : "출고거점";
+        return (
+          <section key={d} aria-label={`${noun} 접근 범위`} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <h3 style={{ margin: "8px 0 0", fontSize: 14 }}>{noun} 접근 범위</h3>
+            {d === "FULFILLMENT_NODE" && <p className="ctx" style={{ margin: 0 }}>재고·물류 업무(입고·확보·실사·이동 등)를 거점별로 제한합니다. 사업자 범위와 함께 적용됩니다.</p>}
+            {kindsOf(d).map(([k, label]) => {
+              const key = `${d}/${k}`;
+              return (
+                <fieldset key={key} className="card pad" style={{ display: "flex", flexDirection: "column", gap: 6 }} disabled={!canManage}>
+                  <legend className="ctx">{noun} {label}</legend>
+                  <div className="row-gap">
+                    <label><input type="radio" name={`mode-${key}`} checked={current[key].mode === "ALL"} onChange={() => setMode(key, "ALL")} /> 전체 {noun}(신규 포함)</label>
+                    <label><input type="radio" name={`mode-${key}`} checked={current[key].mode === "SELECTED"} onChange={() => setMode(key, "SELECTED")} /> 선택한 {noun}만</label>
+                  </div>
+                  {current[key].mode === "SELECTED" && <>
+                    {targets.map((t) => (
+                      <label key={t.id}><input type="checkbox" checked={current[key].entries.some((x) => x.target_id === t.id && x.effect === "ALLOW")}
+                        onChange={() => toggle(key, t.id)} /> {t.name}</label>))}
+                    <label className="ctx"><input type="checkbox" checked={Boolean(current[key].auto_include_new)} onChange={(e) => setAuto(key, e.target.checked)} /> 새로 등록되는 {noun} 자동 포함</label>
+                  </>}
+                  {current[key].entries.filter((x) => x.effect === "DENY").map((x) => <Chip key={x.target_id} kind="err">거부: {nameOf(x.target_id)}</Chip>)}
+                </fieldset>
+              );
+            })}
+          </section>
+        );
+      })}
       <p className="ctx" style={{ margin: 0 }}>수정·내보내기 범위는 조회 범위 안에서만 의미가 있습니다. 명시적 거부가 허용보다 우선합니다.</p>
       {confirmReset && <ConfirmModal title={`${member.display_name}님의 2단계 인증을 초기화할까요?`} danger busy={busy} confirmLabel="초기화"
         impact={[["로그인 세션", "모든 세션 즉시 종료"], ["다음 로그인", "OTP 앱 새로 등록 필요"], ["기록", "변경이력에 남음"]]}

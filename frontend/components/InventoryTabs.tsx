@@ -8,9 +8,10 @@ const TABS: [string, string, string][] = [
   ["counts", "/inventory/counts", "재고조정·실사"],
   ["transfers", "/inventory/transfers", "재고 이동"],
   ["policy", "/inventory/policy", "재고정책"],
+  ["checks", "/inventory/checks", "검증센터"],
 ];
 
-export function InventoryTabs({ active }: { active: "positions" | "ledger" | "reservations" | "external" | "counts" | "transfers" | "policy" }) {
+export function InventoryTabs({ active }: { active: "positions" | "ledger" | "reservations" | "external" | "counts" | "transfers" | "policy" | "checks" }) {
   return (
     <nav aria-label="재고 메뉴" className="row-gap" style={{ borderBottom: "1px solid var(--border)" }}>
       {TABS.map(([k, href, label]) => (

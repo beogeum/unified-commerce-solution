@@ -236,8 +236,9 @@ public class TransferService {
             return List.of();
         }
         boolean filter = status != null && !status.isBlank();
-        var q = jdbc.sql(SELECT + " where t.workspace_id = :ws and t.business_entity_id in (:bes)" + (filter ? " and t.status = :st" : "") + " order by t.id desc limit 200")
-                .param("ws", guard.actor().workspaceId()).param("bes", bes);
+        var q = jdbc.sql(SELECT + " where t.workspace_id = :ws and t.business_entity_id in (:bes) and (t.from_node_id in (:nodes) or t.to_node_id in (:nodes))"
+                        + (filter ? " and t.status = :st" : "") + " order by t.id desc limit 200")
+                .param("ws", guard.actor().workspaceId()).param("bes", bes).param("nodes", inventory.visibleNodes(null));
         if (filter) {
             q = q.param("st", status);
         }
@@ -249,6 +250,9 @@ public class TransferService {
         TransferView v = jdbc.sql(SELECT + " where t.workspace_id = :ws and t.id = :id").param("ws", guard.actor().workspaceId()).param("id", id)
                 .query((rs, i) -> view(rs)).optional().orElseThrow(() -> Errors.notFound("INVENTORY_TRANSFER"));
         guard.checkRead("INVENTORY_TRANSFER", id, v.businessEntityId(), null);
+        if (!guard.scope().allowsNode(AccessKind.READ, v.fromNodeId()) && !guard.scope().allowsNode(AccessKind.READ, v.toNodeId())) {
+            throw Errors.notFound("INVENTORY_TRANSFER");
+        }
         return withLines(v);
     }
 

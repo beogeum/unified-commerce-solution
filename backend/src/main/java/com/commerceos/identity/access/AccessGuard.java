@@ -153,6 +153,34 @@ public class AccessGuard {
         return result;
     }
 
+    /** 출고거점 범위 목록 필터. requested 가 범위 밖이면 403, null 이면 허용 거점 전체. */
+    public Set<UUID> nodeFilter(AccessKind kind, UUID requested) {
+        Set<UUID> allowed = scope().fulfillmentNodeIds(kind);
+        if (requested == null) {
+            return allowed;
+        }
+        if (!allowed.contains(requested)) {
+            denied("SCOPE_FILTER_DENIED", "FULFILLMENT_NODE", requested, null, null);
+            throw Errors.scopeDenied(ScopeDimension.FULFILLMENT_NODE.name(), requested);
+        }
+        return Set.of(requested);
+    }
+
+    /** 거점이 있는 객체의 거점 범위 확인. 조회 범위 밖이면 존재하지 않는 것처럼(404), 쓰기 범위 밖이면 403. */
+    public void checkNode(AccessKind kind, String targetType, UUID targetId, UUID nodeId) {
+        if (nodeId == null) {
+            return;
+        }
+        if (!scope().allowsNode(AccessKind.READ, nodeId)) {
+            denied("SCOPE_READ_DENIED", targetType, targetId, null, null);
+            throw Errors.notFound(targetType);
+        }
+        if (kind != AccessKind.READ && !scope().allowsNode(kind, nodeId)) {
+            denied("SCOPE_WRITE_DENIED", targetType, targetId, null, null);
+            throw Errors.writeScopeDenied();
+        }
+    }
+
     public UUID channelAccountFilter(AccessKind kind, UUID requested) {
         if (requested != null && !scope().channelAccountIds(kind).contains(requested)) {
             denied("SCOPE_FILTER_DENIED", "CHANNEL_ACCOUNT", requested, null, requested);

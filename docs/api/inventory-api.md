@@ -1,6 +1,6 @@
-# 출고거점·재고 API (M3 I1~I5)
+# 출고거점·재고 API (M3 I1~I6)
 
-공통 규칙(인증·오류 형식·If-Match·멱등키)은 `foundation-api.md` §1 과 같다. 재고는 **소유 사업자** 단위로 집계하며, 모든 읽기·쓰기에 사용자별 사업자 범위(ADR-0002)를 적용한다. 출고거점(FULFILLMENT_NODE) 범위 차원은 I6 에서 연다(DLG-087).
+공통 규칙(인증·오류 형식·If-Match·멱등키)은 `foundation-api.md` §1 과 같다. 재고는 **소유 사업자** 단위로 집계하며, 모든 읽기·쓰기에 사용자별 **사업자 범위와 출고거점 범위**(ADR-0002, I6)를 함께(AND) 적용한다. 거점 조회 범위 밖 객체는 404, 거점 쓰기 범위 밖 작업은 403 `WRITE_SCOPE_DENIED`, 범위 밖 `node_id` 필터는 403 `ACCESS_SCOPE_DENIED`.
 
 ## 1. 출고거점 (I1)
 | 메서드·경로 | 권한 | 비고 |
@@ -97,5 +97,18 @@
 
 **실사 잠금(CONF-012)**: 카운트 중인 실사 범위(사업자 단위, ALL·Zone 로케이션·SKU)의 버킷은 입고 적치·품질 변경·조정·이동 입출고·출고 확정이 `409 STOCK_COUNT_LOCKED`. 출고 배정·피킹은 잠기지 않은 판매가능 실물로 채울 수 없을 때만 거부한다.
 
+## 7. 재고 검증센터 (I6, docs/13 §10)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `GET /inventory/checks/summary` | `inventory.read` | 열린 이슈 심각도별 수, 확인함 수, 마지막 검사 |
+| `GET /inventory/checks/runs` | `inventory.read` | 최근 20회 |
+| `POST /inventory/checks/runs` | `inventory.operate` | 운영그룹 전체 수동 검사(정기: 매일 03:17 KST, `commerce.inventory.check.cron`). 같은 운영그룹 검사는 직렬 실행 |
+| `GET /inventory/checks/issues?status=ACTIVE|OPEN|ACKNOWLEDGED|RESOLVED|ALL&severity=&check_code=&business_entity_id=&node_id=` | `inventory.read` + 범위 | 기본 ACTIVE(열림+확인함) |
+| `GET /inventory/checks/issues/{id}` | 같음 | `evidence.recent_ledger`(최근 원장 5건) 등 근거 |
+| `POST /inventory/checks/issues/{id}/recheck` | `inventory.operate` | 다시 검사해 그 이슈의 상태 반환(사라졌으면 RESOLVED) |
+| `POST /inventory/checks/issues/{id}/acknowledge` | `inventory.operate` + 범위 쓰기 | `{reason}` 필수. 열림 → 확인함(원인이 사라지면 자동 해결) |
+
+검사 종류: `POSITION_VS_BUCKETS`·`COMMITTED_VS_RESERVATIONS`·`BUCKETS_VS_LEDGER`·`COMMITTED_VS_LEDGER`·`BUCKET_VS_LEDGER`·`RESERVATION_LEDGER`(HIGH), `RESERVATION_EXPIRED_UNRELEASED`·`EXTERNAL_RESTRICTED`(과확보는 HIGH)·`TRANSFER_OVERDUE`(기본 7일)·`COUNT_LOCK_PROLONGED`(기본 24시간)(MEDIUM), `COUNT_REVIEW_OVERDUE`(기본 3일)(LOW). 수량 이상은 원가 영향(차이 × 기준 원가)을 함께 보인다. 같은 이상은 한 이슈로 이어서 추적(발견 횟수), 해결 후 다시 생기면 새 이슈. 열린 HIGH 이슈가 있는 사업자는 업무함 `INVENTORY_CHECK_FAILED` 한 건(없어지면 자동 종료). 검사는 원장·재고를 고치지 않는다.
+
 ## 4. 오류 코드 요약
-`OWNER_NOT_ON_NODE`, `NODE_INVENTORY_EXTERNAL`, `NODE_NOT_ACTIVE`, `NODE_HAS_STOCK`, `NODE_CLOSED`, `NODE_SHIPPER_*`, `NODE_LOCATION_*`, `SKU_NOT_INVENTORY_MANAGED`, `SKU_ARCHIVED`, `LOT_EXPIRY_MISMATCH`, `STOCK_INSUFFICIENT`, `STOCK_COMMITTED`, `STOCK_BUCKET_MISMATCH`, `INSUFFICIENT_AVAILABLE_STOCK`, `RESERVATION_EXISTS`, `RESERVATION_STATE_INVALID`, `PICK_RETURN_CONFIRMATION_REQUIRED`, `EXTERNAL_ACK_EXISTS`, `NODE_INVENTORY_INTERNAL`, `EXTERNAL_FILE_INVALID`, `TEMPLATE_COLUMN_MISSING`, `STOCK_COUNT_LOCKED`, `COUNT_POLICY_MISSING`, `STOCK_COUNT_OVERLAP`, `NOT_COUNT_ASSIGNEE`, `COUNT_INCOMPLETE`, `RECOUNT_SAME_COUNTER`, `COUNT_APPROVER_CONFLICT`, `RECOUNT_REQUIRED_BEFORE_APPROVAL`, `STOCK_COUNT_STALE`, `APPROVER_NEEDS_INVENTORY_ADJUST`, `TRANSFER_FROM_EXTERNAL`, `TRANSFER_NOT_IN_TRANSIT`.
+`OWNER_NOT_ON_NODE`, `NODE_INVENTORY_EXTERNAL`, `NODE_NOT_ACTIVE`, `NODE_HAS_STOCK`, `NODE_CLOSED`, `NODE_SHIPPER_*`, `NODE_LOCATION_*`, `SKU_NOT_INVENTORY_MANAGED`, `SKU_ARCHIVED`, `LOT_EXPIRY_MISMATCH`, `STOCK_INSUFFICIENT`, `STOCK_COMMITTED`, `STOCK_BUCKET_MISMATCH`, `INSUFFICIENT_AVAILABLE_STOCK`, `RESERVATION_EXISTS`, `RESERVATION_STATE_INVALID`, `PICK_RETURN_CONFIRMATION_REQUIRED`, `EXTERNAL_ACK_EXISTS`, `NODE_INVENTORY_INTERNAL`, `EXTERNAL_FILE_INVALID`, `TEMPLATE_COLUMN_MISSING`, `STOCK_COUNT_LOCKED`, `COUNT_POLICY_MISSING`, `STOCK_COUNT_OVERLAP`, `NOT_COUNT_ASSIGNEE`, `COUNT_INCOMPLETE`, `RECOUNT_SAME_COUNTER`, `COUNT_APPROVER_CONFLICT`, `RECOUNT_REQUIRED_BEFORE_APPROVAL`, `STOCK_COUNT_STALE`, `APPROVER_NEEDS_INVENTORY_ADJUST`, `TRANSFER_FROM_EXTERNAL`, `TRANSFER_NOT_IN_TRANSIT`, `CHECK_ISSUE_NOT_OPEN`.

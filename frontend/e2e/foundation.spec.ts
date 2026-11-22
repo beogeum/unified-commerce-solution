@@ -76,7 +76,7 @@ test.describe.serial("Foundation", () => {
     await page.getByRole("cell", { name: /한상품/ }).click();
     const drawer = page.getByRole("dialog", { name: "한상품" });
     for (const legend of ["조회", "내보내기"]) {
-      const fs = drawer.locator("fieldset", { has: page.locator("legend", { hasText: legend }) });
+      const fs = drawer.locator("fieldset", { has: page.locator("legend", { hasText: `사업자 ${legend}` }) });
       await fs.getByLabel("선택한 사업자만").check();
       await fs.getByLabel(NAMES.a).check();
     }
@@ -497,6 +497,11 @@ test.describe.serial("Foundation", () => {
     const row = page.getByRole("row", { name: new RegExp(`AMP-30-${RUN}`) }).filter({ hasText: `화성 자체창고 ${RUN}` });
     await expect(row.getByRole("cell").nth(2)).toHaveText("2");
     await expect(page.getByText("재고 검증: 집계·버킷·확보·원장이 모두 일치합니다.")).toBeVisible();
+    // I6 검증센터: 수동 검사 → 이상 없음
+    await page.getByRole("link", { name: "검증센터" }).click();
+    await page.getByRole("button", { name: "지금 검사" }).click();
+    await expect(page.getByText(/검사를 마쳤습니다: 이상 0건/)).toBeVisible();
+    await expect(page.getByText("이상이 없습니다.")).toBeVisible();
   });
 
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {

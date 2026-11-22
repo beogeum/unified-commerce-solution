@@ -55,18 +55,24 @@ public class AccessScopeService {
                 .param("ws", workspaceId).query(UUID.class).list());
         Set<UUID> allCa = new HashSet<>(jdbc.sql("select id from channel_account where workspace_id = :ws")
                 .param("ws", workspaceId).query(UUID.class).list());
+        Set<UUID> allNode = new HashSet<>(jdbc.sql("select id from fulfillment_node where workspace_id = :ws")
+                .param("ws", workspaceId).query(UUID.class).list());
 
         Map<AccessKind, Set<UUID>> be = new EnumMap<>(AccessKind.class);
         Map<AccessKind, Set<UUID>> ca = new EnumMap<>(AccessKind.class);
         Map<AccessKind, Boolean> beOpen = new EnumMap<>(AccessKind.class);
         Map<AccessKind, Boolean> caOpen = new EnumMap<>(AccessKind.class);
+        Map<AccessKind, Set<UUID>> node = new EnumMap<>(AccessKind.class);
+        Map<AccessKind, Boolean> nodeOpen = new EnumMap<>(AccessKind.class);
         for (AccessKind k : AccessKind.values()) {
+            node.put(k, effective(ScopeDimension.FULFILLMENT_NODE, k, allNode, selected, entries, node.get(AccessKind.READ)));
+            nodeOpen.put(k, unrestricted(ScopeDimension.FULFILLMENT_NODE, k, selected, entries));
             be.put(k, effective(ScopeDimension.BUSINESS_ENTITY, k, allBe, selected, entries, be.get(AccessKind.READ)));
             ca.put(k, effective(ScopeDimension.CHANNEL_ACCOUNT, k, allCa, selected, entries, ca.get(AccessKind.READ)));
             beOpen.put(k, unrestricted(ScopeDimension.BUSINESS_ENTITY, k, selected, entries));
             caOpen.put(k, unrestricted(ScopeDimension.CHANNEL_ACCOUNT, k, selected, entries));
         }
-        return new ResolvedScope(Map.copyOf(be), Map.copyOf(ca), Map.copyOf(beOpen), Map.copyOf(caOpen));
+        return new ResolvedScope(Map.copyOf(be), Map.copyOf(ca), Map.copyOf(beOpen), Map.copyOf(caOpen), Map.copyOf(node), Map.copyOf(nodeOpen));
     }
 
     private static Set<UUID> effective(ScopeDimension d, AccessKind k, Set<UUID> all, Map<String, Boolean> selected,

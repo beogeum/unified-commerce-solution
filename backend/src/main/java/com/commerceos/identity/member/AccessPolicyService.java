@@ -60,7 +60,7 @@ public class AccessPolicyService {
     }
 
     public record Effective(List<String> permissions, Map<String, List<UUID>> businessEntities,
-                            Map<String, List<UUID>> channelAccounts, Map<String, Boolean> unrestricted) {
+                            Map<String, List<UUID>> channelAccounts, Map<String, Boolean> unrestricted, Map<String, List<UUID>> fulfillmentNodes) {
     }
 
     public record PolicyView(UUID userId, UUID memberId, int accessPolicyVersion, List<Override> permissionOverrides,
@@ -154,18 +154,17 @@ public class AccessPolicyService {
             if (s.dimension() == null || s.accessKind() == null) {
                 throw Errors.validation("scopes", "dimension 과 access_kind 는 필수입니다.");
             }
-            if (s.dimension() == ScopeDimension.FULFILLMENT_NODE) {
-                throw Errors.unprocessable("SCOPE_DIMENSION_NOT_AVAILABLE", "출고거점 범위는 재고 모듈(M3) 이후 설정할 수 있습니다.");
-            }
             if (!seenScope.add(s.dimension() + "/" + s.accessKind())) {
                 throw Errors.validation("scopes", "같은 차원·종류가 중복되었습니다: " + s.dimension() + "/" + s.accessKind());
             }
             if (!"ALL".equals(s.mode()) && !"SELECTED".equals(s.mode())) {
                 throw Errors.validation("scopes", "mode 는 ALL 또는 SELECTED 여야 합니다.");
             }
-            boolean actorUnrestricted = s.dimension() == ScopeDimension.BUSINESS_ENTITY
-                    ? actorScope.businessEntityUnrestricted().get(s.accessKind())
-                    : actorScope.channelAccountUnrestricted().get(s.accessKind());
+            boolean actorUnrestricted = switch (s.dimension()) {
+                case BUSINESS_ENTITY -> actorScope.businessEntityUnrestricted().get(s.accessKind());
+                case CHANNEL_ACCOUNT -> actorScope.channelAccountUnrestricted().get(s.accessKind());
+                case FULFILLMENT_NODE -> actorScope.fulfillmentNodeUnrestricted().get(s.accessKind());
+            };
             if ("ALL".equals(s.mode()) && !a.isSuperAdmin() && !actorUnrestricted) {
                 throw Errors.unprocessable("PRIVILEGE_ESCALATION", "본인 범위가 제한된 사용자는 '전체' 범위를 부여할 수 없습니다.");
             }
@@ -181,14 +180,21 @@ public class AccessPolicyService {
                 } else if (!"DENY".equals(e.effect())) {
                     throw Errors.validation("scopes", "effect 는 ALLOW 또는 DENY 여야 합니다.");
                 }
-                String table = s.dimension() == ScopeDimension.BUSINESS_ENTITY ? "business_entity" : "channel_account";
+                String table = switch (s.dimension()) {
+                    case BUSINESS_ENTITY -> "business_entity";
+                    case CHANNEL_ACCOUNT -> "channel_account";
+                    case FULFILLMENT_NODE -> "fulfillment_node";
+                };
                 int exists = jdbc.sql("select count(*) from " + table + " where workspace_id = :ws and id = :id")
                         .param("ws", a.workspaceId()).param("id", e.targetId()).query(Integer.class).single();
                 if (exists == 0) {
                     throw Errors.validation("scopes", "대상을 찾을 수 없습니다: " + e.targetId());
                 }
-                Set<UUID> actorAllowed = s.dimension() == ScopeDimension.BUSINESS_ENTITY
-                        ? actorScope.businessEntityIds(s.accessKind()) : actorScope.channelAccountIds(s.accessKind());
+                Set<UUID> actorAllowed = switch (s.dimension()) {
+                    case BUSINESS_ENTITY -> actorScope.businessEntityIds(s.accessKind());
+                    case CHANNEL_ACCOUNT -> actorScope.channelAccountIds(s.accessKind());
+                    case FULFILLMENT_NODE -> actorScope.fulfillmentNodeIds(s.accessKind());
+                };
                 if ("ALLOW".equals(e.effect()) && !a.isSuperAdmin() && !actorAllowed.contains(e.targetId())) {
                     throw Errors.unprocessable("PRIVILEGE_ESCALATION", "본인 범위 밖의 대상은 허용할 수 없습니다.",
                             Map.of("target_id", e.targetId().toString()));
@@ -234,14 +240,16 @@ public class AccessPolicyService {
         ResolvedScope resolved = scopes.resolve(ws, m.id());
         Map<String, List<UUID>> be = new LinkedHashMap<>();
         Map<String, List<UUID>> ca = new LinkedHashMap<>();
+        Map<String, List<UUID>> nodes = new LinkedHashMap<>();
         Map<String, Boolean> open = new LinkedHashMap<>();
         for (AccessKind k : AccessKind.values()) {
+            nodes.put(k.name(), resolved.fulfillmentNodeIds(k).stream().sorted().toList());
             be.put(k.name(), resolved.businessEntityIds(k).stream().sorted().toList());
             ca.put(k.name(), resolved.channelAccountIds(k).stream().sorted().toList());
             open.put(k.name(), resolved.unrestricted(k));
         }
         List<String> perms = permissions.effectivePermissions(ws, m.id()).stream().sorted().toList();
-        return new PolicyView(userId, m.id(), m.policyVersion(), overrides, scopeList, new Effective(perms, be, ca, open));
+        return new PolicyView(userId, m.id(), m.policyVersion(), overrides, scopeList, new Effective(perms, be, ca, open, nodes));
     }
 
     private static Map<String, Object> snapshot(PolicyView v) {

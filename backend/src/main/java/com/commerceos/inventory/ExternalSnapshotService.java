@@ -520,19 +520,16 @@ public class ExternalSnapshotService {
         if (bes.isEmpty()) {
             return List.of();
         }
-        String sql = SELECT + " where s.workspace_id = :ws and s.owner_business_entity_id in (:bes)" + (nodeId == null ? "" : " and s.node_id = :n")
-                + " order by s.id desc limit 200";
-        var q = jdbc.sql(sql).param("ws", guard.actor().workspaceId()).param("bes", bes);
-        if (nodeId != null) {
-            q = q.param("n", nodeId);
-        }
-        return q.query((rs, i) -> view(rs)).list();
+        String sql = SELECT + " where s.workspace_id = :ws and s.owner_business_entity_id in (:bes) and s.node_id in (:nodes) order by s.id desc limit 200";
+        return jdbc.sql(sql).param("ws", guard.actor().workspaceId()).param("bes", bes).param("nodes", inventory.visibleNodes(nodeId))
+                .query((rs, i) -> view(rs)).list();
     }
 
     public SnapshotDetail get(UUID id) {
         guard.requirePermission(Perm.INVENTORY_READ);
         SnapshotDetail d = detail(guard.actor().workspaceId(), id);
         guard.checkRead("EXTERNAL_INVENTORY_SNAPSHOT", id, d.snapshot().businessEntityId(), null);
+        guard.checkNode(AccessKind.READ, "EXTERNAL_INVENTORY_SNAPSHOT", id, d.snapshot().nodeId());
         return d;
     }
 
@@ -572,6 +569,7 @@ public class ExternalSnapshotService {
         if (nodeId == null) {
             throw Errors.validation("node_id", "거점을 지정하세요.");
         }
+        guard.checkNode(AccessKind.WRITE, "FULFILLMENT_NODE", nodeId, nodeId);
         NodeRule n = nodeRule(ws, nodeId);
         if (!"EXTERNAL".equals(n.inventorySource())) {
             throw Errors.unprocessable("NODE_INVENTORY_INTERNAL", "내부 원장 거점에는 외부 재고 스냅샷을 반영하지 않습니다.");

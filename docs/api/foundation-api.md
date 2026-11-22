@@ -65,7 +65,7 @@
 | | `GET/POST /shipper-accounts`, `GET/PATCH /shipper-accounts/{id}` | `logistics_account.read/manage` | READ/WRITE | 화주계정 |
 | 사용자 | `GET /users`, `GET /users/{id}` [추가] | `member.read` 또는 `access.manage` | — | `{id}` = user_id |
 | | `POST /users`, `PATCH /users/{id}` [추가] | `access.manage` | — | 권한 상승·마지막 관리자 보호 |
-| | `GET/PUT /users/{id}/access-policy` | `access.manage`(본인 조회는 허용) | — | 전체 교체, `If-Match` = access_policy_version |
+| | `GET/PUT /users/{id}/access-policy` | `access.manage`(본인 조회는 허용) | — | 전체 교체, `If-Match` = access_policy_version. 범위 차원: `BUSINESS_ENTITY`·`CHANNEL_ACCOUNT`·`FULFILLMENT_NODE`(M3 I6부터, 재고·물류 객체에만 적용). 응답 `effective.fulfillment_nodes` |
 | 역할 [추가] | `GET /roles`, `GET /permissions` | `member.read` / 로그인 | — | |
 | 연동 | `GET /integrations/connectors` [추가] | 로그인 | — | 등록된 커넥터(현재 모의만) |
 | | `GET /integrations/connections` | `integration.read` | READ | `channel_account_id`, `status` |
