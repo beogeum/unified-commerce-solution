@@ -1,4 +1,4 @@
-# 출고거점·재고 API (M3 I1~I4)
+# 출고거점·재고 API (M3 I1~I5)
 
 공통 규칙(인증·오류 형식·If-Match·멱등키)은 `foundation-api.md` §1 과 같다. 재고는 **소유 사업자** 단위로 집계하며, 모든 읽기·쓰기에 사용자별 사업자 범위(ADR-0002)를 적용한다. 출고거점(FULFILLMENT_NODE) 범위 차원은 I6 에서 연다(DLG-087).
 
@@ -75,5 +75,27 @@
 - SKU 연결: 외부 SKU 코드 = 우리 SKU 코드(대소문자 무시) → 바코드. 미연결·재고관리 대상 아님 행은 반영하지 않고 업무함 `EXTERNAL_SKU_UNMAPPED`.
 - 비가용: 외부 합계가 늘면 늘어난 만큼 `UNDETERMINED`(보류 `EXTERNAL_UNCLASSIFIED`) 버킷 + 분류 업무, 줄면 내부 세부분류가 '미확정'뿐일 때만 줄이고 그 외에는 **바꾸지 않고** 대사 업무 HIGH(T38). 물류사 거점에서도 비가용 안의 세부분류 변경(`/inventory/quality-changes`)은 허용, 판매가능 전환은 거부.
 
+## 6. 실사·재실사 기준·조정·이동 (I5, CONF-012~014, DEC-F21, DLG-043, T40)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `GET /inventory/count-policies?business_entity_id=&history=` | `inventory.read` | 범위별 현재 기준(삭제된 재정의 제외), `history=true` 면 모든 버전 |
+| `POST /inventory/count-policies` | `inventory.adjust` | `{business_entity_id, node_id?, zone?, removed?, qty_threshold?, rate_threshold_pct?, cost_threshold?, combine: ANY/ALL, on_exceed: RECOUNT_REQUIRED/RECOUNT_RECOMMENDED, recount_assignee: DIFFERENT_COUNTER/SAME_ALLOWED}`. 저장할 때마다 그 범위의 새 버전(append-only). 조건이 하나도 없으면 거부. 사업자 기본값은 삭제 불가. 물류사 재고 기준 거점 불가 |
+| `GET /inventory/count-assignees` | `inventory.operate` | 카운트 담당 후보(재고 처리 권한 있는 활성 사용자) |
+| `POST /inventory/stock-counts/preview` | `inventory.operate` | 생성 전 영향: 버킷·로케이션 수, 진행 중 확보 건수, 적용 기준(없으면 `policy_missing`) |
+| `POST /inventory/stock-counts` | `inventory.operate` + 사업자 쓰기 범위 | `{business_entity_id, node_id, scope: ALL/ZONE/SKU, zone?, sku_ids?, blind?=true, counter_member_ids[], note?}`. 기준 없음 `COUNT_POLICY_MISSING`, 겹치는 진행 중 실사 `STOCK_COUNT_OVERLAP`, 물류사 거점 `NODE_INVENTORY_EXTERNAL`. 행마다 기준 버전 고정(Zone → 거점 → 기본값) |
+| `GET /inventory/stock-counts?business_entity_id=&node_id=&status=` / `GET /inventory/stock-counts/{id}` | `inventory.read` | 블라인드 실사는 카운트 중 시스템 수량·차이·원가 영향을 숨긴다 |
+| `POST /inventory/stock-counts/{id}/entries` | 배정된 카운트 담당자 | `{entries: [{line_id, counted_qty}], found_lines: [{sku_id, location_code?, lot_code?, quality_status?, counted_qty}]}`. 회차별 이력(append-only). 재실사 행은 기준이 `DIFFERENT_COUNTER` 면 첫 카운트 담당자 거부(`RECOUNT_SAME_COUNTER`) |
+| `POST /inventory/stock-counts/{id}/submit` | 요청자·카운트 담당자 | 모든 행 카운트 필요(`COUNT_INCOMPLETE`). 차이·차이율·원가 영향 계산, 기준 판정 → `MATCHED` / `PENDING_APPROVAL`(권장 표시) / `RECOUNT_REQUIRED`(업무함). **실재고 불변**(T40), 잠금 해제 |
+| `POST /inventory/stock-counts/{id}/recount` | 요청자 또는 `inventory.adjust` | `{line_ids}`. 시스템 수량을 현재 버킷 값으로 다시 고정, 실사를 다시 카운트 중(잠금)으로 |
+| `POST /inventory/stock-counts/{id}/decisions` | `inventory.adjust`, 요청자·카운트 담당·카운트 입력자 제외(`COUNT_APPROVER_CONFLICT`) | `{line_ids, approve, reason?}`. 재실사 필수 행 `RECOUNT_REQUIRED_BEFORE_APPROVAL`. 재실사 권장 행·수량 표시 실사 승인은 사유 필수. 스냅샷 이후 버킷이 바뀌었으면 `STOCK_COUNT_STALE`. 승인분만 원장 `ADJUSTMENT`(참조 STOCK_COUNT) |
+| `POST /inventory/stock-counts/{id}/cancel` | 요청자 또는 `inventory.adjust` | `{reason}` 필수. 승인 안 한 차이는 반영하지 않음 |
+| `GET/PUT /inventory/adjustment-policies/{businessEntityId}` | read / **`approval.decide`** | `{approval_threshold}` 원. 미설정 시 기본 100,000원(DLG-043, `commerce.inventory.adjustment-approval-threshold`) |
+| `POST /inventory/adjustments` | `inventory.adjust` + 사업자 쓰기 범위 | `{stock_id | (business_entity_id, node_id, sku_id, location_code?, lot_code?, quality_status?), mode: INCREASE/DECREASE/ABSOLUTE, quantity, reason}`. 원가 영향 ≥ 기준 또는 원가 미등록 → `PENDING_APPROVAL` + 승인 요청(`INVENTORY_ADJUSTMENT`), 아니면 즉시 반영. 승인자는 `approval.decide` + `inventory.adjust`(`APPROVER_NEEDS_INVENTORY_ADJUST`), 요청 후 버킷이 바뀌면 `APPROVAL_STALE` |
+| `GET /inventory/transfers?business_entity_id=&status=` / `GET /inventory/transfers/{id}` | `inventory.read` | `in_transit_quantity` 포함 |
+| `POST /inventory/transfers` | `inventory.operate` | `{business_entity_id, from_node_id, to_node_id, lines: [{sku_id, quantity}], note?}`. 같은 사업자 안에서만, 확보·실사 잠금되지 않은 판매가능 재고만(FEFO), 물류사 거점 출발 거부(`TRANSFER_FROM_EXTERNAL`). 원장 `TRANSFER_OUT` |
+| `POST /inventory/transfers/{id}/receive` | `inventory.operate` | `{lines: [{line_no, received_qty, quality_status?}], location_code?}`. 모든 줄 필수, 초과 수령 불가. 원장 `TRANSFER_IN`, 부족분은 `RECEIVED_WITH_DISCREPANCY` + 업무함(HIGH). 물류사 재고 기준 도착지는 수량 확인만 기록(외부 재고 동기화로 반영) |
+
+**실사 잠금(CONF-012)**: 카운트 중인 실사 범위(사업자 단위, ALL·Zone 로케이션·SKU)의 버킷은 입고 적치·품질 변경·조정·이동 입출고·출고 확정이 `409 STOCK_COUNT_LOCKED`. 출고 배정·피킹은 잠기지 않은 판매가능 실물로 채울 수 없을 때만 거부한다.
+
 ## 4. 오류 코드 요약
-`OWNER_NOT_ON_NODE`, `NODE_INVENTORY_EXTERNAL`, `NODE_NOT_ACTIVE`, `NODE_HAS_STOCK`, `NODE_CLOSED`, `NODE_SHIPPER_*`, `NODE_LOCATION_*`, `SKU_NOT_INVENTORY_MANAGED`, `SKU_ARCHIVED`, `LOT_EXPIRY_MISMATCH`, `STOCK_INSUFFICIENT`, `STOCK_COMMITTED`, `STOCK_BUCKET_MISMATCH`, `INSUFFICIENT_AVAILABLE_STOCK`, `RESERVATION_EXISTS`, `RESERVATION_STATE_INVALID`, `PICK_RETURN_CONFIRMATION_REQUIRED`, `EXTERNAL_ACK_EXISTS`, `NODE_INVENTORY_INTERNAL`, `EXTERNAL_FILE_INVALID`, `TEMPLATE_COLUMN_MISSING`.
+`OWNER_NOT_ON_NODE`, `NODE_INVENTORY_EXTERNAL`, `NODE_NOT_ACTIVE`, `NODE_HAS_STOCK`, `NODE_CLOSED`, `NODE_SHIPPER_*`, `NODE_LOCATION_*`, `SKU_NOT_INVENTORY_MANAGED`, `SKU_ARCHIVED`, `LOT_EXPIRY_MISMATCH`, `STOCK_INSUFFICIENT`, `STOCK_COMMITTED`, `STOCK_BUCKET_MISMATCH`, `INSUFFICIENT_AVAILABLE_STOCK`, `RESERVATION_EXISTS`, `RESERVATION_STATE_INVALID`, `PICK_RETURN_CONFIRMATION_REQUIRED`, `EXTERNAL_ACK_EXISTS`, `NODE_INVENTORY_INTERNAL`, `EXTERNAL_FILE_INVALID`, `TEMPLATE_COLUMN_MISSING`, `STOCK_COUNT_LOCKED`, `COUNT_POLICY_MISSING`, `STOCK_COUNT_OVERLAP`, `NOT_COUNT_ASSIGNEE`, `COUNT_INCOMPLETE`, `RECOUNT_SAME_COUNTER`, `COUNT_APPROVER_CONFLICT`, `RECOUNT_REQUIRED_BEFORE_APPROVAL`, `STOCK_COUNT_STALE`, `APPROVER_NEEDS_INVENTORY_ADJUST`, `TRANSFER_FROM_EXTERNAL`, `TRANSFER_NOT_IN_TRANSIT`.

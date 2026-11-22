@@ -42,8 +42,11 @@ public class InventoryService {
     private final OutboxPublisher outbox;
     private final InventoryLedger ledger;
     private final NodeService nodes;
+    private final CountLocks locks;
 
-    public InventoryService(JdbcClient jdbc, AccessGuard guard, AuditService audit, OutboxPublisher outbox, InventoryLedger ledger, NodeService nodes) {
+    public InventoryService(JdbcClient jdbc, AccessGuard guard, AuditService audit, OutboxPublisher outbox, InventoryLedger ledger, NodeService nodes,
+                            CountLocks locks) {
+        this.locks = locks;
         this.jdbc = jdbc;
         this.guard = guard;
         this.audit = audit;
@@ -110,6 +113,7 @@ public class InventoryService {
         UUID locationId = resolveLocation(a.workspaceId(), node, r.locationCode());
         requireReason(r.reason(), false);
 
+        locks.requireUnlocked(a.workspaceId(), r.businessEntityId(), r.nodeId(), r.skuId(), locationId, "입고 적치");
         Position p = ledger.lockPosition(a.workspaceId(), r.businessEntityId(), r.skuId(), r.nodeId());
         UUID stockId = ledger.addToBucket(a.workspaceId(), new Bucket(r.businessEntityId(), r.skuId(), r.nodeId(), locationId, lotId, quality, hold), qty);
         int sellable = "SELLABLE".equals(quality) ? qty : 0;
@@ -149,6 +153,7 @@ public class InventoryService {
         if ("EXTERNAL".equals(node.inventorySource()) && ("SELLABLE".equals(s.bucket().quality()) || "SELLABLE".equals(c.toQualityStatus()))) {
             throw Errors.unprocessable("NODE_INVENTORY_EXTERNAL", "물류사 재고가 기준인 거점은 판매가능·비가용 전환을 물류사 동기화로만 반영합니다. 비가용 안의 세부분류만 바꿀 수 있습니다.");
         }
+        locks.requireUnlocked(a.workspaceId(), s.bucket().ownerId(), s.bucket().nodeId(), s.bucket().skuId(), s.bucket().locationId(), "품질 변경");
         if (qty > s.onHand()) {
             throw Errors.unprocessable("STOCK_INSUFFICIENT", "버킷 수량보다 많이 옮길 수 없습니다.", Map.of("on_hand", s.onHand(), "requested", qty));
         }
@@ -293,6 +298,14 @@ public class InventoryService {
         int atp = per.stream().mapToInt(NodeAvailability::atp).sum();
         return new Availability(businessEntityId, skuId, skuCode, safety, sellable, committed, Math.max(0, atp - safety),
                 per.stream().anyMatch(NodeAvailability::restricted), per);
+    }
+
+    /** 사업자 SKU 의 현재 기준 원가(공급가, 원). 없으면 비어 있음. */
+    java.util.Optional<java.math.BigDecimal> unitCost(UUID ws, UUID businessEntityId, UUID skuId) {
+        return jdbc.sql("""
+                select unit_cost from sku_cost where workspace_id = :ws and business_entity_id = :b and sku_id = :s and effective_from <= now()
+                 order by effective_from desc limit 1
+                """).param("ws", ws).param("b", businessEntityId).param("s", skuId).query(java.math.BigDecimal.class).optional();
     }
 
     int safetyStock(UUID ws, UUID businessEntityId, UUID skuId) {

@@ -46,10 +46,12 @@ public class ReservationService {
     private final Clock clock;
     private final TransactionTemplate tx;
     private final AuditService audit;
+    private final CountLocks locks;
 
     public ReservationService(JdbcClient jdbc, AccessGuard guard, InventoryLedger ledger, InventoryService inventory, Clock clock, PlatformTransactionManager tm,
-                              AuditService audit) {
+                              AuditService audit, CountLocks locks) {
         this.audit = audit;
+        this.locks = locks;
         this.jdbc = jdbc;
         this.guard = guard;
         this.ledger = ledger;
@@ -212,7 +214,11 @@ public class ReservationService {
         Position p = ledger.lockPositionById(a.workspaceId(), row.positionId());
         Row r = lockReservation(a.workspaceId(), id);
         int remaining = r.quantity();
-        List<Stock> buckets = ledger.lockSellableBucketsFefo(p);
+        List<Stock> all = ledger.lockSellableBucketsFefo(p);
+        List<Stock> buckets = locks.unlocked(a.workspaceId(), p, all);
+        if (buckets.stream().mapToInt(Stock::onHand).sum() < r.quantity() && all.stream().mapToInt(Stock::onHand).sum() >= r.quantity()) {
+            throw CountLocks.locked(locks.first(a.workspaceId(), p).orElseThrow(), "출고 확정");
+        }
         List<Object[]> takes = new ArrayList<>();
         for (Stock s : buckets) {
             if (remaining == 0) {
@@ -427,6 +433,8 @@ public class ReservationService {
         if (!from.equals(r.state())) {
             throw invalidState(r.state(), to);
         }
+        // 실사 잠금(CONF-012): 잠기지 않은 실물로 채울 수 없으면 출고 배정·피킹을 막는다
+        locks.requireUnlockedQuantity(a.workspaceId(), p, r.quantity(), "ALLOCATE".equals(txnType) ? "출고 배정" : "피킹");
         jdbc.sql("update inventory_reservation set state = :to, version = version + 1, updated_at = now() where id = :id").param("to", to).param("id", id).update();
         ledger.record(a.workspaceId(), new Txn(txnType, p, null, null, 0, 0, 0, id, from, to, r.demandType(), r.demandRef(),
                 InventoryService.trimOrNull(t == null ? null : t.reason()), a.memberId()));

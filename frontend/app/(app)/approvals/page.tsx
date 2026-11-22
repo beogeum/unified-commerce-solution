@@ -11,7 +11,7 @@ import { useApi } from "@/lib/useApi";
 
 type Approval = { id: string; request_type: string; status: string; reason: string; impact: Record<string, string | null>;
   requested_by: string; requested_by_name: string; requested_at: string; decided_by_name: string | null; decision_note: string | null };
-const TYPE_KO: Record<string, string> = { SKU_MIN_PRICE_CHANGE: "최저판매가 변경" };
+const TYPE_KO: Record<string, string> = { SKU_MIN_PRICE_CHANGE: "최저판매가 변경", INVENTORY_ADJUSTMENT: "재고 조정" };
 const STATUS: Record<string, ["warn" | "ok" | "err" | "mute", string]> = {
   PENDING: ["warn", "대기"], APPROVED: ["ok", "승인"], REJECTED: ["err", "반려"], CANCELLED: ["mute", "취소"],
 };
@@ -21,6 +21,11 @@ function impactRows(a: Approval): [string, string][] {
   if (a.request_type === "SKU_MIN_PRICE_CHANGE") {
     return [["SKU", String(i.sku_code ?? "")], ["최저판매가", `${i.min_price_from ? formatWon(i.min_price_from) + "원" : "없음"} → ${formatWon(i.min_price_to ?? "")}원`],
       ["기준 판매가", i.base_price ? `${formatWon(i.base_price)}원` : "미설정"], ["요청자", a.requested_by_name], ["사유", a.reason]];
+  }
+  if (a.request_type === "INVENTORY_ADJUSTMENT") {
+    return [["SKU", String(i.sku_code ?? "")], ["수량", `${i.before} → ${i.after} (${Number(i.delta) > 0 ? "+" : ""}${i.delta})`],
+      ["원가 영향", i.cost_impact == null ? "기준 원가 없음(판단 불가)" : `${formatWon(i.cost_impact)}원`], ["승인 기준", `${formatWon(i.approval_threshold ?? "")}원 이상`],
+      ["요청자", a.requested_by_name], ["사유", a.reason]];
   }
   return [["요청자", a.requested_by_name], ["사유", a.reason]];
 }

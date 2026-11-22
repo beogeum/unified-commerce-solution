@@ -80,6 +80,7 @@ function PositionDrawer({ p, onClose, onChanged }: { p: Position; onClose: () =>
   const stocks = useApi<Stock[]>(`/inventory/stocks${qs({ business_entity_id: p.business_entity_id, sku_id: p.sku_id, node_id: p.node_id })}`);
   const txns = useApi<Txn[]>(`/inventory/transactions${qs({ business_entity_id: p.business_entity_id, sku_id: p.sku_id, node_id: p.node_id, limit: "20" })}`);
   const [moving, setMoving] = useState<Stock | null>(null);
+  const [adjusting, setAdjusting] = useState<Stock | null>(null);
   return (
     <Drawer title={`${p.sku_code} · ${p.node_name}`} onClose={onClose}>
       <div className="kv"><span>소유 사업자</span><span>{p.business_entity_name}</span></div>
@@ -94,14 +95,61 @@ function PositionDrawer({ p, onClose, onChanged }: { p: Position; onClose: () =>
             { key: "lot", header: "LOT · 유통기한", render: (s) => s.lot_code ? <><span className="mono">{s.lot_code}</span> <span className="ctx">{s.expires_on ?? ""}</span></> : "—" },
             { key: "q", header: "품질", render: (s) => <Chip kind={s.quality_status === "SELLABLE" ? "ok" : "warn"}>{QUALITY_KO[s.quality_status]}{s.hold_reason ? ` · ${s.hold_reason}` : ""}</Chip> },
             { key: "n", header: "수량", num: true, render: (s) => num(s.on_hand) },
-            { key: "a", header: "", render: (s) => can("inventory.operate") && (p.inventory_source === "INTERNAL" || s.quality_status !== "SELLABLE")
-              ? <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); setMoving(s); }}>품질 변경</button> : null },
+            { key: "a", header: "", render: (s) => <span className="row-gap" style={{ gap: 4 }}>
+              {can("inventory.operate") && (p.inventory_source === "INTERNAL" || s.quality_status !== "SELLABLE") &&
+                <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); setMoving(s); }}>품질 변경</button>}
+              {can("inventory.adjust") && p.inventory_source === "INTERNAL" &&
+                <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); setAdjusting(s); }}>조정</button>}</span> },
           ]} />)}
       <h3 style={{ fontSize: 14 }}>최근 원장</h3>
       {txns.loading ? <Loading /> : txns.error ? <ErrorState error={txns.error} onRetry={txns.reload} /> : <TxnList rows={txns.data ?? []} />}
+      {adjusting && <AdjustModal stock={adjusting} onClose={() => setAdjusting(null)} onDone={() => { setAdjusting(null); stocks.reload(); txns.reload(); onChanged(); }} />}
       {moving && <QualityModal stock={moving} external={p.inventory_source === "EXTERNAL"} committedGuard={p.sellable_on_hand - p.committed} onClose={() => setMoving(null)}
         onDone={() => { setMoving(null); stocks.reload(); txns.reload(); onChanged(); }} />}
     </Drawer>
+  );
+}
+
+type AdjustResult = { status: string; approval_id: string | null; before: number; after: number; delta: number; cost_impact: string | null;
+  approval_threshold: string; approval_reason_ko: string | null };
+
+function AdjustModal({ stock, onClose, onDone }: { stock: Stock; onClose: () => void; onDone: () => void }) {
+  const [mode, setMode] = useState("DECREASE");
+  const [qty, setQty] = useState(1);
+  const [reason, setReason] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [result, setResult] = useState<AdjustResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [key] = useState(newIdempotencyKey);
+  const after = mode === "ABSOLUTE" ? qty : mode === "INCREASE" ? stock.on_hand + qty : stock.on_hand - qty;
+  const submit = async () => {
+    if (result) { onDone(); return; }
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await api<AdjustResult>("/inventory/adjustments", { method: "POST", idempotencyKey: key, body: { stock_id: stock.id, mode, quantity: qty, reason } });
+      setResult(r.data);
+    } catch (x) {
+      setErr(x instanceof ApiError ? x.message : "조정하지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <ConfirmModal title="재고 조정" confirmLabel={result ? "닫기" : "조정 요청"} busy={busy} onClose={result ? onDone : onClose} onConfirm={submit}
+      confirmDisabled={!result && (!reason.trim() || after < 0 || after === stock.on_hand)}
+      impact={[["대상", `${stock.sku_code} · ${QUALITY_KO[stock.quality_status]}${stock.location_code ? ` · ${stock.location_code}` : ""}${stock.lot_code ? ` · ${stock.lot_code}` : ""}`],
+        ["수량", `${num(stock.on_hand)} → ${num(Math.max(0, after))}`]]}>
+      {err && <div className="note n-err" role="alert">{err}</div>}
+      {result ? (result.status === "APPLIED" ? <div className="note n-ok">반영했습니다(원가 영향 {result.cost_impact ?? "—"}원, 승인 기준 미만).</div>
+        : <div className="note n-warn">승인 요청을 만들었습니다. {result.approval_reason_ko} 승인 전까지 재고는 바뀌지 않습니다.</div>) : <>
+        <label className="fld">방식<select className="inp" value={mode} onChange={(e) => setMode(e.target.value)}>
+          <option value="DECREASE">감소</option><option value="INCREASE">증가</option><option value="ABSOLUTE">절대수량으로 맞춤</option></select></label>
+        <label className="fld">{mode === "ABSOLUTE" ? "맞출 수량" : "수량"}<input className="inp" type="number" min={0} value={qty} onChange={(e) => setQty(Math.max(0, Number(e.target.value) || 0))} /></label>
+        <label className="fld">사유(필수)<input className="inp" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} /></label>
+        <p className="ctx" style={{ margin: 0 }}>원가 영향이 사업자 승인 기준 이상이거나 기준 원가가 없으면 승인 요청이 됩니다. 실사 차이는 실사 화면에서 승인하세요.</p>
+      </>}
+    </ConfirmModal>
   );
 }
 

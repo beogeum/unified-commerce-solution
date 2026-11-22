@@ -421,6 +421,84 @@ test.describe.serial("Foundation", () => {
     await expect(extRow.getByRole("cell").nth(7)).toHaveText("6");
   });
 
+  const WORKER = { email: `worker-${RUN}@e2e.test`, password: "E2e-Worker-pass-4826", name: "서창고" };
+  const APPROVER = { email: `logi-${RUN}@e2e.test`, password: "E2e-Logi-pass-4826", name: "박물류" };
+
+  test("관리자: 재실사 기준 → 블라인드 실사 생성(영향 미리보기) (M3 I5)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    for (const [u, role] of [[WORKER, "WAREHOUSE_WORKER"], [APPROVER, "LOGISTICS_MANAGER"]] as const) {
+      const r = await bff(page.request).post("/users", { email: u.email, display_name: u.name, initial_password: u.password, role_codes: [role] },
+        { "idempotency-key": `e2e-user-${role}-${RUN}` });
+      expect(r.status()).toBe(201);
+    }
+    await page.goto("/inventory/policy");
+    await page.getByLabel("정책 사업자").selectOption({ label: NAMES.a });
+    await expect(page.getByText("사업자 기본값이 없습니다")).toBeVisible();
+    await page.getByRole("button", { name: "사업자 기본값 만들기" }).click();
+    const pd = page.getByRole("dialog", { name: "재실사 기준 — 사업자 기본값" });
+    await pd.getByLabel("수량 차이가 넘으면(개)").fill("3");
+    await pd.getByRole("button", { name: "새 버전 저장" }).click();
+    await expect(page.getByRole("row", { name: /사업자 기본값/ })).toContainText("3개 초과");
+
+    await page.getByRole("link", { name: "재고조정·실사" }).click();
+    await page.getByRole("button", { name: "실사 생성" }).click();
+    const cd = page.getByRole("dialog", { name: "실사 생성" });
+    await cd.getByLabel("사업자(재고 소유)").selectOption({ label: NAMES.a });
+    await cd.getByLabel("출고거점").selectOption({ label: `화성 자체창고 ${RUN}` });
+    await cd.getByLabel(WORKER.name).check();
+    await expect(cd).toContainText("영향 미리보기");
+    await expect(cd).toContainText("수량 차이 3개 초과");
+    await cd.getByRole("button", { name: "실사 생성" }).click();
+    const drawer = page.getByRole("dialog", { name: /^실사 C-/ });
+    await expect(drawer).toContainText("범위 잠금 중");
+    await expect(drawer.getByRole("row", { name: new RegExp(`AMP-30-${RUN}`) })).toContainText("비공개"); // 블라인드
+  });
+
+  test("카운트 담당: 블라인드 카운트 입력 → 제출(실재고 불변, T40)", async ({ page }) => {
+    await login(page, WORKER.email, WORKER.password);
+    await expectOnHome(page, WORKER.name);
+    await page.goto("/inventory/counts");
+    await page.getByRole("row", { name: /카운트 중/ }).first().click();
+    const drawer = page.getByRole("dialog", { name: /^실사 C-/ });
+    await drawer.getByLabel(new RegExp(`AMP-30-${RUN}.*실사 수량`)).fill("2");
+    await drawer.getByRole("button", { name: "카운트 저장" }).click();
+    await expect(drawer).toContainText("카운트를 저장했습니다");
+    await drawer.getByRole("button", { name: "카운트 제출" }).click();
+    await expect(drawer).toContainText("실재고는 승인 전까지 바뀌지 않습니다");
+    await expect(drawer.getByRole("row", { name: new RegExp(`AMP-30-${RUN}`) })).toContainText("승인 대기");
+    // 카운트 담당자는 승인할 수 없다(승인 버튼 없음)
+    await expect(drawer.getByRole("button", { name: "선택 승인" })).toHaveCount(0);
+    await page.goto("/inventory");
+    const row = page.getByRole("row", { name: new RegExp(`AMP-30-${RUN}`) }).filter({ hasText: `화성 자체창고 ${RUN}` });
+    await expect(row.getByRole("cell").nth(2)).toHaveText("3");
+  });
+
+  test("승인자(요청자·카운트 담당 아님): 실사 차이 승인 → 조정 반영 (CONF-013)", async ({ page }) => {
+    await login(page, APPROVER.email, APPROVER.password);
+    await expectOnHome(page, APPROVER.name);
+    await page.goto("/inventory/counts");
+    await page.getByRole("row", { name: /차이 검토/ }).first().click();
+    const drawer = page.getByRole("dialog", { name: /^실사 C-/ });
+    const line = drawer.getByRole("row", { name: new RegExp(`AMP-30-${RUN}`) });
+    await expect(line).toContainText("−1".replace("−", "-"));
+    await line.getByRole("checkbox").check();
+    await drawer.getByRole("button", { name: "선택 승인" }).click();
+    const m = page.getByRole("alertdialog");
+    await expect(m).toContainText("차이 합계 -1개를 조정 원장으로 반영");
+    await m.getByRole("button", { name: "승인" }).click();
+    await expect(drawer).toContainText("승인해 재고에 반영했습니다");
+    await expect(line).toContainText("승인·반영");
+    await page.goto("/inventory");
+    const row = page.getByRole("row", { name: new RegExp(`AMP-30-${RUN}`) }).filter({ hasText: `화성 자체창고 ${RUN}` });
+    await expect(row.getByRole("cell").nth(2)).toHaveText("2");
+    await expect(page.getByText("재고 검증: 집계·버킷·확보·원장이 모두 일치합니다.")).toBeVisible();
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");

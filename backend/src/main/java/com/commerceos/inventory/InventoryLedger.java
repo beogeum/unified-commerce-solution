@@ -53,6 +53,17 @@ class InventoryLedger {
                 .param("ws", ws).param("o", ownerId).param("s", skuId).param("n", nodeId).query(this::position).single();
     }
 
+    /** 집계 행이 없으면 만든다(잠그지 않음 — 이후 lockPositions 로 id 순 잠금). */
+    @Transactional(propagation = Propagation.MANDATORY)
+    void ensurePositions(UUID ws, UUID ownerId, java.util.Collection<UUID> skuIds, UUID nodeId) {
+        for (UUID sku : skuIds) {
+            jdbc.sql("""
+                    insert into inventory_position (id, workspace_id, owner_business_entity_id, sku_id, node_id) values (:id, :ws, :o, :s, :n)
+                    on conflict (owner_business_entity_id, sku_id, node_id) do nothing
+                    """).param("id", Ids.newId()).param("ws", ws).param("o", ownerId).param("s", sku).param("n", nodeId).update();
+        }
+    }
+
     /** 소유 사업자의 SKU 들에 대한 모든 거점 집계를 id 순으로 잠근다(동시 예약 직렬화, T07). */
     @Transactional(propagation = Propagation.MANDATORY)
     List<Position> lockPositions(UUID ws, UUID ownerId, Collection<UUID> skuIds) {
@@ -115,6 +126,42 @@ class InventoryLedger {
     Stock lockStock(UUID ws, UUID stockId) {
         return jdbc.sql("select * from inventory_stock where workspace_id = :ws and id = :id for update").param("ws", ws).param("id", stockId)
                 .query((rs, i) -> stock(rs)).optional().orElseThrow(() -> Errors.notFound("INVENTORY_STOCK"));
+    }
+
+    /** 버킷 키로 찾아 잠근다(없으면 빈 값). */
+    @Transactional(propagation = Propagation.MANDATORY)
+    java.util.Optional<Stock> findBucket(UUID ws, Bucket b) {
+        return jdbc.sql("""
+                select * from inventory_stock where workspace_id = :ws and owner_business_entity_id = :o and sku_id = :s and node_id = :n
+                   and location_id is not distinct from cast(:loc as uuid) and lot_id is not distinct from cast(:lot as uuid) and quality_status = :q
+                   and hold_reason is not distinct from cast(:h as text)
+                 for update
+                """).param("ws", ws).param("o", b.ownerId()).param("s", b.skuId()).param("n", b.nodeId()).param("loc", b.locationId()).param("lot", b.lotId())
+                .param("q", b.quality()).param("h", b.holdReason()).query((rs, i) -> stock(rs)).optional();
+    }
+
+    /**
+     * 버킷 수량을 delta 만큼 바꾸고 집계·원장을 함께 기록한다(조정·이동 공통). 판매가능 감소가 확보수량을 침범하면 409 STOCK_COMMITTED.
+     * 호출자는 집계(position)를 먼저 잠가 둔다. @return 바뀐 집계
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    Position changeBucket(UUID ws, Position p, Bucket b, int delta, String txnType, String referenceType, String referenceId, String reason, UUID actor) {
+        boolean sellable = "SELLABLE".equals(b.quality());
+        if (sellable && delta < 0 && p.sellableOnHand() + delta < p.committed()) {
+            throw Errors.conflict("STOCK_COMMITTED", "확보(예약·할당·피킹)된 수량은 줄일 수 없습니다. 먼저 확보를 해제하거나 다른 거점으로 배정하세요.",
+                    Map.of("sku_id", p.skuId().toString(), "sellable_on_hand", p.sellableOnHand(), "committed", p.committed(), "requested", delta));
+        }
+        UUID stockId;
+        if (delta > 0) {
+            stockId = addToBucket(ws, b, delta);
+        } else {
+            Stock s = findBucket(ws, b).orElseThrow(() -> Errors.conflict("STOCK_INSUFFICIENT", "재고 버킷 수량이 부족합니다."));
+            removeFromBucket(s.id(), -delta);
+            stockId = s.id();
+        }
+        Position after = applyToPosition(p, sellable ? delta : 0, 0);
+        record(ws, new Txn(txnType, after, stockId, b.quality(), delta, sellable ? delta : 0, 0, null, null, null, referenceType, referenceId, reason, actor));
+        return after;
     }
 
     /** 판매 가능 버킷을 선입선출(유통기한 빠른 LOT 먼저 — FEFO) 순서로 잠근다. */

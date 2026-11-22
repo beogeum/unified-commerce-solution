@@ -2,7 +2,7 @@
 
 - 상태: **v1 기본 역할로 승인(2026-11-21 위임 결정 DLG-020)**. 코드: `backend/src/main/java/com/commerceos/identity/access/SystemRoles.java`(운영그룹 생성 시 역할로 복사).
 - 역할은 권한 묶음일 뿐이며 사업자·판매계정 **범위는 사용자별 접근정책**으로 따로 제한한다(ADR-0002).
-- ★ = 민감 권한(docs/08 §1). `order.*`, `claim.refund`, `inventory.adjust`·`inventory.dispose`, `pii.read`, `cost.read`, `settlement.read`, `profit.read`, `period.close` 는 후속 모듈에서 사용하며 지금은 카탈로그에만 정의되어 있다.
+- ★ = 민감 권한(docs/08 §1). `order.*`, `claim.refund`, `inventory.dispose`, `pii.read`, `cost.read`, `settlement.read`, `profit.read`, `period.close` 는 후속 모듈에서 사용하며 지금은 카탈로그에만 정의되어 있다.
 
 | 권한 | 이름 | 최고관리자 | 운영관리자 | 상품/MD | 주문담당 | CS담당 | 물류관리자 | 창고작업자 | 정산/재무 | 분석읽기전용 | 일반읽기전용 | 연동관리자 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -33,7 +33,7 @@
 | `order.read` | 주문 조회 | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● |
 | `order.update` | 주문 변경 | ● | ● |  | ● | ● |  |  |  |  |  |  |
 | `claim.refund` ★ | 환불 실행 | ● |  |  |  |  |  |  |  |  |  |  |
-| `inventory.adjust` ★ | 재고 조정 | ● |  |  |  |  | ● |  |  |  |  |  |
+| `inventory.adjust` ★ | 재고 조정·실사 차이 승인·재실사 기준 | ● |  |  |  |  | ● |  |  |  |  |  |
 | `inventory.dispose` ★ | 재고 폐기 | ● |  |  |  |  |  |  |  |  |  |  |
 | `pii.read` ★ | 고객 개인정보 원문 조회 | ● |  |  | ● | ● |  |  |  |  |  |  |
 | `cost.read` ★ | 원가·비용 조회 | ● |  | ● |  |  |  |  | ● | ● |  |  |

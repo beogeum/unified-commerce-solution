@@ -32,6 +32,7 @@ public final class Perm {
     public static final String APPROVAL_DECIDE = "approval.decide";
     public static final String INVENTORY_READ = "inventory.read";
     public static final String INVENTORY_OPERATE = "inventory.operate";
+    public static final String INVENTORY_ADJUST = "inventory.adjust";
 
     private Perm() {
     }

@@ -61,3 +61,33 @@ export function ago(iso: string | null): string {
   if (m < 1440) return `${Math.floor(m / 60)}시간 전`;
   return `${Math.floor(m / 1440)}일 전`;
 }
+export type CountPolicy = { id: string; business_entity_id: string; node_id: string | null; node_name: string | null; zone: string | null; version: number;
+  removed: boolean; qty_threshold: number | null; rate_threshold_pct: string | null; cost_threshold: string | null; combine: string; on_exceed: string;
+  recount_assignee: string; created_by_name: string | null; created_at: string };
+export type StockCount = { id: string; count_no: string; business_entity_id: string; business_entity_name: string; node_id: string; node_name: string;
+  scope: string; zone: string | null; sku_ids: string[] | null; blind: boolean; policy_id: string; policy_version: number; status: string; round: number;
+  snapshot_at: string; note: string | null; requested_by: string; requested_by_name: string | null; counters: { member_id: string; name: string }[];
+  line_count: number; counted_lines: number; diff_lines: number; pending_lines: number; recount_required_lines: number; submitted_at: string | null;
+  completed_at: string | null; version: number };
+export type CountLine = { id: string; line_no: number; sku_id: string; sku_code: string; sku_name: string | null; location_code: string | null; zone: string | null;
+  lot_code: string | null; quality_status: string; hold_reason: string | null; system_qty: number | null; found_in_count: boolean; counted_qty: number | null;
+  counted_by_name: string | null; recount_count: number; status: string; diff: number | null; diff_rate_pct: string | null; unit_cost: string | null;
+  cost_impact: string | null; exceeds_policy: boolean | null; recount_recommended: boolean; policy_id: string; policy_version: number;
+  decided_by_name: string | null; decision_reason: string | null };
+export type CountDetail = { count: StockCount; lines: CountLine[]; impact: Record<string, unknown> };
+export type Transfer = { id: string; transfer_no: string; business_entity_id: string; business_entity_name: string; from_node_id: string; from_node_name: string;
+  to_node_id: string; to_node_name: string; to_inventory_source: string; status: string; note: string | null; shipped_at: string; received_at: string | null;
+  requested_by_name: string | null; total_quantity: number; in_transit_quantity: number;
+  lines: { line_no: number; sku_id: string; sku_code: string; lot_code: string | null; quantity: number; received_qty: number | null; received_quality: string | null }[];
+  version: number };
+export const COUNT_STATUS: Record<string, ["info" | "warn" | "ok" | "mute", string]> = {
+  COUNTING: ["info", "카운트 중"], REVIEW: ["warn", "차이 검토"], COMPLETED: ["ok", "완료"], CANCELLED: ["mute", "취소"],
+};
+export const LINE_STATUS: Record<string, ["info" | "warn" | "ok" | "err" | "mute", string]> = {
+  COUNTING: ["info", "카운트 대기"], RECOUNT: ["info", "재실사 중"], MATCHED: ["ok", "일치"], PENDING_APPROVAL: ["warn", "승인 대기"],
+  RECOUNT_REQUIRED: ["err", "재실사 필요"], APPROVED: ["ok", "승인·반영"], REJECTED: ["mute", "반려"],
+};
+export const SCOPE_KO: Record<string, string> = { ALL: "거점 전체", ZONE: "Zone", SKU: "SKU 지정" };
+export const TRANSFER_STATUS: Record<string, ["info" | "ok" | "warn", string]> = {
+  IN_TRANSIT: ["info", "이동 중"], RECEIVED: ["ok", "입고 완료"], RECEIVED_WITH_DISCREPANCY: ["warn", "입고 · 수량 차이"],
+};
