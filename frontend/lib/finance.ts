@@ -23,3 +23,30 @@ export const METHOD_KO: Record<string, string> = { RATE_OF_NET_SALES: "순매출
 export const BASIS_KO: Record<string, string> = { ESTIMATED: "예상", ACTUAL: "실제" };
 export const GROUP_KO: Record<string, string> = { business_entity: "사업자", channel_account: "판매계정", sku: "SKU", order: "주문", month: "월" };
 export const won = (v: string | number | null | undefined) => (v === null || v === undefined ? "—" : Number(v).toLocaleString("ko-KR"));
+
+// ---------------------------------------------------------------- 정산·입금·월 마감(M5 2차)
+export type SettlementLine = { id: string; line_no: number; line_type: string; amount: string; quantity: number | null; external_order_key: string | null;
+  external_item_key: string | null; order_id: string | null; order_no: string | null; order_item_id: string | null; match_level: string; applied: string };
+export type OrderDiff = { order_id: string; order_no: string; settlement: string; ledger: string; difference: string };
+export type SettlementRun = { id: string; settlement_key: string; business_entity_id: string; business_entity_name: string; channel_account_id: string;
+  channel_account_name: string; period_from: string | null; period_to: string | null; payout_date: string | null; declared_payout: string | null; payout: string;
+  deposited: string; remaining: string; status: string; source: string; totals: Record<string, string>; review_lines: number; differences: OrderDiff[];
+  lines: SettlementLine[]; created_at: string };
+export type DepositMatch = { id: string; deposit_id: string; run_id: string; settlement_key: string; channel_account_name: string; amount: string; method: string;
+  created_at: string; cancelled_at: string | null };
+export type Deposit = { id: string; business_entity_id: string; business_entity_name: string; bank_account_id: string | null; bank_account_last4: string | null;
+  deposited_on: string; amount: string; matched: string; remaining: string; depositor: string | null; external_ref: string | null; memo: string | null;
+  matches: DepositMatch[]; created_at: string };
+export type PeriodCheck = { code: string; severity: "WARNING" | "INFO"; count: number; amount: string | null; message: string };
+export type PeriodTotals = { supply_by_category: Record<string, string>; vat_by_category: Record<string, string>; net_sales: string; other_revenue: string;
+  total_cost: string; contribution: string; entry_count: number; posted_after_close: number };
+export type Period = { business_entity_id: string; business_entity_name: string; month: string; status: "OPEN" | "CLOSED"; closable: boolean;
+  not_closable_reason: string | null; checks: PeriodCheck[]; totals: PeriodTotals; snapshot: PeriodTotals | null; snapshot_matches: boolean | null;
+  closed_at: string | null; closed_by_name: string | null; pending_reopen_approval_id: string | null;
+  events: { event_type: string; reason: string | null; actor_name: string | null; approval_id: string | null; occurred_at: string }[] };
+
+export const LINE_TYPE_KO: Record<string, string> = { SALE: "판매", SHIPPING_FEE: "배송비", COMMISSION: "판매수수료", PAYMENT_FEE: "결제수수료",
+  DISCOUNT_COMPENSATION: "할인보전", REFUND: "환불", PENALTY: "패널티", ADJUSTMENT: "조정", OTHER: "기타" };
+export const APPLIED_KO: Record<string, string> = { LEDGER: "원장 반영", RECON_ONLY: "대사용", REVIEW: "검토 필요" };
+export const MATCH_KO: Record<string, string> = { ITEM: "주문상품", ORDER: "주문", PERIOD: "기간(주문 없음)", UNMATCHED: "원주문 없음" };
+export const RUN_STATUS_KO: Record<string, string> = { IMPORTED: "가져옴", RECONCILED: "대사 완료", ISSUES: "확인 필요" };

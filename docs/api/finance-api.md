@@ -22,3 +22,36 @@
 
 ## 2. 원가
 - 이동평균(사업자·SKU, 거점 통합): `POST /inventory/receipts` 에 `unit_cost`(공급가)를 주면 갱신. 없으면 등록 원가(`sku_cost`). 원가가 없으면 0원 예상 원가 + 업무 `FINANCE_COST_MISSING`.
+
+## 3. 정산 원본·대사 (N3, DLG-161~165)
+금액은 판매자 기준 부호(+ 받을 돈, − 공제)·부가세 포함. 원본 행은 불변(미매칭 행의 연결 정보만 재매칭으로 채움).
+
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `POST /finance/settlements/imports` (multipart `channel_account_id`, `file`) | `settlement.manage` + 판매계정 쓰기 범위 | 표준 양식(.csv·.xlsx). 필수 열 정산번호·항목·금액, 선택 정산기간시작·정산기간종료·지급예정일·지급액·주문번호·상품주문번호·수량. 항목 = 판매·배송비·판매수수료·결제수수료·할인보전·환불·패널티·조정·기타(또는 영문 코드). 잘못된 행이 있으면 `422 SETTLEMENT_FILE_INVALID`(전체 미반영), 열 누락 `422 TEMPLATE_COLUMN_MISSING`. 응답 `{runs, new_lines, duplicate_lines, run_ids}` |
+| `POST /finance/settlements {channel_account_id, settlement_key, period_from?, period_to?, payout_date?, declared_payout?, lines[{line_type, amount, quantity?, external_order_key?, external_item_key?}]}` | `settlement.manage` | 수기 정산. 같은 판매계정·정산번호는 같은 정산에 새 행만 추가 |
+| `GET /finance/settlements?business_entity_id&channel_account_id` | `settlement.read` + 범위 | 지급액(행 합계)·입금 연결·미입금·상태·검토 행·대사 차이 |
+| `GET /finance/settlements/{id}` | `settlement.read` | `{run(…, totals, differences, lines), matches}` |
+| `POST /finance/settlements/{id}/rematch` | `settlement.manage` | 원주문 없음 행을 다시 연결, 모두 연결되면 업무 해결 |
+
+원장 반영: 수수료 → 실제 `SELLING_FEE`·`PAYMENT_FEE`(같은 주문상품 예상 상계, 주문 단위는 순매출 비중 배부), 패널티 → `CHANNEL_PENALTY`, 조정·기타 → `OTHER`. 판매·배송비·할인보전·환불은 대사용(플랫폼 물류 주문만 매출 근거). 주문 없는 수수료·원주문 없음은 업무(`SETTLEMENT_LINE_REVIEW`·`SETTLEMENT_UNMATCHED`).
+
+## 4. 입금 매칭 (N4, DLG-166)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `POST /finance/deposits {business_entity_id, deposited_on, amount, bank_account_id?, depositor?, external_ref?, memo?}` + `Idempotency-Key` | `settlement.manage` | 추가 전용. 같은 키 → 같은 입금, 같은 거래번호 `409 DEPOSIT_DUPLICATE` |
+| `GET /finance/deposits?business_entity_id&unmatched` · `GET /finance/deposits/{id}` | `settlement.read` | 연결·미연결·연결 내역(취소 포함) |
+| `POST /finance/deposits/{id}/matches {run_id, amount?}` | `settlement.manage` | 금액 생략 = min(입금 잔액, 정산 미입금). 초과 `422 DEPOSIT_OVER_MATCHED`·`SETTLEMENT_OVER_MATCHED`, 다른 사업자 `422 DEPOSIT_ENTITY_MISMATCH` |
+| `POST /finance/deposits/{id}/auto-match` | `settlement.manage` | `outcome` = `MATCHED·NO_MATCH·AMBIGUOUS·NOTHING_TO_MATCH`, 모호하면 `candidate_run_ids` 만 |
+| `POST /finance/deposit-matches/{id}/cancel {reason}` | `settlement.manage` | 행 유지 + 취소 시각, 이미 취소 `409 DEPOSIT_MATCH_CANCELLED` |
+
+## 5. 월 마감 (N7, DLG-167·168)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `GET /finance/periods?business_entity_id&months` | `profit.read` | 최근 N개월 상태·합계·점검 |
+| `GET /finance/periods/preview?business_entity_id&month` | `profit.read` | 점검(`WARNING`·`INFO`), 원장 합계, 마감 스냅샷·일치 여부, 이력, 대기 중 재개방 요청 |
+| `POST /finance/periods/close {business_entity_id, month, acknowledge_warnings?, note?}` | `period.close` | 끝난 달만(`422 PERIOD_NOT_ENDED`), 경고 미확인 `422 PERIOD_CLOSE_WARNINGS`, 이미 마감 `409 PERIOD_ALREADY_CLOSED` |
+| `POST /finance/periods/reopen-requests {business_entity_id, month, reason}` | `period.close` | 승인 요청 `PERIOD_REOPEN`(본인 승인 불가, 승인자도 `period.close`). `POST /approvals/{id}/decision` 으로 처리 |
+
+마감 월에는 원장을 기록할 수 없다(DB 트리거). 마감 후 사건은 다음 열린 달 1일로 귀속하고 `original_period_date`·메모 "마감 후 발생(원 귀속 YYYY-MM)"으로 원거래 월과 연결한다.
+

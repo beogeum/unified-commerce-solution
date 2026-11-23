@@ -138,30 +138,12 @@ public class FinanceService {
             orderId = (UUID) i.get("order_id");
         }
         LocalDate period = c.periodDate() == null ? Ledger.period(null) : c.periodDate();
-        List<UUID> replaced = new ArrayList<>();
-        BigDecimal estimated = BigDecimal.ZERO;
-        if ("ACTUAL".equals(basis) && scopeKey != null) {
-            // 같은 범위의 남은 예상(상계되지 않은 행)만 대체. 범위 밖 예상과는 섞지 않는다.
-            for (Map<String, Object> e : jdbc.sql("""
-                    select e.* from financial_entry e where e.workspace_id = :ws and e.scope_key = :sk and e.basis = 'ESTIMATED' and e.reverses_id is null
-                       and not exists (select 1 from financial_entry r where r.reverses_id = e.id)
-                    """).param("ws", a.workspaceId()).param("sk", scopeKey).query().listOfRows()) {
-                BigDecimal amt = (BigDecimal) e.get("supply_amount");
-                estimated = estimated.add(amt);
-                UUID id = (UUID) e.get("id");
-                ledger.post(new Ledger.Entry(a.workspaceId(), (UUID) e.get("business_entity_id"), (UUID) e.get("channel_account_id"), (UUID) e.get("order_id"),
-                        (UUID) e.get("order_item_id"), (UUID) e.get("claim_id"), (UUID) e.get("fo_id"), null, (UUID) e.get("sku_id"), (UUID) e.get("node_id"), "COST",
-                        c.category(), "ESTIMATED", amt.negate(), ((BigDecimal) e.get("vat_amount")).negate(), (String) e.get("tax_type"),
-                        e.get("quantity") == null ? null : -((Number) e.get("quantity")).intValue(), null, period, "COST_REPLACEMENT", c.sourceRef(), "REV:" + id, id, scopeKey,
-                        "실제 비용으로 대체(예상 상계)", a.memberId()));
-                replaced.add(id);
-            }
-        }
-        UUID entryId = Ids.newId();
-        ledger.post(new Ledger.Entry(a.workspaceId(), c.businessEntityId(), c.channelAccountId(), orderId, itemId, claimId, foId, null, c.skuId(), c.nodeId(), "COST",
-                c.category(), basis, c.supplyAmount(), c.vatAmount() == null ? BigDecimal.ZERO : c.vatAmount(), "TAXABLE", null, null, period, "MANUAL_COST", c.sourceRef(),
-                key, null, scopeKey, ClaimTrim.trim(c.memo()), a.memberId()));
-        entryId = jdbc.sql("select id from financial_entry where workspace_id = :ws and source_key = :k").param("ws", a.workspaceId()).param("k", key).query(UUID.class).single();
+        Applied ap = applyActual(new ActualCost(a.workspaceId(), c.businessEntityId(), c.channelAccountId(), orderId, itemId, claimId, foId, c.skuId(), c.nodeId(),
+                c.category(), basis, c.supplyAmount(), c.vatAmount() == null ? BigDecimal.ZERO : c.vatAmount(), period, "MANUAL_COST", c.sourceRef(), key, scopeKey,
+                ClaimTrim.trim(c.memo()), a.memberId()));
+        UUID entryId = ap.entryId();
+        List<UUID> replaced = ap.replaced();
+        BigDecimal estimated = ap.estimated();
         BigDecimal variance = replaced.isEmpty() ? null : c.supplyAmount().subtract(estimated);
         boolean review = variance != null && variance.abs().compareTo(varianceThreshold) >= 0;
         if (review) {
@@ -174,6 +156,52 @@ public class FinanceService {
                 .scope(c.businessEntityId(), c.channelAccountId()).after(Map.of("category", c.category(), "basis", basis, "supply", c.supplyAmount().toPlainString(),
                         "replaced", replaced.size(), "variance", String.valueOf(variance))).build());
         return new CostResult(entryId, replaced, replaced.isEmpty() ? null : estimated, c.supplyAmount(), variance, review);
+    }
+
+    /** 실제 비용 기록 입력(수동·정산 공통). */
+    public record ActualCost(UUID workspaceId, UUID businessEntityId, UUID channelAccountId, UUID orderId, UUID orderItemId, UUID claimId, UUID foId, UUID skuId,
+                             UUID nodeId, String category, String basis, BigDecimal supply, BigDecimal vat, LocalDate period, String sourceType, String sourceRef,
+                             String sourceKey, String scopeKey, String memo, UUID createdBy) {
+    }
+
+    public record Applied(UUID entryId, List<UUID> replaced, BigDecimal estimated) {
+    }
+
+    /**
+     * 실제 비용 기록. 범위 키가 있으면 그 범위의 남은 예상(상계되지 않은 행)을 반대 거래로 상계한 뒤 실제를 기록한다(합산 금지, DLG-158).
+     * 같은 source_key 는 한 번만.
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public Applied applyActual(ActualCost c) {
+        UUID existing = jdbc.sql("select id from financial_entry where workspace_id = :ws and source_key = :k").param("ws", c.workspaceId()).param("k", c.sourceKey())
+                .query(UUID.class).optional().orElse(null);
+        if (existing != null) {
+            return new Applied(existing, List.of(), BigDecimal.ZERO);
+        }
+        List<UUID> replaced = new ArrayList<>();
+        BigDecimal estimated = BigDecimal.ZERO;
+        if ("ACTUAL".equals(c.basis()) && c.scopeKey() != null) {
+            for (Map<String, Object> e : jdbc.sql("""
+                    select e.* from financial_entry e where e.workspace_id = :ws and e.scope_key = :sk and e.basis = 'ESTIMATED' and e.reverses_id is null
+                       and not exists (select 1 from financial_entry r where r.reverses_id = e.id)
+                    """).param("ws", c.workspaceId()).param("sk", c.scopeKey()).query().listOfRows()) {
+                BigDecimal amt = (BigDecimal) e.get("supply_amount");
+                estimated = estimated.add(amt);
+                UUID id = (UUID) e.get("id");
+                ledger.post(new Ledger.Entry(c.workspaceId(), (UUID) e.get("business_entity_id"), (UUID) e.get("channel_account_id"), (UUID) e.get("order_id"),
+                        (UUID) e.get("order_item_id"), (UUID) e.get("claim_id"), (UUID) e.get("fo_id"), null, (UUID) e.get("sku_id"), (UUID) e.get("node_id"), "COST",
+                        c.category(), "ESTIMATED", amt.negate(), ((BigDecimal) e.get("vat_amount")).negate(), (String) e.get("tax_type"),
+                        e.get("quantity") == null ? null : -((Number) e.get("quantity")).intValue(), null, c.period(), "COST_REPLACEMENT", c.sourceRef(), "REV:" + id, id,
+                        c.scopeKey(), "실제 비용으로 대체(예상 상계)", c.createdBy()));
+                replaced.add(id);
+            }
+        }
+        ledger.post(new Ledger.Entry(c.workspaceId(), c.businessEntityId(), c.channelAccountId(), c.orderId(), c.orderItemId(), c.claimId(), c.foId(), null, c.skuId(),
+                c.nodeId(), "COST", c.category(), c.basis(), c.supply(), c.vat(), "TAXABLE", null, null, c.period(), c.sourceType(), c.sourceRef(), c.sourceKey(), null,
+                c.scopeKey(), c.memo(), c.createdBy()));
+        UUID id = jdbc.sql("select id from financial_entry where workspace_id = :ws and source_key = :k").param("ws", c.workspaceId()).param("k", c.sourceKey())
+                .query(UUID.class).single();
+        return new Applied(id, replaced, estimated);
     }
 
     // ---------------------------------------------------------------- 재고 평가손실

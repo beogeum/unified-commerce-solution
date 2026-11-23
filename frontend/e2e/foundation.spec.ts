@@ -897,6 +897,72 @@ test.describe.serial("Foundation", () => {
     await expect(page.getByRole("row", { name: new RegExp(NAMES.a) })).toContainText("5,000");
   });
 
+  test("재무: 정산 파일 → 대사 → 입금 등록 → 자동 연결 → 전월 마감 → 재개방 승인 요청 (M5 N3·N4·N7, T29·T30·T32)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    await page.getByRole("link", { name: "정산·입금" }).click();
+    await expect(page.getByRole("heading", { name: "정산·입금" })).toBeVisible();
+    await page.getByRole("button", { name: "정산 파일 올리기" }).click();
+    const up = page.getByRole("dialog", { name: "정산 파일 올리기" });
+    const acc = up.getByLabel("정산 판매계정");
+    const value = await acc.locator("option", { hasText: NAMES.a }).first().getAttribute("value");
+    await acc.selectOption(value!);
+    const csv = "정산번호,지급예정일,항목,금액\r\n" + `ST-${RUN},2026-11-20,판매,30000\r\n` + `ST-${RUN},2026-11-20,조정,-1000\r\n`;
+    await up.getByLabel("파일(.xlsx·.csv)").setInputFiles({ name: "settlement.csv", mimeType: "text/csv", buffer: Buffer.from(csv, "utf-8") });
+    await up.getByRole("button", { name: "반영" }).click();
+    await expect(up.getByRole("status")).toContainText("새 행 2");
+    // 같은 파일 재업로드 → 중복 없음
+    await up.getByRole("button", { name: "반영" }).click();
+    await expect(up.getByRole("status")).toContainText("이미 반영된 행 2");
+    await up.getByRole("button", { name: "닫기", exact: true }).first().click();
+    const runRow = page.getByRole("row", { name: new RegExp(`ST-${RUN}`) });
+    await expect(runRow).toContainText("29,000");
+    await runRow.click();
+    const rd = page.getByRole("dialog", { name: `정산 ST-${RUN}` });
+    await expect(rd.getByRole("row", { name: /조정/ })).toContainText("원장 반영");
+    await rd.getByRole("button", { name: "닫기", exact: true }).click();
+
+    await page.getByRole("button", { name: "입금 등록" }).click();
+    const dm = page.getByRole("alertdialog");
+    await dm.getByLabel("입금 사업자").selectOption({ label: NAMES.a });
+    await dm.getByLabel("입금액(원)").fill("29000");
+    await dm.getByLabel("거래번호(중복 방지)").fill(`BANK-${RUN}`);
+    await dm.getByRole("button", { name: "등록" }).click();
+    const depRow = page.getByRole("row", { name: new RegExp(`BANK-${RUN}`) });
+    await expect(depRow).toContainText("29,000");
+    await depRow.click();
+    const dd = page.getByRole("dialog", { name: /^입금 / });
+    await dd.getByRole("button", { name: "자동 연결" }).click();
+    await expect(dd.getByRole("status")).toContainText("정산 1건과 연결했습니다.");
+    await expect(dd.getByRole("row", { name: new RegExp(`ST-${RUN}`) })).toBeVisible();
+    await dd.getByRole("button", { name: "닫기", exact: true }).click();
+    await page.getByRole("button", { name: "정산", exact: true }).click();
+    await expect(page.getByRole("row", { name: new RegExp(`ST-${RUN}`) })).toContainText("대사 완료");
+
+    // 월 마감: 전월 점검 → 마감 → 재개방 요청(본인 승인 불가)
+    await page.getByRole("link", { name: "월 마감" }).click();
+    await page.getByLabel("마감 사업자").selectOption({ label: NAMES.a });
+    const now = new Date(Date.now() + 9 * 3600_000);
+    const prev = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)).toISOString().slice(0, 7);
+    await page.getByRole("row", { name: new RegExp(`^${prev}`) }).click();
+    const pd = page.getByRole("dialog", { name: `${prev} 마감` });
+    await pd.getByRole("button", { name: "점검 후 마감" }).click();
+    const cm = page.getByRole("alertdialog");
+    await cm.getByRole("button", { name: /마감$/ }).click();
+    await expect(pd.getByRole("status")).toContainText(`${prev} 마감을 완료했습니다.`);
+    await expect(pd.getByText("현재 원장 합계가 마감 스냅샷과 같습니다.")).toBeVisible();
+    await pd.getByRole("button", { name: "재개방 요청" }).click();
+    const rm = page.getByRole("alertdialog");
+    await rm.getByLabel("사유").fill("누락 청구 반영");
+    await rm.getByRole("button", { name: "승인 요청" }).click();
+    await expect(pd.getByRole("status")).toContainText("재개방 승인을 요청했습니다.");
+    await expect(pd.getByRole("button", { name: "재개방 승인 대기 중" })).toBeDisabled();
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");

@@ -2,7 +2,7 @@
 
 - 상태: **v1 기본 역할로 승인(2026-11-21 위임 결정 DLG-020)**. 코드: `backend/src/main/java/com/commerceos/identity/access/SystemRoles.java`(운영그룹 생성 시 역할로 복사).
 - 역할은 권한 묶음일 뿐이며 사업자·판매계정 **범위는 사용자별 접근정책**으로 따로 제한한다(ADR-0002).
-- ★ = 민감 권한(docs/08 §1). `order.*`, `claim.refund`, `inventory.dispose`, `pii.read`, `cost.read`, `settlement.read`, `profit.read`, `period.close` 는 후속 모듈에서 사용하며 지금은 카탈로그에만 정의되어 있다.
+- ★ = 민감 권한(docs/08 §1). 카탈로그의 권한은 M5 2차(2026-11-23) 기준 모두 서버에서 검사한다(`settlement.manage` 는 V24 에서 추가).
 
 | 권한 | 이름 | 최고관리자 | 운영관리자 | 상품/MD | 주문담당 | CS담당 | 물류관리자 | 창고작업자 | 정산/재무 | 분석읽기전용 | 일반읽기전용 | 연동관리자 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -38,6 +38,7 @@
 | `pii.read` ★ | 고객 개인정보 원문 조회 | ● |  |  | ● | ● |  |  |  |  |  |  |
 | `cost.read` ★ | 원가·비용 조회 | ● |  | ● |  |  |  |  | ● | ● |  |  |
 | `settlement.read` ★ | 정산 조회 | ● |  |  |  |  |  |  | ● | ● |  |  |
+| `settlement.manage` ★ | 정산 가져오기·입금 매칭 | ● |  |  |  |  |  |  | ● |  |  |  |
 | `profit.read` ★ | 손익 조회 | ● |  |  |  |  |  |  | ● | ● |  |  |
 | `period.close` ★ | 월 마감·재개방 | ● |  |  |  |  |  |  | ● |  |  |  |
 
@@ -47,3 +48,5 @@
 - `bank_account.read/manage`: 정산/재무만.
 - `claim.refund`, `inventory.dispose` 는 승인정책(REV-058) 확정 전까지 최고관리자 외 기본 배정 없음. 재무의 `period.close` 는 초안 배정.
 - 모든 역할(창고작업자 포함)에 `order.read` 를 둔 것은 CONF-003(기본 주문 조회 허용) 반영.
+- `settlement.manage`(M5 2차, DLG-161): 정산 파일·수기 정산 반영, 입금 등록·연결·연결 취소. 정산/재무·최고관리자.
+- 월 재개방 승인자는 `approval.decide` 와 `period.close` 를 모두 가져야 한다(DLG-168). 기본 역할로는 최고관리자만 해당하므로, 재무 담당이 승인하려면 사용자별 ALLOW 로 `approval.decide` 를 부여한다.

@@ -33,6 +33,7 @@ public final class Perm {
     public static final String COST_MANAGE = "cost.manage";
     public static final String PROFIT_READ = "profit.read";
     public static final String SETTLEMENT_READ = "settlement.read";
+    public static final String SETTLEMENT_MANAGE = "settlement.manage";
     public static final String PERIOD_CLOSE = "period.close";
     public static final String APPROVAL_DECIDE = "approval.decide";
     public static final String INVENTORY_READ = "inventory.read";
