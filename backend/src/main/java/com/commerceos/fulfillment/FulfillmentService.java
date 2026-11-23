@@ -42,9 +42,10 @@ public class FulfillmentService {
     private final OutboxPublisher outbox;
     private final AuditService audit;
     private final Json json;
+    private final WmsPickPlans picks;
 
     public FulfillmentService(JdbcClient jdbc, AccessGuard guard, ReservationService reservations, WorkItemService workItems, OutboxPublisher outbox,
-                              AuditService audit, Json json) {
+                              AuditService audit, Json json, WmsPickPlans picks) {
         this.jdbc = jdbc;
         this.guard = guard;
         this.reservations = reservations;
@@ -52,6 +53,7 @@ public class FulfillmentService {
         this.outbox = outbox;
         this.audit = audit;
         this.json = json;
+        this.picks = picks;
     }
 
     public record AllocationResult(String outcome, UUID fulfillmentOrderId, String nodeName, List<Map<String, Object>> shortages) {
@@ -327,6 +329,7 @@ public class FulfillmentService {
         jdbc.sql("update fulfillment_order set status = 'CANCELLED', cancel_reason = :r, cancelled_at = now(), version = version + 1, updated_at = now() where id = :id")
                 .param("r", reason).param("id", foId).update();
         foEvent(a, foId, "CANCELLED", st, "CANCELLED", null, Map.of("reason", reason));
+        picks.closeIfDone((UUID) f.get("wave_id"));
         workItems.resolveByKey(a.workspaceId(), "fulfillment:" + foId + ":CANCEL");
         workItems.resolveByKey(a.workspaceId(), "fulfillment:" + foId + ":DISPATCH");
         UUID orderId = (UUID) f.get("order_id");

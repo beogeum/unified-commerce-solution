@@ -52,9 +52,10 @@ public class ShipmentService {
     private final OutboxPublisher outbox;
     private final AuditService audit;
     private final Clock clock;
+    private final WmsPickPlans picks;
 
     public ShipmentService(JdbcClient jdbc, AccessGuard guard, ReservationService reservations, FulfillmentService fulfillment, WorkItemService workItems,
-                           OutboxPublisher outbox, AuditService audit, Clock clock) {
+                           OutboxPublisher outbox, AuditService audit, Clock clock, WmsPickPlans picks) {
         this.jdbc = jdbc;
         this.guard = guard;
         this.reservations = reservations;
@@ -63,6 +64,7 @@ public class ShipmentService {
         this.outbox = outbox;
         this.audit = audit;
         this.clock = clock;
+        this.picks = picks;
     }
 
     public record Item(UUID skuId, Integer quantity) {
@@ -161,6 +163,12 @@ public class ShipmentService {
             String mode = "SELF_WMS".equals(kind) ? "INTERNAL" : f.get("dispatch_mode") == null ? "MANUAL" : (String) f.get("dispatch_mode");
             fulfillment.markAccepted(foId, mode, (String) f.get("external_ref"), shippedAt, (UUID) f.get("connection_id"));
         }
+        // 자체 WMS 웨이브 출고지시는 스캔 검수·포장을 마친 것만 출고 확정, 피킹한 버킷 그대로 차감(DLG-149)
+        UUID waveId = (UUID) f.get("wave_id");
+        Map<UUID, Map<UUID, Integer>> picked = waveId == null ? Map.of() : picks.pickPlan(foId);
+        if (waveId != null && !"PACKING".equals(st) && !"CANCEL_REQUESTED".equals(st)) {
+            throw Errors.conflict("WMS_NOT_PACKED", "자체 WMS 웨이브 출고지시는 피킹·검수 포장을 마친 뒤 출고 확정합니다.", Map.of("status", st));
+        }
         // 확보: ALLOCATED → PICKING → CONSUMED(실물 출고 시각). 같은 수량을 다시 차감하지 않는다.
         Set<UUID> reservationIds = new LinkedHashSet<>();
         lines.forEach(l -> {
@@ -174,9 +182,9 @@ public class ShipmentService {
             switch (state) {
                 case "ALLOCATED" -> {
                     reservations.pick(r, t);
-                    reservations.consumeAt(r, t, shippedAt);
+                    reservations.consumePlanned(r, t, shippedAt, picked.get(r));
                 }
-                case "PICKING" -> reservations.consumeAt(r, t, shippedAt);
+                case "PICKING" -> reservations.consumePlanned(r, t, shippedAt, picked.get(r));
                 case "CONSUMED" -> {
                 }
                 default -> throw Errors.conflict("RESERVATION_NOT_ACTIVE", "출고지시의 재고 확보가 이미 해제되었습니다. 재고 확인 후 처리하세요.",
@@ -228,6 +236,7 @@ public class ShipmentService {
                 update fulfillment_order set status = 'SHIPPED', shipped_at = :at, ship_source = :src, version = version + 1, updated_at = now() where id = :id
                 """).param("at", Db.ts(shippedAt)).param("src", source).param("id", foId).update();
         fulfillment.foEvent(a, foId, "SHIPPED", st, "SHIPPED", shippedAt, Map.of("parcels", parcels.size(), "source", source));
+        picks.closeIfDone(waveId);
         UUID orderId = (UUID) f.get("order_id");
         refreshOrderShipping(a, orderId);
         fulfillment.orderEvent(a, orderId, "FULFILLMENT_SHIPPED", null, foNo, Map.of("tracking", String.join(", ", requested)));

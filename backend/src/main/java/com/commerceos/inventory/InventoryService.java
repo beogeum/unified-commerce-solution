@@ -62,6 +62,9 @@ public class InventoryService {
     public record QualityChange(UUID stockId, Integer quantity, String toQualityStatus, String toHoldReason, String reason) {
     }
 
+    public record LocationMove(UUID stockId, Integer quantity, String toLocationCode, String reason) {
+    }
+
     public record StockView(UUID id, UUID businessEntityId, String businessEntityName, UUID skuId, String skuCode, String skuName, UUID nodeId, String nodeCode,
                             String locationCode, String lotCode, LocalDate expiresOn, String qualityStatus, String holdReason, int onHand, Instant updatedAt) {
     }
@@ -185,6 +188,59 @@ public class InventoryService {
         if (sellableDelta != 0) {
             availabilityChanged(a.workspaceId(), p);
         }
+        return List.of(stock(s.id()), stock(toId));
+    }
+
+    // ---------------------------------------------------------------- 로케이션 이동(적치, M4 O7)
+
+    /**
+     * 같은 거점 안 로케이션 이동(입고 적치·보충). 실물·판매가능 수량은 그대로, 원장 LOCATION_MOVE 두 줄(−/+)로 남긴다.
+     * 자체 WMS 피킹 계획에 잡힌 수량은 옮길 수 없다(계획 위치와 실물 위치가 어긋나지 않게, DLG-148). 물류사 재고 기준 거점은 3PL 이 로케이션을 관리한다.
+     */
+    @Transactional
+    public List<StockView> moveLocation(LocationMove m) {
+        guard.requirePermission(Perm.INVENTORY_OPERATE);
+        CurrentActor a = guard.actor();
+        if (m == null || m.stockId() == null) {
+            throw Errors.validation("stock_id", "옮길 재고 버킷을 지정하세요.");
+        }
+        int qty = positive(m.quantity());
+        Map<String, Object> head = jdbc.sql("select owner_business_entity_id, sku_id, node_id from inventory_stock where workspace_id = :ws and id = :id")
+                .param("ws", a.workspaceId()).param("id", m.stockId()).query().listOfRows().stream().findFirst().orElseThrow(() -> Errors.notFound("INVENTORY_STOCK"));
+        UUID owner = (UUID) head.get("owner_business_entity_id");
+        guard.checkWrite("INVENTORY_STOCK", m.stockId(), owner, null);
+        guard.checkNode(AccessKind.WRITE, "INVENTORY_STOCK", m.stockId(), (UUID) head.get("node_id"));
+        Position p = ledger.lockPosition(a.workspaceId(), owner, (UUID) head.get("sku_id"), (UUID) head.get("node_id"));
+        Stock s = ledger.lockStock(a.workspaceId(), m.stockId());
+        NodeService.NodeView node = nodes.find(s.bucket().nodeId()).orElseThrow();
+        if ("EXTERNAL".equals(node.inventorySource())) {
+            throw Errors.unprocessable("NODE_INVENTORY_EXTERNAL", "물류사 재고 기준 거점의 로케이션은 물류사가 관리합니다.");
+        }
+        UUID to = resolveLocation(a.workspaceId(), node, m.toLocationCode());
+        if (to == null) {
+            throw Errors.validation("to_location_code", "옮길 로케이션을 입력하세요.");
+        }
+        Bucket from = s.bucket();
+        if (to.equals(from.locationId())) {
+            throw Errors.validation("to_location_code", "현재와 같은 로케이션입니다.");
+        }
+        int planned = jdbc.sql("""
+                select coalesce(sum(t.quantity), 0) from wms_pick_task t join fulfillment_order f on f.id = t.fo_id
+                 where t.stock_id = :s and t.status in ('OPEN', 'PICKED') and f.status in ('ACCEPTED', 'PICKING', 'PACKING')
+                """).param("s", s.id()).query(Integer.class).single();
+        if (qty > s.onHand() - planned) {
+            throw Errors.conflict("STOCK_PLANNED_FOR_PICK", "피킹 계획에 잡힌 수량은 옮길 수 없습니다.", Map.of("on_hand", s.onHand(), "planned", planned));
+        }
+        locks.requireUnlocked(a.workspaceId(), from.ownerId(), from.nodeId(), from.skuId(), from.locationId(), "로케이션 이동");
+        locks.requireUnlocked(a.workspaceId(), from.ownerId(), from.nodeId(), from.skuId(), to, "로케이션 이동");
+        String reason = trimOrNull(m.reason()) == null ? "로케이션 이동" : trimOrNull(m.reason());
+        ledger.removeFromBucket(s.id(), qty);
+        UUID toId = ledger.addToBucket(a.workspaceId(), new Bucket(from.ownerId(), from.skuId(), from.nodeId(), to, from.lotId(), from.quality(), from.holdReason()), qty);
+        boolean sellable = "SELLABLE".equals(from.quality());
+        ledger.record(a.workspaceId(), new Txn("LOCATION_MOVE", p, s.id(), from.quality(), -qty, sellable ? -qty : 0, 0, null, null, null, "INVENTORY_STOCK",
+                toId.toString(), reason, a.memberId()));
+        ledger.record(a.workspaceId(), new Txn("LOCATION_MOVE", p, toId, from.quality(), qty, sellable ? qty : 0, 0, null, null, null, "INVENTORY_STOCK",
+                s.id().toString(), reason, a.memberId()));
         return List.of(stock(s.id()), stock(toId));
     }
 

@@ -90,6 +90,12 @@ public class InventoryController {
         return idem(key, http, req, () -> inventory.changeQuality(req));
     }
 
+    @PostMapping("/location-moves")
+    public ResponseEntity<?> moveLocation(@RequestHeader(value = "Idempotency-Key", required = false) String key, @RequestBody InventoryService.LocationMove req,
+                                          HttpServletRequest http) {
+        return idem(key, http, req, () -> inventory.moveLocation(req));
+    }
+
     @GetMapping("/reservations")
     public ApiResponse<List<ReservationService.ReservationView>> reservations(@RequestParam(name = "business_entity_id", required = false) List<String> be,
                                                                              @RequestParam(name = "node_id", required = false) UUID node,

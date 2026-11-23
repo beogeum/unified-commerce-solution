@@ -788,6 +788,75 @@ test.describe.serial("Foundation", () => {
     await expect(cd2).toContainText("환불 완료");
   });
 
+  test("창고: 웨이브 → 잘못된 로케이션 스캔 차단 → 스캔 피킹 → 스캔 검수 포장 → 출고 확정(피킹 로케이션 차감) (M4 O7)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    const nodes = await (await bff(page.request).get("/fulfillment-nodes")).json();
+    const nodeId = nodes.data.find((n: { code: string }) => n.code === `SELF-${RUN}`.toUpperCase()).id;
+    expect((await bff(page.request).post(`/fulfillment-nodes/${nodeId}/locations`, { code: "A-01", zone: "A" }, { "idempotency-key": `e2e-loc-${RUN}` })).status()).toBe(201);
+    const skus = await (await bff(page.request).get(`/skus?q=AMP-30-${RUN}`)).json();
+    const skuId = skus.data[0].id;
+    expect((await bff(page.request).post("/inventory/receipts", { business_entity_id: ids.a, sku_id: skuId, node_id: nodeId, quantity: 3, location_code: "A-01" },
+      { "idempotency-key": `e2e-rec-o7-${RUN}` })).status()).toBe(201);
+    const accounts = await (await bff(page.request).get(`/channel-accounts?q=${encodeURIComponent(RUN)}`)).json();
+    const account = accounts.data.find((a: { display_name: string }) => a.display_name === `A 공식스토어 ${RUN}`);
+    const now = new Date().toISOString();
+    const order = { external_order_key: `NV-O7-${RUN}`, ordered_at: now, paid_at: now, external_updated_at: now, total_amount: 10000,
+      recipient: { name: "정수령", phone: "010-1212-3434", postal_code: "06236", address1: "서울특별시 강남구 테헤란로 152" },
+      items: [{ external_item_key: `NV-O7-${RUN}-1`, external_product_id: `PRD-${RUN}`, external_option_id: "", product_name: "비타 앰플 30ml", quantity: 1,
+        unit_price: 10000, line_amount: 10000 }] };
+    const imp = await bff(page.request).post("/orders/imports", { channel_account_id: account.id, orders: [order] }, { "idempotency-key": `e2e-ord-o7-${RUN}` });
+    const orderId = (await imp.json()).data.results[0].order_id;
+    await expect.poll(async () => (await (await bff(page.request).get(`/fulfillment-orders?order_id=${orderId}`)).json()).data[0]?.status ?? "NONE",
+      { timeout: 30_000 }).toBe("ACCEPTED");
+    const fo = (await (await bff(page.request).get(`/fulfillment-orders?order_id=${orderId}`)).json()).data[0];
+    const atA01 = async () => {
+      const st = await (await bff(page.request).get(`/inventory/stocks?sku_id=${skuId}&node_id=${nodeId}`)).json();
+      return st.data.filter((x: { location_code: string | null }) => x.location_code === "A-01").reduce((n: number, x: { on_hand: number }) => n + x.on_hand, 0);
+    };
+
+    await page.getByRole("link", { name: "WMS 작업" }).click();
+    await page.getByLabel("자체 WMS 거점").selectOption({ label: `화성 자체창고 ${RUN} (${`SELF-${RUN}`.toUpperCase()})` });
+    await page.getByRole("button", { name: /웨이브 만들기/ }).click();
+    const wd = page.getByRole("dialog", { name: /^웨이브 W/ });
+    const task = wd.getByRole("row", { name: new RegExp(fo.fo_no) }).first();
+    await expect(task).toContainText("A-01");
+    await expect(task).toContainText("피킹 대기");
+    // 잘못된 로케이션 스캔 → 차단
+    await wd.getByLabel("로케이션").fill("Z-99");
+    await wd.getByLabel("상품 바코드·SKU").fill(`AMP-30-${RUN}`);
+    await wd.getByRole("button", { name: "스캔" }).click();
+    await expect(wd.getByRole("alert")).toContainText("로케이션이 다릅니다");
+    await wd.getByLabel("로케이션").fill("A-01");
+    await wd.getByLabel("상품 바코드·SKU").fill(`AMP-30-${RUN}`);
+    await wd.getByRole("button", { name: "스캔" }).click();
+    await expect(wd.getByRole("status")).toContainText("피킹");
+    await expect(task).toContainText("피킹 완료");
+    await wd.getByRole("row", { name: new RegExp(`^${fo.fo_no}`) }).getByRole("button", { name: "검수·포장" }).click();
+    const pd = page.getByRole("dialog", { name: /^검수·포장 F/ });
+    await pd.getByLabel("상품 바코드 스캔").fill(`AMP-30-${RUN}`);
+    await pd.getByRole("button", { name: "추가" }).click();
+    await pd.getByRole("button", { name: "포장 완료" }).click();
+    await expect(wd.getByRole("row", { name: new RegExp(`^${fo.fo_no}`) })).toContainText("포장 중");
+    await wd.getByRole("button", { name: "닫기", exact: true }).click();
+
+    // 출고 확정 → A-01 에서 차감
+    const before = await atA01();
+    await page.getByRole("link", { name: "출고", exact: true }).click();
+    await page.getByRole("row", { name: new RegExp(fo.fo_no) }).first().click();
+    const fd = page.getByRole("dialog", { name: /^출고지시 F/ });
+    await fd.getByRole("button", { name: "출고 확정·송장 입력" }).click();
+    const m = page.getByRole("alertdialog");
+    await m.getByLabel("송장번호 1").fill(`6${Date.now().toString().slice(-11)}`);
+    await m.getByRole("button", { name: "출고 확정" }).click();
+    await expect(fd.getByText("출고 완료", { exact: true })).toBeVisible();
+    expect(await atA01()).toBe(before - 1);
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");

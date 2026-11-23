@@ -4,6 +4,7 @@ import com.commerceos.identity.access.AccessGuard;
 import com.commerceos.identity.access.AccessKind;
 import com.commerceos.identity.access.CurrentActor;
 import com.commerceos.identity.access.Perm;
+import com.commerceos.inventory.InventoryLedger.Bucket;
 import com.commerceos.inventory.InventoryLedger.Position;
 import com.commerceos.inventory.InventoryLedger.Stock;
 import com.commerceos.inventory.InventoryLedger.Txn;
@@ -227,6 +228,15 @@ public class ReservationService {
      */
     @Transactional
     public ReservationView consumeAt(UUID id, Transition t, Instant physicalAt) {
+        return consumePlanned(id, t, physicalAt, null);
+    }
+
+    /**
+     * 출고 실물확정 — 자체 WMS 피킹 계획(재고 버킷별 수량)대로 차감한다(M4 O7, DLG-149). plan 이 없으면 유통기한 빠른 버킷부터.
+     * 계획 합은 확보수량과 같아야 하고, 각 버킷은 같은 사업자·SKU·거점의 판매가능 버킷이어야 한다.
+     */
+    @Transactional
+    public ReservationView consumePlanned(UUID id, Transition t, Instant physicalAt, Map<UUID, Integer> plan) {
         guard.requirePermission(Perm.INVENTORY_OPERATE);
         CurrentActor a = guard.actor();
         Row row = lockRow(a.workspaceId(), id);
@@ -238,25 +248,45 @@ public class ReservationService {
         }
         Position p = ledger.lockPositionById(a.workspaceId(), row.positionId());
         Row r = lockReservation(a.workspaceId(), id);
-        int remaining = r.quantity();
-        List<Stock> all = ledger.lockSellableBucketsFefo(p);
-        List<Stock> buckets = locks.unlocked(a.workspaceId(), p, all);
-        if (buckets.stream().mapToInt(Stock::onHand).sum() < r.quantity() && all.stream().mapToInt(Stock::onHand).sum() >= r.quantity()) {
-            throw CountLocks.locked(locks.first(a.workspaceId(), p).orElseThrow(), "출고 확정");
-        }
         List<Object[]> takes = new ArrayList<>();
-        for (Stock s : buckets) {
-            if (remaining == 0) {
-                break;
+        if (plan != null && !plan.isEmpty()) {
+            int sum = plan.values().stream().mapToInt(Integer::intValue).sum();
+            if (sum != r.quantity()) {
+                throw Errors.conflict("PICK_PLAN_MISMATCH", "피킹 수량 합이 확보수량과 다릅니다.", Map.of("quantity", r.quantity(), "picked", sum));
             }
-            int take = Math.min(remaining, s.onHand());
-            takes.add(new Object[]{s, take});
-            remaining -= take;
-        }
-        if (remaining > 0) {
-            // 집계와 버킷이 어긋난 상태(검증센터 대상). 덮어쓰지 않고 실패시킨다
-            throw Errors.conflict("STOCK_BUCKET_MISMATCH", "판매가능 버킷 수량이 확보수량보다 적습니다. 재고 검증 후 다시 시도하세요.",
-                    Map.of("quantity", r.quantity(), "shortage", remaining));
+            for (var e : new java.util.TreeMap<>(plan).entrySet()) {
+                Stock s = ledger.lockStock(a.workspaceId(), e.getKey());
+                Bucket b = s.bucket();
+                if (!b.ownerId().equals(p.ownerId()) || !b.skuId().equals(p.skuId()) || !b.nodeId().equals(p.nodeId()) || !"SELLABLE".equals(b.quality())
+                        || s.onHand() < e.getValue()) {
+                    throw Errors.conflict("STOCK_BUCKET_MISMATCH", "피킹한 로케이션 재고가 확보와 맞지 않습니다. 재고 검증 후 다시 시도하세요.",
+                            Map.of("stock_id", e.getKey().toString(), "on_hand", s.onHand(), "picked", e.getValue()));
+                }
+                if (locks.unlocked(a.workspaceId(), p, List.of(s)).isEmpty()) {
+                    throw CountLocks.locked(locks.first(a.workspaceId(), p).orElseThrow(), "출고 확정");
+                }
+                takes.add(new Object[]{s, e.getValue()});
+            }
+        } else {
+            int remaining = r.quantity();
+            List<Stock> all = ledger.lockSellableBucketsFefo(p);
+            List<Stock> buckets = locks.unlocked(a.workspaceId(), p, all);
+            if (buckets.stream().mapToInt(Stock::onHand).sum() < r.quantity() && all.stream().mapToInt(Stock::onHand).sum() >= r.quantity()) {
+                throw CountLocks.locked(locks.first(a.workspaceId(), p).orElseThrow(), "출고 확정");
+            }
+            for (Stock s : buckets) {
+                if (remaining == 0) {
+                    break;
+                }
+                int take = Math.min(remaining, s.onHand());
+                takes.add(new Object[]{s, take});
+                remaining -= take;
+            }
+            if (remaining > 0) {
+                // 집계와 버킷이 어긋난 상태(검증센터 대상). 덮어쓰지 않고 실패시킨다
+                throw Errors.conflict("STOCK_BUCKET_MISMATCH", "판매가능 버킷 수량이 확보수량보다 적습니다. 재고 검증 후 다시 시도하세요.",
+                        Map.of("quantity", r.quantity(), "shortage", remaining));
+            }
         }
         Instant now = clock.instant();
         Instant at = physicalAt == null || physicalAt.isAfter(now) ? now : physicalAt;

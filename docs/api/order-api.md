@@ -100,3 +100,15 @@
 - 상태축: 클레임 `REQUESTED → APPROVED → PROCESSING → COMPLETED`(`REJECTED`·`CANCELLED`), 회수 `NOT_REQUIRED·REQUESTED·IN_TRANSIT·RECEIVED·INSPECTED`, 환불 `NOT_REQUIRED·EXPECTED·REQUESTED·PARTIALLY_CONFIRMED·CONFIRMED·FAILED·CANCELLED`, 재출고 `NOT_REQUIRED·PENDING·SHIPPED`, 채널 반영 `NOT_REQUIRED·PENDING·SENT·MANUAL_REQUIRED·MANUAL_DONE·FAILED`. 완료 = 취소 반영·회수 검수·환불 확정·재출고가 각각 끝났거나 필요 없음.
 - 주문 영향: 취소 승인 → `canceled_qty`(출고 전이면 즉시, 물류 전달 후면 출고 취소 확인 뒤), 검수 → `returned_qty`, 교환 → 0원 `EXCHANGE_REPLACEMENT` 주문상품 + 출고 배정, 환불 확정 → 결제 `PARTIALLY_REFUNDED·REFUNDED`. 열린 클레임이 있으면 주문 완료로 넘기지 않는다.
 - 금액(부가세 포함 원): 상품 환불 = (상품 금액 − 판매자·채널 할인) × 수량 비례(원 미만 버림, 마지막 수량이 나머지), 출고 전 전체 취소면 배송비 환불, 고객 부담 반품 배송비는 환불에서 차감. 교환 차액 +는 고객 추가 결제, −는 환불 예정. 매출·원가·평가손실 원장 반영은 M5(N1·N5).
+
+## 9. 자체 WMS 기본 (O7, DLG-147~152)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `POST /inventory/location-moves {stock_id, quantity, to_location_code, reason?}` + `Idempotency-Key` | `inventory.operate` + 거점 쓰기 | 같은 거점 안 이동(적치·보충). 실물·판매가능 불변, 원장 `LOCATION_MOVE` 두 줄. 피킹 계획 수량은 `409 STOCK_PLANNED_FOR_PICK`, 3PL 거점 불가 |
+| `GET /wms/candidates?node_id` | `inventory.read` | 웨이브에 넣을 수 있는(물류 접수·웨이브 없음) 출고지시 수 |
+| `POST /wms/waves {node_id, fulfillment_order_ids?, limit?}` · `GET /wms/waves?node_id&status` · `GET /wms/waves/{id}` | `inventory.operate` / `inventory.read` + 거점 범위 | 자체 WMS·내부 원장 거점만(`422 WMS_NODE_NOT_SELF`). 확보마다 버킷(유통기한 → LOT → 로케이션) 계획, 계획 못 한 출고지시는 `skipped` + 업무 `WMS_PICK_PLAN_SHORT`. 출고지시·확보 → `PICKING` |
+| `POST /wms/waves/{id}/picks {location_code, barcode, quantity}` | `inventory.operate` | 바코드 = SKU 바코드 또는 SKU 코드. 모르는 바코드·다른 로케이션·초과는 `422 SCAN_REJECTED`(스캔 기록에 남김) |
+| `POST /wms/pick-tasks/{id}/short {reason}` | `inventory.operate` | 남은 수량을 다른 버킷으로 재계획, 없으면 업무 `WMS_PICK_SHORT`. 로케이션 실사 업무 `WMS_LOCATION_DISCREPANCY` |
+| `GET /wms/fulfillment-orders/{id}/packing` · `POST /wms/fulfillment-orders/{id}/pack {scans[{barcode, quantity}]}` | `inventory.read` / `inventory.operate` | 피킹 완료 후 스캔 합계가 출고지시 수량과 정확히 같아야 `PACKING`(아니면 `422 SCAN_REJECTED`) |
+
+- 웨이브 출고지시의 출고 확정(`/fulfillment-orders/{id}/ship`)은 `PACKING` 이어야 하고(`409 WMS_NOT_PACKED`), 피킹한 버킷·수량 그대로 차감한다. 웨이브는 출고지시가 모두 출고·취소되면 `CLOSED`.

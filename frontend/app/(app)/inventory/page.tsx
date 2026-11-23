@@ -82,6 +82,7 @@ function PositionDrawer({ p, onClose, onChanged }: { p: Position; onClose: () =>
   const [moving, setMoving] = useState<Stock | null>(null);
   const [adjusting, setAdjusting] = useState<Stock | null>(null);
   const [disposing, setDisposing] = useState<Stock | null>(null);
+  const [relocating, setRelocating] = useState<Stock | null>(null);
   return (
     <Drawer title={`${p.sku_code} · ${p.node_name}`} onClose={onClose}>
       <div className="kv"><span>소유 사업자</span><span>{p.business_entity_name}</span></div>
@@ -101,11 +102,14 @@ function PositionDrawer({ p, onClose, onChanged }: { p: Position; onClose: () =>
                 <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); setMoving(s); }}>품질 변경</button>}
               {can("inventory.adjust") && p.inventory_source === "INTERNAL" &&
                 <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); setAdjusting(s); }}>조정</button>}
+              {can("inventory.operate") && p.inventory_source === "INTERNAL" &&
+                <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); setRelocating(s); }}>로케이션 이동</button>}
               {can("inventory.operate") && p.inventory_source === "INTERNAL" && ["DISPOSAL_PENDING", "DEFECTIVE", "DAMAGED", "EXPIRED"].includes(s.quality_status) &&
                 <button className="btn dan" type="button" onClick={(e) => { e.stopPropagation(); setDisposing(s); }}>폐기 요청</button>}</span> },
           ]} />)}
       <h3 style={{ fontSize: 14 }}>최근 원장</h3>
       {txns.loading ? <Loading /> : txns.error ? <ErrorState error={txns.error} onRetry={txns.reload} /> : <TxnList rows={txns.data ?? []} />}
+      {relocating && <MoveModal stock={relocating} onClose={() => setRelocating(null)} onDone={() => { setRelocating(null); stocks.reload(); txns.reload(); onChanged(); }} />}
       {disposing && <DisposalModal stock={disposing} onClose={() => setDisposing(null)} />}
       {adjusting && <AdjustModal stock={adjusting} onClose={() => setAdjusting(null)} onDone={() => { setAdjusting(null); stocks.reload(); txns.reload(); onChanged(); }} />}
       {moving && <QualityModal stock={moving} external={p.inventory_source === "EXTERNAL"} committedGuard={p.sellable_on_hand - p.committed} onClose={() => setMoving(null)}
@@ -153,6 +157,37 @@ function AdjustModal({ stock, onClose, onDone }: { stock: Stock; onClose: () => 
         <label className="fld">사유(필수)<input className="inp" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} /></label>
         <p className="ctx" style={{ margin: 0 }}>원가 영향이 사업자 승인 기준 이상이거나 기준 원가가 없으면 승인 요청이 됩니다. 실사 차이는 실사 화면에서 승인하세요.</p>
       </>}
+    </ConfirmModal>
+  );
+}
+
+function MoveModal({ stock, onClose, onDone }: { stock: Stock; onClose: () => void; onDone: () => void }) {
+  const [qty, setQty] = useState(stock.on_hand);
+  const [to, setTo] = useState("");
+  const [reason, setReason] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [key] = useState(newIdempotencyKey);
+  const submit = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await api("/inventory/location-moves", { method: "POST", idempotencyKey: key, body: { stock_id: stock.id, quantity: qty, to_location_code: to, reason: reason || undefined } });
+      onDone();
+    } catch (x) {
+      setErr(x instanceof ApiError ? x.message : "옮기지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <ConfirmModal title="로케이션 이동(적치)" confirmLabel="이동" busy={busy} onClose={onClose} onConfirm={submit} confirmDisabled={!to.trim() || qty < 1 || qty > stock.on_hand}
+      impact={[["대상", `${stock.sku_code} · ${stock.location_code ?? "로케이션 없음"} ${num(stock.on_hand)}개`], ["재고 영향", "실물·판매가능 수량 변화 없음(위치만 이동)"]]}>
+      {err && <div className="note n-err" role="alert">{err}</div>}
+      <label className="fld">수량<input className="inp" type="number" min={1} max={stock.on_hand} value={qty} onChange={(e) => setQty(Number(e.target.value) || 1)} /></label>
+      <label className="fld">옮길 로케이션(스캔)<input className="inp mono" value={to} onChange={(e) => setTo(e.target.value.toUpperCase())} placeholder="B-01" /></label>
+      <label className="fld">사유<input className="inp" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} placeholder="예: 입고 적치" /></label>
+      <p className="ctx" style={{ margin: 0 }}>WMS 피킹 계획에 잡힌 수량은 옮길 수 없습니다.</p>
     </ConfirmModal>
   );
 }
