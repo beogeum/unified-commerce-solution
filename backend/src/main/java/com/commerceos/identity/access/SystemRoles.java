@@ -37,7 +37,7 @@ public final class SystemRoles {
         t.put("WAREHOUSE_WORKER", new Template("WAREHOUSE_WORKER", "창고작업자",
                 new TreeSet<>(Set.of("business_entity.read", "logistics_account.read", "order.read", "work_item.read", "catalog.read", "inventory.read", "inventory.operate"))));
         t.put("FINANCE", tpl("FINANCE", "정산/재무", "bank_account.read", "bank_account.manage", "settlement.read", "cost.read",
-                "profit.read", "period.close", "export.create", "file.upload", "file.read", "audit.read", "cost.manage", "settlement.manage"));
+                "profit.read", "period.close", "export.create", "file.upload", "file.read", "audit.read", "cost.manage", "settlement.manage", "vat.manage"));
         t.put("ANALYST", tpl("ANALYST", "분석읽기전용", "cost.read", "profit.read", "settlement.read", "export.create"));
         t.put("VIEWER", tpl("VIEWER", "일반읽기전용"));
         t.put("INTEGRATION_ADMIN", tpl("INTEGRATION_ADMIN", "연동관리자", "integration.manage", "integration.credential.manage",

@@ -180,7 +180,7 @@ public class ExportService implements JobHandler {
         }
     }
 
-    static byte[] toCsv(List<List<String>> rows) {
+    public static byte[] toCsv(List<List<String>> rows) {
         StringBuilder sb = new StringBuilder("﻿"); // Excel 한글 인식용 BOM
         for (List<String> row : rows) {
             for (int i = 0; i < row.size(); i++) {

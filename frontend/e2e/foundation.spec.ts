@@ -1034,6 +1034,46 @@ test.describe.serial("Foundation", () => {
     await expect(page.getByText(/^마지막 분석 /)).toBeVisible();
   });
 
+  test("재무: 부가세 신고자료 묶음 → 표준 양식 올리기 → 문제 행 보정 → 본인 확정 차단 → 사업자 단위 내보내기 (M6 2차)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    await page.getByRole("link", { name: "부가세 신고자료" }).click();
+    await page.getByRole("button", { name: "신고자료 묶음 만들기" }).click();
+    const m = page.getByRole("alertdialog");
+    const accSel = m.getByLabel("신고자료 판매계정");
+    await accSel.selectOption((await accSel.locator("option", { hasText: NAMES.a }).first().getAttribute("value"))!);
+    const y = new Date(Date.now() + 9 * 3600_000).getUTCFullYear();
+    await m.getByRole("button", { name: `${y}년 2기` }).click();
+    await m.getByRole("button", { name: "만들기", exact: true }).click();
+    const d = page.getByRole("dialog", { name: /~/ });
+    const today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+    const csv = "거래일,주문번호,매출유형,세금유형,결제수단,증빙유형,공급가,세액,합계\r\n" + `${today},VAT-${RUN},판매,과세,카드,없음,10000,1000,11000\r\n`
+      + `${y - 1}-12-31,VAT-OLD-${RUN},판매,과세,카드,없음,1000,100,1100\r\n`;
+    await d.getByLabel("신고자료 파일(.xlsx·.csv)").setInputFiles({ name: "vat.csv", mimeType: "text/csv", buffer: Buffer.from(csv, "utf-8") });
+    await d.getByRole("button", { name: "올리기" }).click();
+    await expect(d.getByRole("status")).toContainText("보정 필요 1");
+    await expect(d.getByRole("table", { name: /^분류별 합계/ }).getByRole("row", { name: /카드매출/ })).toBeVisible();
+    await d.getByRole("button", { name: "보정 필요" }).click();
+    const fx = page.getByRole("alertdialog");
+    await fx.getByLabel("보정 분류").selectOption({ label: "제외" });
+    await fx.getByLabel("사유").fill("전년도 거래 혼입");
+    await fx.getByRole("button", { name: "보정", exact: true }).click();
+    await expect(d.getByRole("status")).toContainText("분류를 보정했습니다.");
+    await d.getByRole("button", { name: "검토 후 확정" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "확정", exact: true }).click();
+    await expect(d.getByRole("status")).toContainText("자료를 올린 담당자는 확정할 수 없습니다");
+    await d.getByRole("button", { name: "닫기", exact: true }).click();
+    await page.getByRole("button", { name: "사업자별 신고자료" }).click();
+    await page.getByLabel("신고 사업자").selectOption({ label: NAMES.a });
+    await expect(page.getByText("확정되지 않은 묶음이 포함되어 있습니다.")).toBeVisible();
+    await page.getByRole("button", { name: "이 사업자 신고자료 내보내기" }).click();
+    await expect(page.getByTestId("vat-export-download")).toBeVisible({ timeout: 25000 });
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");

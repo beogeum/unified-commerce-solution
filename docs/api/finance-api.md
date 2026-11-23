@@ -80,3 +80,18 @@
 
 `GET /finance/profit` 응답의 `elimination`(범위에 양쪽 사업자가 있을 때): `internal_sales`, `unrealized_at_start`, `unrealized_at_end`, `cogs_adjustment`, `note`. 합계 행에만 반영되고 사업자별 행은 그대로다.
 
+## 9. 부가세 신고자료 (M6 2차, docs/15, DLG-183~189)
+국세청 자동 신고가 아니다. 금액은 원 단위 정수, 공급가·세액·합계 별도(환불은 음수).
+
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `POST /vat/batches {channel_account_id, period_from, period_to}` | `vat.manage` + 판매계정 쓰기 범위 | 묶음(판매계정 × 기간), 같은 계정·기간 `409 VAT_BATCH_EXISTS` |
+| `POST /vat/batches/{id}/files` (multipart `file`) | `vat.manage` | 표준 양식. `{row_count, new_rows, duplicate_rows, blocking_rows, warning_rows}`. 오류 `TEMPLATE_COLUMN_MISSING`·`VAT_FILE_INVALID`·`VAT_ENTITY_MISMATCH`, `409 VAT_FILE_DUPLICATE`·`VAT_BATCH_CONFIRMED` |
+| `GET /vat/batches?business_entity_id&from&to` · `GET /vat/batches/{id}` | `settlement.read` + 범위 | 분류별 합계, 대사(`recon`), 파일, 문제·보정 행 |
+| `POST /vat/rows/{id}/override {classification, reason}` | `vat.manage` | 원본 불변, 보정 기록(`EXCLUDED` 가능, `REVIEW` 불가) |
+| `POST /vat/batches/{id}/confirm` | `vat.manage`(파일을 올리지 않은 담당자) | `VAT_SELF_CONFIRM_FORBIDDEN`, `VAT_BATCH_HAS_ISSUES`, `VAT_BATCH_EMPTY` |
+| `GET /vat/reports?business_entity_id&from&to` | `settlement.read` | 사업자 1곳 × 기간 합계, 모두 확정 여부 |
+| `POST /vat/exports {business_entity_id, period_from, period_to}` | `export.create` + `settlement.read` + 내보내기 범위 | `202 {job_id}` → `GET /jobs/{id}` → `GET /files/{file_id}/content`(요청자만, 24시간) |
+
+분류: `CARD` 카드매출, `CASH_RECEIPT` 현금영수증, `MOBILE` 휴대폰, `OTHER` 기타, `TAX_INVOICE` 세금계산서, `FREE_CARD`·`FREE_CASH_RECEIPT`·`FREE_MOBILE`·`FREE_OTHER` 면세, `E_INVOICE` 전자계산서, `ZERO_RATED` 영세율(검토), `REVIEW` 검토 필요, `EXCLUDED` 제외(보정만).
+

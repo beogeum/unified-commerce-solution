@@ -82,3 +82,24 @@ export const METRIC_KO: Record<string, string> = { current_margin_pct: "최근 �
   days_without_sale: "미판매 기준 일수", last_sale_at: "마지막 출고", book_value: "장부가(원)", lot_code: "LOT", expires_on: "유통기한", days_left: "남은 일수",
   sellable_qty: "판매가능 수량", orders: "주문 수", order_amount: "주문금액(원)", days_after_shipment: "출고 후 기준 일수", runs: "정산 수",
   undeposited_amount: "미입금액(원)", oldest_payout_date: "가장 오래된 지급예정일", grace_days: "유예 일수" };
+
+// ---------------------------------------------------------------- 부가세 신고자료(M6 2차)
+export type VatClassTotal = { classification: string; label: string; rows: number; supply: string; vat: string; total: string };
+export type VatRow = { id: string; row_no: number; file_name: string; txn_date: string; source_key: string | null; sales_type: string; tax_type: string;
+  payment_method: string; evidence_type: string; supply: string; vat: string; total: string; classification: string; effective_classification: string;
+  issues: string[]; blocking: boolean; override_reason: string | null };
+export type VatRecon = { vat_sales: string; vat_refunds: string; vat_total: string; ledger_sales: string; ledger_refunds: string; ledger_total: string;
+  settlement_total: string | null; settlement_imported: boolean; diff_vs_ledger: string; diff_vs_settlement: string | null; note: string };
+export type VatBatch = { id: string; business_entity_id: string; business_entity_name: string; business_registration_no: string; channel_account_id: string;
+  channel_account_name: string; sales_channel_code: string; period_from: string; period_to: string; status: "DRAFT" | "CONFIRMED"; rule_version: string; rows: number;
+  blocking_rows: number; warning_rows: number; totals: VatClassTotal[]; recon: VatRecon;
+  files: { id: string; file_id: string; filename: string; sha256: string; sheet_name: string | null; parser_version: string; row_count: number; new_rows: number;
+    duplicate_rows: number; imported_by_name: string | null; imported_at: string }[];
+  issue_rows: VatRow[]; confirmed_by_name: string | null; confirmed_at: string | null; created_at: string };
+export type VatReport = { business_entity_id: string; business_entity_name: string; business_registration_no: string; period_from: string; period_to: string;
+  rule_version: string; all_confirmed: boolean; totals: VatClassTotal[]; batches: VatBatch[]; note: string };
+export const VAT_CLASS_KO: Record<string, string> = { CARD: "카드매출", CASH_RECEIPT: "현금영수증", MOBILE: "휴대폰", OTHER: "기타", TAX_INVOICE: "세금계산서",
+  FREE_CARD: "면세카드", FREE_CASH_RECEIPT: "면세현금영수증", FREE_MOBILE: "면세휴대폰", FREE_OTHER: "면세기타", E_INVOICE: "전자계산서", ZERO_RATED: "영세율(검토)",
+  REVIEW: "검토 필요", EXCLUDED: "제외" };
+export const VAT_ISSUE_KO: Record<string, string> = { PERIOD_OUT: "신고기간 밖 거래", TOTAL_MISMATCH: "공급가+세액 ≠ 합계", SIGN_MISMATCH: "매출유형과 부호 불일치",
+  TAX_TYPE_UNKNOWN: "세금유형 미상", VAT_ON_NON_TAXABLE: "면세·영세인데 세액 있음", EVIDENCE_TAX_MISMATCH: "증빙과 세금유형 불일치", VAT_RATE_DEVIATION: "세액이 10%와 다름(경고)" };
