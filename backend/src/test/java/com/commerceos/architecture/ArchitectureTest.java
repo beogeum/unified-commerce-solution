@@ -26,7 +26,7 @@ class ArchitectureTest {
 
     @Test
     void channelAndLogistics_doNotDependOnIntegrationInternals() {
-        noClasses().that().resideInAnyPackage("..channel..", "..logistics..", "..identity..", "..catalog..", "..inventory..", "..order..", "..fulfillment..", "..claim..", "..finance..", "..insight..", "..procurement..")
+        noClasses().that().resideInAnyPackage("..channel..", "..logistics..", "..identity..", "..catalog..", "..inventory..", "..order..", "..fulfillment..", "..claim..", "..finance..", "..insight..", "..procurement..", "..cs..")
                 .should().dependOnClassesThat().resideInAPackage("..integration..").check(MAIN);
     }
 }

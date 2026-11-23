@@ -1135,6 +1135,44 @@ test.describe.serial("Foundation", () => {
     await expect(page.getByRole("row", { name: new RegExp(`B2B · 올리브 ${RUN}`) })).toBeVisible();
   });
 
+  test("CS: 답변 템플릿 → 전화 문의 접수(고객 마스킹) → 템플릿 답변 기록 → 채널 등록 완료 (FR-CS-01·05)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    await page.getByRole("link", { name: "CS 통합함" }).click();
+    await page.getByRole("button", { name: "답변 템플릿" }).click();
+    await page.getByRole("button", { name: "템플릿 추가" }).click();
+    let m = page.getByRole("alertdialog");
+    await m.getByLabel("이름").fill(`성분 안내 ${RUN}`);
+    await m.getByLabel("내용").fill("{고객명}님, 문의 주셔서 감사합니다. 성분표를 안내해 드립니다.");
+    await m.getByRole("button", { name: "저장", exact: true }).click();
+    await expect(page.getByRole("row", { name: new RegExp(`성분 안내 ${RUN}`) })).toBeVisible();
+    await page.getByRole("button", { name: "통합함" }).click();
+    await page.getByRole("button", { name: "문의 접수" }).click();
+    m = page.getByRole("alertdialog");
+    const acc = m.getByLabel("문의 판매계정");
+    await acc.selectOption((await acc.locator("option", { hasText: NAMES.a }).first().getAttribute("value"))!);
+    await m.getByLabel("접수 경로").selectOption({ label: "전화" });
+    await m.getByLabel("문의 유형").selectOption({ label: "상품" });
+    await m.getByLabel("제목").fill(`성분 문의 ${RUN}`);
+    await m.getByLabel("문의 내용").fill("임산부도 써도 되나요?");
+    await m.getByLabel("고객 이름").fill("박고객");
+    await m.getByLabel("고객 연락처").fill("010-9999-8888");
+    await m.getByRole("button", { name: "접수", exact: true }).click();
+    const d = page.getByRole("dialog", { name: new RegExp(`성분 문의 ${RUN}`) });
+    await expect(d.getByText("박*객")).toBeVisible();
+    await expect(d.getByText("010-9999-8888")).toHaveCount(0);
+    await d.getByLabel("답변 템플릿").selectOption({ label: `성분 안내 ${RUN}` });
+    await expect(d.getByLabel("문의 메시지 내용")).toHaveValue(/박\*객님/);
+    await d.getByRole("button", { name: "답변 기록" }).click();
+    await expect(d.getByRole("status")).toContainText("답변을 기록했습니다.");
+    await d.getByRole("button", { name: "채널 등록 완료" }).click();
+    await expect(d.getByRole("status")).toContainText("채널 등록 완료로 표시했습니다.");
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");
