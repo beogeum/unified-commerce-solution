@@ -42,7 +42,7 @@ public class OrderRules {
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public int mapItems(UUID ws, UUID orderId, UUID actor) {
-        Map<String, Object> o = jdbc.sql("select channel_account_id, sales_unit_id, ordered_at from sales_order where id = :id").param("id", orderId).query().listOfRows().get(0);
+        Map<String, Object> o = jdbc.sql("select channel_account_id, sales_unit_id, ordered_at, source_type from sales_order where id = :id").param("id", orderId).query().listOfRows().get(0);
         UUID ca = (UUID) o.get("channel_account_id");
         UUID su = (UUID) o.get("sales_unit_id");
         Instant orderedAt = instant(o.get("ordered_at"));
@@ -51,6 +51,21 @@ public class OrderRules {
                 .param("o", orderId).query().listOfRows()) {
             String product = (String) i.get("external_product_id");
             String option = (String) i.get("external_option_id");
+            // 수동 주문(MANUAL)은 채널상품 없이 SKU 를 직접 지정한다(SKU:<코드>, 수량 배수 1)
+            if (product != null && product.startsWith(ManualOrderService.SKU_PREFIX) && "MANUAL".equals(o.get("source_type"))) {
+                Map<String, Object> sk = jdbc.sql("""
+                        select s.id, p.tax_type from sku s join product p on p.id = s.product_id where s.workspace_id = :ws and s.sku_code = :c and s.status = 'ACTIVE'
+                        """).param("ws", ws).param("c", product.substring(ManualOrderService.SKU_PREFIX.length())).query().listOfRows().stream().findFirst().orElse(null);
+                if (sk != null) {
+                    jdbc.sql("""
+                            update order_item set sku_id = :s, sku_qty_per_unit = 1, mapping_status = 'MAPPED', tax_type = cast(:tt as text), version = version + 1,
+                                   updated_at = now() where id = :id
+                            """).param("s", sk.get("id")).param("tt", sk.get("tax_type")).param("id", i.get("id")).update();
+                    event(ws, orderId, (UUID) i.get("id"), "ITEM_MAPPED", null, sk.get("id").toString(), Map.of("basis", "MANUAL_SKU"), actor);
+                    mapped++;
+                }
+                continue;
+            }
             jdbc.sql("""
                     insert into channel_listing (id, workspace_id, channel_account_id, sales_unit_id, external_product_id, external_option_id, title, option_text, source,
                         source_ref)

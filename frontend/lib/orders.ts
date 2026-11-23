@@ -1,7 +1,7 @@
 export type OrderRow = { id: string; order_no: string; business_entity_id: string; business_entity_name: string; channel_account_id: string;
   channel_account_name: string; sales_channel_name: string; sales_unit_name: string; source_type: string; external_order_key: string; ordered_at: string;
   status: string; payment_status: string; on_hold: boolean; hold_reasons: string[]; total_amount: string; item_count: number; item_summary: string | null;
-  recipient_name_masked: string | null; updated_at: string };
+  recipient_name_masked: string | null; updated_at: string; order_kind: string; customer_name: string | null };
 export type OrderItem = { id: string; line_no: number; is_gift: boolean; gift_source: string | null; gwp_campaign_id: string | null; external_item_key: string; external_product_id: string; external_option_id: string; product_name: string;
   option_name: string | null; listing_id: string | null; sku_id: string | null; sku_code: string | null; sku_qty_per_unit: number | null; mapping_status: string;
   original_qty: number; canceled_qty: number; active_qty: number; shipped_qty: number; returned_qty: number; unit_price: string; line_amount: string;

@@ -112,3 +112,11 @@
 | `GET /wms/fulfillment-orders/{id}/packing` · `POST /wms/fulfillment-orders/{id}/pack {scans[{barcode, quantity}]}` | `inventory.read` / `inventory.operate` | 피킹 완료 후 스캔 합계가 출고지시 수량과 정확히 같아야 `PACKING`(아니면 `422 SCAN_REJECTED`) |
 
 - 웨이브 출고지시의 출고 확정(`/fulfillment-orders/{id}/ship`)은 `PACKING` 이어야 하고(`409 WMS_NOT_PACKED`), 피킹한 버킷·수량 그대로 차감한다. 웨이브는 출고지시가 모두 출고·취소되면 `CLOSED`.
+
+## 수동·B2B·샘플 주문 (FR-ORD-04, DLG-197~200)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `POST /orders/manual {channel_account_id, sales_unit_id?, kind(MANUAL·B2B·SAMPLE), customer_name?, recipient{name, phone, address1, address2?, postal_code?, memo?}, shipping_fee?, lines[{sku_id, quantity, unit_price, discount?}], memo?}` + `Idempotency-Key` | `order.update` + 판매계정 쓰기 범위 | `201 {order_id, order_no, external_order_key(M-…), status, kind}`. B2B 는 거래처명 필수, 샘플은 금액 0. `SKU_NOT_SELLABLE` |
+
+주문 목록·상세(`order`)에 `order_kind`(NORMAL·MANUAL·B2B·SAMPLE)·`customer_name` 포함.
+

@@ -30,8 +30,10 @@ public class OrderController {
     private final IdempotencyService idempotency;
     private final AccessGuard guard;
     private final OrderPrivacyService privacy;
+    private final ManualOrderService manual;
 
-    public OrderController(OrderService orders, IdempotencyService idempotency, AccessGuard guard, OrderPrivacyService privacy) {
+    public OrderController(OrderService orders, IdempotencyService idempotency, AccessGuard guard, OrderPrivacyService privacy, ManualOrderService manual) {
+        this.manual = manual;
         this.privacy = privacy;
         this.orders = orders;
         this.idempotency = idempotency;
@@ -98,6 +100,15 @@ public class OrderController {
                                                                                        @RequestBody OrderPrivacyService.PolicyPut req) {
         var v = privacy.putPolicy(businessEntityId, ifMatch == null ? null : IfMatch.parse(ifMatch), req);
         return ResponseEntity.ok().eTag(IfMatch.etag(v.version())).body(ApiResponse.of(v));
+    }
+
+    /** 수동·B2B·샘플 주문(FR-ORD-04). */
+    @PostMapping("/manual")
+    public ResponseEntity<?> manual(@RequestHeader(value = "Idempotency-Key", required = false) String key, @RequestBody ManualOrderService.NewManualOrder req,
+                                    HttpServletRequest http) {
+        CurrentActor a = guard.actor();
+        return idempotency.execute(a.workspaceId(), a.memberId(), key, "POST", http.getRequestURI(), req,
+                () -> ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(ApiResponse.of(manual.create(req))));
     }
 
     @PostMapping("/imports")

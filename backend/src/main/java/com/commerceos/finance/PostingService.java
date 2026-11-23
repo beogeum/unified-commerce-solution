@@ -60,7 +60,8 @@ public class PostingService {
         String foRef = (String) f.get("fo_no");
         List<Map<String, Object>> lines = jdbc.sql("""
                 select l.order_item_id, l.sku_id, l.quantity, c.quantity_per_unit, i.original_qty, i.line_amount, i.seller_discount, i.channel_discount, i.tax_type,
-                       i.is_gift, i.item_kind, i.claim_id, i.sku_id as item_sku
+                       (i.is_gift or exists (select 1 from sales_order so where so.id = i.order_id and so.order_kind = 'SAMPLE')) as is_gift, i.item_kind,
+                       i.claim_id, i.sku_id as item_sku
                   from fulfillment_order_line l join order_item i on i.id = l.order_item_id
                   join order_item_component c on c.order_item_id = l.order_item_id and c.component_sku_id = l.sku_id
                  where l.fo_id = :f order by l.line_no
@@ -185,7 +186,8 @@ public class PostingService {
         UUID orderId = (UUID) c.get("order_id");
         String claimNo = (String) c.get("claim_no");
         for (Map<String, Object> in : jdbc.sql("""
-                select ri.*, l.sku_id, l.claim_item_id, ci.order_item_id, i.is_gift from return_inspection ri join return_receipt_line l on l.id = ri.receipt_line_id
+                select ri.*, l.sku_id, l.claim_item_id, ci.order_item_id,
+                       (i.is_gift or exists (select 1 from sales_order so where so.id = i.order_id and so.order_kind = 'SAMPLE')) as is_gift from return_inspection ri join return_receipt_line l on l.id = ri.receipt_line_id
                   join claim_item ci on ci.id = l.claim_item_id join order_item i on i.id = ci.order_item_id
                  where l.receipt_id = :r order by ri.inspected_at
                 """).param("r", receiptId).query().listOfRows()) {
@@ -231,7 +233,8 @@ public class PostingService {
         LocalDate period = Ledger.period(Instant.now());
         if ("RETURN".equals(c.get("claim_type"))) {
             for (Map<String, Object> ci : jdbc.sql("""
-                    select ci.*, i.tax_type, i.sku_id as item_sku, i.is_gift from claim_item ci join order_item i on i.id = ci.order_item_id where ci.claim_id = :c order by ci.line_no
+                    select ci.*, i.tax_type, i.sku_id as item_sku,
+                           (i.is_gift or exists (select 1 from sales_order so where so.id = i.order_id and so.order_kind = 'SAMPLE')) as is_gift from claim_item ci join order_item i on i.id = ci.order_item_id where ci.claim_id = :c order by ci.line_no
                     """).param("c", claimId).query().listOfRows()) {
                 UUID item = (UUID) ci.get("order_item_id");
                 int q = ((Number) ci.get("quantity")).intValue();

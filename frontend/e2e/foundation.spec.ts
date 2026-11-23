@@ -1111,6 +1111,30 @@ test.describe.serial("Foundation", () => {
     await expect(pd.getByText("승인 대기")).toBeVisible();
   });
 
+  test("주문: B2B 수동 주문 작성 → 주문 목록에 종류·거래처 표시 (FR-ORD-04)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    await page.getByRole("link", { name: "주문", exact: true }).click();
+    await page.getByRole("button", { name: "수동 주문 작성" }).click();
+    const m = page.getByRole("alertdialog");
+    const acc = m.getByLabel("수동 주문 판매계정");
+    await acc.selectOption((await acc.locator("option", { hasText: NAMES.a }).first().getAttribute("value"))!);
+    await m.getByLabel("거래처명").fill(`올리브 ${RUN}`);
+    await m.getByLabel("받는 분").fill("김납품");
+    await m.getByLabel("연락처").fill("010-2222-3333");
+    await m.getByLabel("주소", { exact: true }).fill("경기도 성남시 분당구 판교역로 1");
+    await m.getByLabel("상품 추가(SKU 검색)").fill(`AMP-30-${RUN}`);
+    await m.getByRole("button", { name: new RegExp(`AMP-30-${RUN}`) }).click();
+    await m.getByLabel(`AMP-30-${RUN} 단가`).fill("20000");
+    await m.getByRole("button", { name: "주문 만들기" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "만들었습니다" })).toBeVisible();
+    await expect(page.getByRole("row", { name: new RegExp(`B2B · 올리브 ${RUN}`) })).toBeVisible();
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");

@@ -59,7 +59,7 @@ public class OrderService {
     public record OrderRow(UUID id, String orderNo, UUID businessEntityId, String businessEntityName, UUID channelAccountId, String channelAccountName,
                            String salesChannelName, String salesUnitName, String sourceType, String externalOrderKey, Instant orderedAt, String status,
                            String paymentStatus, boolean onHold, List<String> holdReasons, BigDecimal totalAmount, int itemCount, String itemSummary,
-                           String recipientNameMasked, Instant updatedAt) {
+                           String recipientNameMasked, Instant updatedAt, String orderKind, String customerName) {
     }
 
     public record ItemView(UUID id, int lineNo, boolean isGift, String giftSource, UUID gwpCampaignId, String externalItemKey, String externalProductId, String externalOptionId, String productName, String optionName,
@@ -339,7 +339,7 @@ public class OrderService {
                 rs.getString("ca_name"), rs.getString("channel_name"), rs.getString("su_name"), rs.getString("source_type"), rs.getString("external_order_key"),
                 Db.instant(rs, "ordered_at"), rs.getString("status"), rs.getString("payment_status"), rs.getBoolean("on_hold"), List.of(reasons),
                 rs.getBigDecimal("total_amount"), count, first == null ? null : count > 1 ? first + " 외 " + (count - 1) + "건" : first,
-                rs.getString("recipient_name_masked"), Db.instant(rs, "updated_at"));
+                rs.getString("recipient_name_masked"), Db.instant(rs, "updated_at"), rs.getString("order_kind"), rs.getString("customer_name"));
     }
 
     private UUID ws() {

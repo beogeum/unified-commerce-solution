@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Chip } from "@/components/Chip";
 import { DataTable } from "@/components/DataTable";
+import { ManualOrderModal, ORDER_KIND_KO } from "@/components/ManualOrderModal";
 import { ConfirmModal, Drawer } from "@/components/Overlay";
 import { Empty, ErrorState, Forbidden, Loading } from "@/components/States";
 import { api, ApiError, qs } from "@/lib/api";
@@ -24,6 +25,8 @@ export default function OrdersPage() {
   const [error, setError] = useState<ApiError | null>(null);
   const [tick, setTick] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
     if (!can("order.read")) return;
     let alive = true;
@@ -44,7 +47,9 @@ export default function OrdersPage() {
   return (
     <>
       <div className="page-head"><div><h1>주문</h1><p>판매계정에서 수집한 주문입니다. 같은 외부 주문번호라도 판매계정·판매단위가 다르면 다른 주문이고, 주문 사업자는 주문 시점의 판매계정 귀속으로 고정됩니다.
-        상품이 연결되지 않았거나 금액이 맞지 않는 주문은 보류되어 출고로 넘어가지 않습니다.</p></div></div>
+        상품이 연결되지 않았거나 금액이 맞지 않는 주문은 보류되어 출고로 넘어가지 않습니다. B2B·샘플·전화 주문은 '수동 주문 작성'으로 만듭니다.</p></div>
+        {can("order.update") && <button className="btn pri" type="button" onClick={() => setCreating(true)}>수동 주문 작성</button>}</div>
+      {notice && <div className="note n-info" role="status">{notice}</div>}
       <div className="row-gap">
         <label className="fld">검색<input className="inp" value={q} onChange={(e) => setQ(e.target.value)} placeholder="주문번호·외부 주문번호·상품명" /></label>
         <label className="fld">상태<select className="inp" value={status} onChange={(e) => setStatus(e.target.value)}><option value="">전체</option>
@@ -59,7 +64,7 @@ export default function OrdersPage() {
             columns={[
               { key: "no", header: "주문번호", render: (r) => <><b className="mono">{r.order_no}</b><div className="ctx mono">{r.external_order_key}</div></> },
               { key: "t", header: "주문 시각", render: (r) => <span className="ctx">{formatDateTime(r.ordered_at)}</span> },
-              { key: "ch", header: "사업자 · 판매계정", render: (r) => <>{r.business_entity_name} · {r.channel_account_name}{r.source_type !== "ORDER" && <span className="ctx"> ({SOURCE_TYPE_KO[r.source_type]})</span>}</> },
+              { key: "ch", header: "사업자 · 판매계정", render: (r) => <>{r.business_entity_name} · {r.channel_account_name}{r.source_type !== "ORDER" && <span className="ctx"> ({r.order_kind && r.order_kind !== "NORMAL" ? ORDER_KIND_KO[r.order_kind] : SOURCE_TYPE_KO[r.source_type]}{r.customer_name ? ` · ${r.customer_name}` : ""})</span>}</> },
               { key: "i", header: "상품", render: (r) => r.item_summary ?? "—" },
               { key: "rc", header: "수령인", render: (r) => r.recipient_name_masked ?? "—" },
               { key: "amt", header: "결제 금액", num: true, render: (r) => `${formatWon(r.total_amount)}원` },
@@ -70,6 +75,7 @@ export default function OrdersPage() {
         </>
       )}
       {open && <OrderDrawer id={open} onClose={() => setOpen(null)} onChanged={() => setTick(tick + 1)} />}
+      {creating && <ManualOrderModal selected={selected} onClose={() => setCreating(false)} onDone={(no) => { setCreating(false); setNotice(`주문 ${no} 을(를) 만들었습니다.`); setTick(tick + 1); }} />}
     </>
   );
 }
