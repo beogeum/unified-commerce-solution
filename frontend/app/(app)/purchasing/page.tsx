@@ -7,14 +7,14 @@ import { Empty, ErrorState, Forbidden, Loading } from "@/components/States";
 import { api, ApiError, qs } from "@/lib/api";
 import { won } from "@/lib/finance";
 import { Node } from "@/lib/inventory";
-import { Inbound, PO_STATUS, PurchaseOrder, Supplier } from "@/lib/procurement";
+import { Inbound, PO_STATUS, PurchaseOrder, Suggestion, Supplier } from "@/lib/procurement";
 import { useSession } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
 export default function PurchasingPage() {
   const { can, selected, entities } = useSession();
   const allowed = can("inventory.read");
-  const [tab, setTab] = useState<"orders" | "suppliers" | "inbound">("orders");
+  const [tab, setTab] = useState<"orders" | "suppliers" | "inbound" | "suggest">("orders");
   const [status, setStatus] = useState("");
   const [openPo, setOpenPo] = useState<string | null>(null);
   const [openSup, setOpenSup] = useState<string | null>(null);
@@ -39,6 +39,7 @@ export default function PurchasingPage() {
         <button className="btn" type="button" aria-current={tab === "orders" ? "page" : undefined} onClick={() => setTab("orders")}>발주</button>
         <button className="btn" type="button" aria-current={tab === "suppliers" ? "page" : undefined} onClick={() => setTab("suppliers")}>공급처</button>
         <button className="btn" type="button" aria-current={tab === "inbound" ? "page" : undefined} onClick={() => setTab("inbound")}>입고예정</button>
+        <button className="btn" type="button" aria-current={tab === "suggest" ? "page" : undefined} onClick={() => setTab("suggest")}>발주 제안</button>
       </nav>
       {tab === "orders" && <>
         <div className="row-gap"><label className="fld">상태<select className="inp" value={status} onChange={(e) => setStatus(e.target.value)}><option value="">전체</option>
@@ -71,6 +72,7 @@ export default function PurchasingPage() {
           { key: "q", header: "입고예정 수량", num: true, render: (r) => r.inbound_qty },
           { key: "e", header: "가장 빠른 예정일", render: (r) => r.earliest_expected_on ?? "—" },
         ]} />))}
+      {tab === "suggest" && <SuggestTab nodes={nodes.data ?? []} onCreated={(ids) => { setTab("orders"); orders.reload(); if (ids[0]) setOpenPo(ids[0]); }} />}
       {openPo && <PoDrawer id={openPo} onClose={() => setOpenPo(null)} onChanged={orders.reload} />}
       {openSup && <SupplierDrawer id={openSup} onClose={() => setOpenSup(null)} onChanged={suppliers.reload} />}
       {modal === "po" && <NewPoModal suppliers={suppliers.data ?? []} nodes={nodes.data ?? []} onClose={() => setModal(null)}
@@ -106,5 +108,53 @@ function NewSupplierModal({ onClose, onDone }: { onClose: () => void; onDone: (i
       <label className="fld">리드타임(일)<input className="inp" type="number" min={0} max={365} value={lead} onChange={(e) => setLead(Math.max(0, Number(e.target.value) || 0))} /></label>
       <label className="fld">결제조건<input className="inp" value={terms} onChange={(e) => setTerms(e.target.value)} maxLength={200} /></label>
     </ConfirmModal>
+  );
+}
+
+function SuggestTab({ nodes, onCreated }: { nodes: Node[]; onCreated: (ids: string[]) => void }) {
+  const { can, selected } = useSession();
+  const [cover, setCover] = useState(14);
+  const list = useApi<Suggestion[]>(`/purchase-orders/suggestions${qs({ business_entity_id: selected, cover_days: String(cover) })}`);
+  const [pick, setPick] = useState<Record<string, number>>({});
+  const internal = nodes.filter((n) => n.inventory_source === "INTERNAL" && n.status === "ACTIVE");
+  const [nodeSel, setNode] = useState("");
+  const node = nodeSel || internal[0]?.id || "";
+  const [err, setErr] = useState<string | null>(null);
+  const create = async () => {
+    setErr(null);
+    try {
+      const r = await api<PurchaseOrder[]>("/purchase-orders/from-suggestions", { method: "POST", body: { node_id: node,
+        items: Object.entries(pick).map(([id, q]) => ({ supplier_sku_id: id, quantity: q })) } });
+      setPick({});
+      onCreated(r.data.map((p) => p.id));
+    } catch (x) {
+      setErr(x instanceof ApiError ? x.message : "발주를 만들지 못했습니다.");
+    }
+  };
+  return (
+    <>
+      <p className="ctx">최근 28일 출고 속도 × (공급처 리드타임 + 목표 재고일수) − (가용재고 + 입고예정)이 부족하면 제안합니다. MOQ·발주단위로 올리고, 공급처는 단가가 가장 낮은 곳입니다. 제안만 하며 발주는 작성·승인을 거칩니다.</p>
+      <div className="row-gap">
+        <label className="fld">목표 재고일수<input className="inp" type="number" min={0} max={180} value={cover} onChange={(e) => setCover(Math.max(0, Number(e.target.value) || 0))} /></label>
+        {can("purchase.manage") && <>
+          <label className="fld">입고 거점<select className="inp" value={node} onChange={(e) => setNode(e.target.value)} aria-label="제안 입고 거점">
+            {internal.map((n) => <option key={n.id} value={n.id}>{n.name}</option>)}</select></label>
+          <button className="btn pri" type="button" disabled={!node || Object.keys(pick).length === 0} onClick={create}>선택 항목으로 발주 작성</button></>}
+      </div>
+      {err && <div className="note n-err" role="alert">{err}</div>}
+      {list.loading ? <Loading /> : list.error ? <ErrorState error={list.error} onRetry={list.reload} /> : (
+        <DataTable caption="발주 제안" rows={list.data ?? []} rowKey={(s) => s.supplier_sku_id} empty={<Empty title="지금 발주가 필요한 SKU 가 없습니다." hint="공급 SKU 가 등록되고 최근 판매가 있는 SKU 만 계산합니다." />} columns={[
+          { key: "c", header: "선택", render: (s) => <input type="checkbox" aria-label={`${s.sku_code} 선택`} checked={s.supplier_sku_id in pick}
+            onChange={(e) => setPick((p) => { const n = { ...p }; if (e.target.checked) n[s.supplier_sku_id] = s.suggested_qty; else delete n[s.supplier_sku_id]; return n; })} /> },
+          { key: "k", header: "사업자 · SKU", render: (s) => <>{s.business_entity_name} <span className="mono">{s.sku_code}</span></> },
+          { key: "s", header: "공급처", render: (s) => s.supplier_name },
+          { key: "a", header: "가용 · 입고예정 · 재고일수", num: true, render: (s) => `${s.atp} · ${s.inbound} · ${s.days_of_cover ?? "—"}일` },
+          { key: "n", header: "부족 · 제안", num: true, render: (s) => <>{s.need} · <b>{s.suggested_qty}</b></> },
+          { key: "q", header: "수량", render: (s) => (s.supplier_sku_id in pick ? <input className="inp" type="number" min={1} style={{ width: 80 }} aria-label={`${s.sku_code} 발주 수량`}
+            value={pick[s.supplier_sku_id]} onChange={(e) => setPick({ ...pick, [s.supplier_sku_id]: Math.max(1, Math.round(Number(e.target.value) || 1)) })} /> : "—") },
+          { key: "m", header: "금액", num: true, render: (s) => (s.amount === null ? "—" : won(s.amount)) },
+          { key: "r", header: "근거", render: (s) => <span className="ctx">{s.reason}</span> },
+        ]} />)}
+    </>
   );
 }

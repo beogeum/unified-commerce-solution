@@ -16,3 +16,6 @@ export const PO_STATUS: Record<string, ["ok" | "info" | "warn" | "err" | "mute",
   DRAFT: ["mute", "작성 중"], APPROVAL_PENDING: ["warn", "승인 대기"], PLACED: ["info", "발주 완료"], SUPPLIER_CONFIRMED: ["info", "공급처 확인"],
   PARTIALLY_RECEIVED: ["warn", "부분 입고"], RECEIVED: ["ok", "입고 완료"], CLOSED: ["ok", "잔량 종료"], CANCELLED: ["mute", "취소"],
 };
+export type Suggestion = { business_entity_id: string; business_entity_name: string; sku_id: string; sku_code: string; supplier_id: string; supplier_name: string;
+  supplier_sku_id: string; avg_daily_sales: string; atp: number; inbound: number; lead_time_days: number; target_days: number; days_of_cover: string | null; need: number;
+  moq: number; order_multiple: number; suggested_qty: number; unit_cost: string | null; amount: string | null; reason: string };

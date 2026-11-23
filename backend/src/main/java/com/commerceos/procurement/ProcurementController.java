@@ -23,8 +23,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProcurementController {
     private final SupplierService suppliers;
     private final PurchaseOrderService orders;
+    private final ReorderService reorder;
 
-    public ProcurementController(SupplierService suppliers, PurchaseOrderService orders) {
+    public ProcurementController(SupplierService suppliers, PurchaseOrderService orders, ReorderService reorder) {
+        this.reorder = reorder;
         this.suppliers = suppliers;
         this.orders = orders;
     }
@@ -83,6 +85,17 @@ public class ProcurementController {
     public ApiResponse<List<PurchaseOrderService.InboundRow>> inbound(@RequestParam(name = "business_entity_id", required = false) List<String> be,
                                                                       @RequestParam(name = "sku_id", required = false) UUID sku) {
         return ApiResponse.of(orders.inbound(be, sku));
+    }
+
+    @GetMapping("/purchase-orders/suggestions")
+    public ApiResponse<List<ReorderService.Suggestion>> suggestions(@RequestParam(name = "business_entity_id", required = false) List<String> be,
+                                                                    @RequestParam(name = "cover_days", required = false) Integer cover) {
+        return ApiResponse.of(reorder.suggestions(be, cover));
+    }
+
+    @PostMapping("/purchase-orders/from-suggestions")
+    public ResponseEntity<ApiResponse<List<PurchaseOrderService.PoView>>> fromSuggestions(@RequestBody ReorderService.FromSuggestions body) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.of(reorder.createDrafts(body)));
     }
 
     @GetMapping("/purchase-orders/{id}")

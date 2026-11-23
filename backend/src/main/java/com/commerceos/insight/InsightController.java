@@ -20,8 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class InsightController {
     private final AnalyticsService analytics;
     private final InsightService insights;
+    private final SimulationService simulations;
 
-    public InsightController(AnalyticsService analytics, InsightService insights) {
+    public InsightController(AnalyticsService analytics, InsightService insights, SimulationService simulations) {
+        this.simulations = simulations;
         this.analytics = analytics;
         this.insights = insights;
     }
@@ -50,6 +52,16 @@ public class InsightController {
                                                                    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                                                                    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return ApiResponse.of(analytics.logistics(be, from, to));
+    }
+
+    @PostMapping("/simulations/profit")
+    public ApiResponse<SimulationService.Result> simulate(@RequestBody SimulationService.Scenario body) {
+        return ApiResponse.of(simulations.simulate(body));
+    }
+
+    @PostMapping("/simulations/profit/work-item")
+    public ApiResponse<Map<String, Object>> saveSimulation(@RequestBody SimulationService.Scenario body) {
+        return ApiResponse.of(simulations.saveAsWorkItem(body));
     }
 
     @GetMapping("/insights")
