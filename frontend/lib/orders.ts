@@ -5,7 +5,7 @@ export type OrderRow = { id: string; order_no: string; business_entity_id: strin
 export type OrderItem = { id: string; line_no: number; is_gift: boolean; gift_source: string | null; gwp_campaign_id: string | null; external_item_key: string; external_product_id: string; external_option_id: string; product_name: string;
   option_name: string | null; listing_id: string | null; sku_id: string | null; sku_code: string | null; sku_qty_per_unit: number | null; mapping_status: string;
   original_qty: number; canceled_qty: number; active_qty: number; shipped_qty: number; returned_qty: number; unit_price: string; line_amount: string;
-  seller_discount: string; channel_discount: string; tax_type: string | null; external_status: string | null };
+  seller_discount: string; channel_discount: string; tax_type: string | null; external_status: string | null; item_kind: string; claim_id: string | null };
 export type OrderEvent = { id: string; event_type: string; order_item_id: string | null; from_value: string | null; to_value: string | null; actor_type: string;
   actor_name: string | null; occurred_at: string };
 export type OrderRaw = { id: string; source: string; result: string; result_detail: string | null; mapping_version: string; external_updated_at: string | null;
@@ -28,7 +28,7 @@ export const EVENT_KO: Record<string, string> = {
   ORDER_CREATED: "주문 수집", PAYMENT_CONFIRMED: "결제 확인", EXTERNAL_STATUS_CHANGED: "외부 상태 변경", RECIPIENT_CHANGED: "수령인 변경",
   ITEM_ADDED: "상품주문 추가", ITEM_CANCELED: "취소 수량 반영", ITEM_MAPPED: "SKU 연결", HOLD_CHANGED: "보류 사유 변경", HOLD_RELEASED: "보류 해제",
   HOLD_MANUAL: "직접 보류", HOLD_MANUAL_RELEASED: "직접 보류 해제", COMPOSITION_FIXED: "출고 구성 확정", GWP_AWARDED: "사은품 지급",
-  GWP_HOLD: "사은품 재고 보류", BOM_MISSING: "묶음 구성 없음", FULFILLMENT_ALLOCATED: "출고 배정", ALLOCATION_FAILED: "출고 배정 실패", FULFILLMENT_CANCELLED: "출고 취소", FULFILLMENT_SHIPPED: "출고 확정", ITEM_SHIPPED: "출고 수량 반영", SHIPPING_STATUS_CHANGED: "배송 상태 변경", STATUS_CHANGED: "상태 변경", RAW_IGNORED_STALE: "오래된 원본 무시",
+  GWP_HOLD: "사은품 재고 보류", BOM_MISSING: "묶음 구성 없음", FULFILLMENT_ALLOCATED: "출고 배정", ALLOCATION_FAILED: "출고 배정 실패", FULFILLMENT_CANCELLED: "출고 취소", FULFILLMENT_SHIPPED: "출고 확정", ITEM_SHIPPED: "출고 수량 반영", SHIPPING_STATUS_CHANGED: "배송 상태 변경", CLAIM_CREATED: "클레임 접수", EXCHANGE_ITEM_ADDED: "교환품 추가", PAYMENT_STATUS_CHANGED: "결제 상태 변경", STATUS_CHANGED: "상태 변경", RAW_IGNORED_STALE: "오래된 원본 무시",
 };
 export const RAW_RESULT_KO: Record<string, string> = { CREATED: "생성", UPDATED: "갱신", IGNORED_STALE: "역순 도착 · 미반영", REJECTED: "거절" };
 export const SOURCE_TYPE_KO: Record<string, string> = { ORDER: "일반", PLATFORM_FULFILLMENT: "플랫폼 물류", MANUAL: "수동" };

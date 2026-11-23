@@ -22,7 +22,8 @@ public class MockChannelConnector implements ChannelConnector {
     public static final String CODE = "mock-channel";
     private static final Set<FeatureOp> IMPLEMENTED = Set.of(
             FeatureOp.read("ORDER"), FeatureOp.read("PRODUCT"), FeatureOp.read("CLAIM_CANCEL"), FeatureOp.read("CLAIM_RETURN"),
-            FeatureOp.read("SETTLEMENT"), FeatureOp.write("SHIPMENT_DISPATCH"));
+            FeatureOp.read("SETTLEMENT"), FeatureOp.write("SHIPMENT_DISPATCH"),
+            FeatureOp.read("CLAIM_EXCHANGE"), FeatureOp.write("CLAIM_CANCEL"), FeatureOp.write("CLAIM_RETURN"), FeatureOp.write("CLAIM_EXCHANGE"));
 
     private final MockScenarioControl control;
 
@@ -79,7 +80,9 @@ public class MockChannelConnector implements ChannelConnector {
 
     @Override
     public ConnectorEnvelope<Map<String, Object>> fetchClaims(ConnectorContext ctx, String cursor, Window window) {
-        return empty(ctx);
+        control.apply(ctx);
+        return new ConnectorEnvelope<>(CODE, ctx.externalAccountKey(), "mock://claims/" + ctx.connectionId(), null, List.copyOf(control.claims(ctx.connectionId())),
+                "mock-claim-mapping-v1", Instant.now(), Instant.now(), 1, null);
     }
 
     @Override
@@ -97,6 +100,9 @@ public class MockChannelConnector implements ChannelConnector {
 
     @Override
     public ConnectorEnvelope<Map<String, Object>> processClaimAction(ConnectorContext ctx, Map<String, Object> command, String idempotencyKey) {
-        throw unsupported("CLAIM_* WRITE");
+        control.apply(ctx);
+        String ref = control.applyClaimAction(ctx.connectionId(), idempotencyKey);
+        return new ConnectorEnvelope<>(CODE, ctx.externalAccountKey(), null, ref, List.of(Map.of("action_ref", ref)), "mock-claim-action-v1", Instant.now(),
+                Instant.now(), 1, null);
     }
 }

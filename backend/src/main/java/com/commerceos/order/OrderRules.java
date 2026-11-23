@@ -119,7 +119,8 @@ public class OrderRules {
                 causes.add(i.get("line_no") + "번 상품의 SKU 가 판매 불가 상태이거나 사업자 판매 설정이 꺼져 있습니다.");
             }
             BigDecimal min = (BigDecimal) i.get("min_price");
-            if (min != null) {
+            // 교환 대체품(0원)은 판매가 검사 대상이 아니다(원판매와 분리, DLG-141)
+            if (min != null && !"EXCHANGE_REPLACEMENT".equals(i.get("item_kind"))) {
                 int qty = ((Number) i.get("original_qty")).intValue();
                 BigDecimal net = ((BigDecimal) i.get("line_amount")).subtract((BigDecimal) i.get("seller_discount"));
                 if (net.compareTo(min.multiply(BigDecimal.valueOf(qty))) < 0) {

@@ -99,6 +99,28 @@ public class MockScenarioControl {
         return "MOCK-DSP-" + Math.abs((connectionId + key).hashCode() % 100000);
     }
 
+    private final Map<UUID, java.util.List<Map<String, Object>>> claims = new ConcurrentHashMap<>();
+    private final Map<String, AtomicInteger> claimActions = new ConcurrentHashMap<>();
+
+    /** 모의 판매채널 클레임 응답(표준 필드 형태). */
+    public void setClaims(UUID connectionId, java.util.List<Map<String, Object>> rows) {
+        claims.put(connectionId, rows);
+    }
+
+    java.util.List<Map<String, Object>> claims(UUID connectionId) {
+        return claims.getOrDefault(connectionId, java.util.List.of());
+    }
+
+    /** 이 연결·멱등 키로 채널에 클레임 처리(승인·거부)가 반영된 횟수(같은 키 재호출은 다시 세지 않는다). */
+    public int claimActions(UUID connectionId, String key) {
+        return claimActions.getOrDefault(connectionId + ":" + key, new AtomicInteger()).get();
+    }
+
+    String applyClaimAction(UUID connectionId, String key) {
+        claimActions.computeIfAbsent(connectionId + ":" + key, k -> new AtomicInteger()).compareAndSet(0, 1);
+        return "MOCK-CLM-" + Math.abs((connectionId + key).hashCode() % 100000);
+    }
+
     /** 모의 판매채널 주문 응답(표준 필드 형태). */
     public void setOrders(UUID connectionId, java.util.List<Map<String, Object>> rows) {
         orders.put(connectionId, rows);

@@ -299,6 +299,10 @@ public class OrderIngestService {
         rules.reevaluate(ws, orderId, in.actorMemberId(), in.connectionId());
         UUID be = (UUID) cur.get("business_entity_id");
         outbox.publish(ws, be, "SALES_ORDER", orderId, "OrderUpdated", Map.of("order_id", orderId.toString(), "changes", changes));
+        if (changes.contains("취소")) {
+            // 진행 중 출고지시가 취소된 수량까지 담고 있으면 클레임 모듈이 정리한다(M4 O6, DLG-139)
+            outbox.publish(ws, be, "SALES_ORDER", orderId, "OrderItemsCanceledExternally", Map.of("order_id", orderId.toString()));
+        }
         return new Result("UPDATED", orderId, String.join(", ", changes));
     }
 

@@ -65,7 +65,7 @@ public class OrderService {
     public record ItemView(UUID id, int lineNo, boolean isGift, String giftSource, UUID gwpCampaignId, String externalItemKey, String externalProductId, String externalOptionId, String productName, String optionName,
                            UUID listingId, UUID skuId, String skuCode, Integer skuQtyPerUnit, String mappingStatus, int originalQty, int canceledQty, int activeQty,
                            int shippedQty, int returnedQty, BigDecimal unitPrice, BigDecimal lineAmount, BigDecimal sellerDiscount, BigDecimal channelDiscount,
-                           String taxType, String externalStatus) {
+                           String taxType, String externalStatus, String itemKind, UUID claimId) {
     }
 
     public record EventView(UUID id, String eventType, UUID orderItemId, String fromValue, String toValue, JsonNode detail, String actorType, String actorName,
@@ -151,7 +151,8 @@ public class OrderService {
                         Db.uuid(rs, "listing_id"), Db.uuid(rs, "sku_id"), rs.getString("sku_code"), (Integer) rs.getObject("sku_qty_per_unit"),
                         rs.getString("mapping_status"), rs.getInt("original_qty"), rs.getInt("canceled_qty"), rs.getInt("original_qty") - rs.getInt("canceled_qty"),
                         rs.getInt("shipped_qty"), rs.getInt("returned_qty"), rs.getBigDecimal("unit_price"), rs.getBigDecimal("line_amount"),
-                        rs.getBigDecimal("seller_discount"), rs.getBigDecimal("channel_discount"), rs.getString("tax_type"), rs.getString("external_status"))).list();
+                        rs.getBigDecimal("seller_discount"), rs.getBigDecimal("channel_discount"), rs.getString("tax_type"), rs.getString("external_status"),
+                        rs.getString("item_kind"), Db.uuid(rs, "claim_id"))).list();
         List<EventView> events = jdbc.sql("""
                 select e.*, u.display_name as actor_name from order_event e left join workspace_member m on m.workspace_id = e.workspace_id and m.id = e.actor_member_id
                   left join user_account u on u.id = m.user_id where e.order_id = :o order by e.occurred_at desc, e.id desc limit 200

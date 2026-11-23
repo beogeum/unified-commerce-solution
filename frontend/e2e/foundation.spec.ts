@@ -694,6 +694,100 @@ test.describe.serial("Foundation", () => {
     await expect(page.getByRole("row", { name: new RegExp(fos[1].fo_no) })).toContainText("한진택배");
   });
 
+  test("관리자: 반품 접수 → 승인 → 반품 입고(검수대기·판매가능 불변) → 검수 정상 → 환불 요청·확정 → 완료 (M4 O6, T15·T16)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    const accounts = await (await bff(page.request).get(`/channel-accounts?q=${encodeURIComponent(RUN)}`)).json();
+    const account = accounts.data.find((a: { display_name: string }) => a.display_name === `A 공식스토어 ${RUN}`);
+    const now = new Date().toISOString();
+    const order = { external_order_key: `NV-O6-${RUN}`, ordered_at: now, paid_at: now, external_updated_at: now, total_amount: 20000,
+      recipient: { name: "최수령", phone: "010-7777-8888", postal_code: "06236", address1: "서울특별시 강남구 테헤란로 152" },
+      items: [{ external_item_key: `NV-O6-${RUN}-1`, external_product_id: `PRD-${RUN}`, external_option_id: "", product_name: "비타 앰플 30ml", quantity: 2,
+        unit_price: 10000, line_amount: 20000 }] };
+    const imp = await bff(page.request).post("/orders/imports", { channel_account_id: account.id, orders: [order] }, { "idempotency-key": `e2e-ord-o6-${RUN}` });
+    const orderId = (await imp.json()).data.results[0].order_id;
+    await expect.poll(async () => (await (await bff(page.request).get(`/fulfillment-orders?order_id=${orderId}`)).json()).data[0]?.status ?? "NONE",
+      { timeout: 30_000 }).toBe("ACCEPTED");
+    const fo = (await (await bff(page.request).get(`/fulfillment-orders?order_id=${orderId}`)).json()).data[0];
+    const shipped = await bff(page.request).post(`/fulfillment-orders/${fo.id}/ship`, { shipped_at: new Date(Date.now() - 60_000).toISOString(),
+      parcels: [{ carrier_code: "CJ", tracking_no: `7${Date.now().toString().slice(-11)}` }] }, { "idempotency-key": `e2e-ship-o6-${RUN}` });
+    expect(shipped.status()).toBe(200);
+    const skus = await (await bff(page.request).get(`/skus?q=AMP-30-${RUN}`)).json();
+    const skuId = skus.data[0].id;
+    const sellable = async () => {
+      const a = await (await bff(page.request).get(`/inventory/availability?business_entity_id=${ids.a}&sku_id=${skuId}`)).json();
+      return a.data.sellable_on_hand as number;
+    };
+    const before = await sellable();
+
+    // 주문 상세에서 반품 접수
+    await page.getByRole("link", { name: "주문", exact: true }).click();
+    await page.getByRole("row", { name: new RegExp(`NV-O6-${RUN}`) }).click();
+    const od = page.getByRole("dialog", { name: /^주문 O/ });
+    await od.getByRole("button", { name: "클레임 접수" }).click();
+    let m = page.getByRole("alertdialog");
+    await m.getByLabel("유형").selectOption("RETURN");
+    await m.getByLabel("비타 앰플 30ml 클레임 수량").fill("1");
+    await m.getByLabel("고객 부담 반품 배송비(원)").fill("3000");
+    await m.getByRole("button", { name: "접수" }).click();
+    await expect(od.getByRole("row", { name: /반품 · 단순 변심/ })).toContainText("접수");
+    await od.getByRole("button", { name: "닫기", exact: true }).click();
+
+    // 클레임 승인
+    await page.getByRole("link", { name: "클레임", exact: true }).click();
+    const row = page.getByRole("row", { name: new RegExp(`NV-O6-${RUN}|비타 앰플 30ml ×1`) }).first();
+    await expect(row).toContainText("7,000원");
+    await row.click();
+    const cd = page.getByRole("dialog", { name: /^반품 C/ });
+    const claimNo = (await cd.getByRole("heading").textContent())!.replace("반품 ", "").trim();
+    await cd.getByRole("button", { name: "승인" }).click();
+    m = page.getByRole("alertdialog");
+    await expect(m).toContainText("회수품은 입고·검수 후에만 재고에 반영");
+    await m.getByRole("button", { name: "승인" }).click();
+    await expect(cd).toContainText("처리 중");
+    await cd.getByRole("button", { name: "닫기", exact: true }).click();
+
+    // 반품 입고 → 검수대기(판매가능 불변) → 검수 정상
+    await page.getByRole("link", { name: "반품 입고", exact: true }).click();
+    await page.getByRole("button", { name: "반품 입고" }).click();
+    const rd = page.getByRole("dialog", { name: "반품 입고" });
+    await rd.getByLabel("입고 거점").selectOption({ label: `화성 자체창고 ${RUN} (${`SELF-${RUN}`.toUpperCase()})` });
+    await rd.getByLabel(/클레임 찾기/).fill(claimNo);
+    await rd.getByRole("button", { name: new RegExp(claimNo) }).click();
+    await expect(rd.getByRole("row", { name: new RegExp(`AMP-30-${RUN}`) })).toBeVisible();
+    await rd.getByRole("button", { name: "입고", exact: true }).click();
+    const rcd = page.getByRole("dialog", { name: /^반품 입고 R/ });
+    await expect(rcd).toContainText("클레임 일치");
+    expect(await sellable()).toBe(before); // 검수 전 판매가능 아님(T16)
+    await rcd.getByRole("button", { name: "검수", exact: true }).click();
+    m = page.getByRole("alertdialog");
+    await m.getByLabel(`판정 AMP-30-${RUN} 1`).selectOption("SELLABLE");
+    await m.getByRole("button", { name: "검수 저장" }).click();
+    await expect(rcd).toContainText("검수 완료");
+    await expect.poll(sellable).toBe(before + 1);
+    await rcd.getByRole("button", { name: "닫기", exact: true }).click();
+
+    // 환불 요청 → 확정 → 완료
+    await page.getByRole("link", { name: "클레임", exact: true }).click();
+    await page.getByRole("row", { name: new RegExp(claimNo) }).click();
+    const cd2 = page.getByRole("dialog", { name: /^반품 C/ });
+    await expect(cd2).toContainText("검수 완료");
+    await cd2.getByRole("button", { name: "환불 요청" }).click();
+    m = page.getByRole("alertdialog");
+    await expect(m.getByLabel("금액(원)")).toHaveValue("7000");
+    await m.getByRole("button", { name: "환불 요청" }).click();
+    await cd2.getByRole("button", { name: "확정", exact: true }).click();
+    m = page.getByRole("alertdialog");
+    await m.getByLabel("처리 번호(PG·채널)").fill(`NV-REF-${RUN}`);
+    await m.getByRole("button", { name: "확정" }).click();
+    await expect(cd2.getByText("완료", { exact: true }).first()).toBeVisible();
+    await expect(cd2).toContainText("환불 완료");
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");

@@ -338,6 +338,8 @@ public class FulfillmentService {
                     """).param("id", orderId).update();
         }
         orderEvent(a, orderId, "FULFILLMENT_CANCELLED", (String) f.get("fo_no"), null, Map.of("reason", reason));
+        outbox.publish(a.workspaceId(), (UUID) f.get("business_entity_id"), "FULFILLMENT_ORDER", foId, "FulfillmentOrderCancelled",
+                Map.of("fulfillment_order_id", foId.toString(), "order_id", orderId.toString()));
         audit.record(AuditEntry.builder(a.workspaceId(), "FULFILLMENT_CANCELLED", "FULFILLMENT_ORDER", foId).actor(ActorType.USER, a.memberId(), a.displayName())
                 .scope((UUID) f.get("business_entity_id"), (UUID) f.get("channel_account_id")).reason(reason).build());
         return get(foId);

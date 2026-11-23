@@ -23,7 +23,7 @@ public class SyncJobService {
     static final Map<String, String[]> DATA_JOB_CAPABILITY = Map.of(
             "ORDER_FETCH", new String[]{"ORDER", "READ", "M4"},
             "PRODUCT_FETCH", new String[]{"PRODUCT", "READ", "M2"},
-            "CLAIM_FETCH", new String[]{"CLAIM_RETURN", "READ", "M4"},
+            "CLAIM_FETCH", new String[]{"CLAIM_CANCEL", "READ", "M4"},
             "SETTLEMENT_FETCH", new String[]{"SETTLEMENT", "READ", "M5"},
             "INVENTORY_FETCH", new String[]{"INVENTORY_QUERY", "READ", "M3"},
             "SHIPMENT_SYNC", new String[]{"OUTBOUND_STATUS", "READ", "M4"},
@@ -31,7 +31,7 @@ public class SyncJobService {
 
     /** 처리기가 있는 데이터 수집 유형. */
     static final java.util.Set<String> IMPLEMENTED_DATA_JOBS = java.util.Set.of(InventoryFetchJobHandler.TYPE, OrderFetchJobHandler.TYPE,
-            ShipmentSyncJobHandler.TYPE);
+            ShipmentSyncJobHandler.TYPE, ClaimFetchJobHandler.TYPE);
 
     private final ConnectionService connections;
     private final CapabilityService capabilities;
@@ -62,7 +62,10 @@ public class SyncJobService {
             }
             // 출고상태·송장 수신은 출고상태 또는 송장(배송 단계) 중 하나만 확인돼도 실행할 수 있다
             boolean trackingOnly = ShipmentSyncJobHandler.TYPE.equals(type) && capabilities.executableSystem(a.workspaceId(), connectionId, "TRACKING", "READ");
-            if (!trackingOnly) {
+            // 클레임 수집은 취소·반품·교환 조회 중 하나만 확인돼도 실행한다
+            boolean anyClaim = ClaimFetchJobHandler.TYPE.equals(type) && ClaimFetchJobHandler.FEATURES.stream()
+                    .anyMatch(f -> capabilities.executableSystem(a.workspaceId(), connectionId, f, "READ"));
+            if (!trackingOnly && !anyClaim) {
                 capabilities.require(connectionId, cap[0], cap[1]);
             }
             if (!IMPLEMENTED_DATA_JOBS.contains(type)) {

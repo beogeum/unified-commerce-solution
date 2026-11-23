@@ -35,6 +35,8 @@ public final class Perm {
     public static final String INVENTORY_READ = "inventory.read";
     public static final String INVENTORY_OPERATE = "inventory.operate";
     public static final String INVENTORY_ADJUST = "inventory.adjust";
+    public static final String INVENTORY_DISPOSE = "inventory.dispose";
+    public static final String CLAIM_REFUND = "claim.refund";
 
     private Perm() {
     }

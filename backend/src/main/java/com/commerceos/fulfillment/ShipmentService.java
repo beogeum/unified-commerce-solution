@@ -413,7 +413,8 @@ public class ShipmentService {
     // ---------------------------------------------------------------- 주문 배송 축
 
     /** 주문상품 출고 수량(구성품 기준 완전 출고 단위)과 주문 배송 상태를 다시 계산한다. */
-    void refreshOrderShipping(CurrentActor a, UUID orderId) {
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void refreshOrderShipping(CurrentActor a, UUID orderId) {
         List<Map<String, Object>> rows = jdbc.sql("""
                 select i.id, i.shipped_qty, i.original_qty - i.canceled_qty as active,
                        coalesce((select min(floor(coalesce((select sum(l.quantity) from fulfillment_order_line l join fulfillment_order f on f.id = l.fo_id

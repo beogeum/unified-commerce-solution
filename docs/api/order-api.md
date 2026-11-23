@@ -79,3 +79,24 @@
 - 채널 발송처리 `channel_dispatch_status`: `PENDING · SENT · MANUAL_REQUIRED · MANUAL_DONE · FAILED · NOT_REQUIRED`(추가 박스에 새 품목 없음·수동 주문). 판매계정 연결 + `SHIPMENT_DISPATCH/WRITE` 확인 시만 API(멱등 키 = `shipment_no`).
 - 주문: `order_item.shipped_qty`(구성품 전부 출고된 단위), `shipping_status`(`NONE · PARTIALLY_SHIPPED · SHIPPED · DELIVERED`), `delivered_at`. 전부 배송완료 후 8일(`commerce.order.complete-after-delivery-days`)이 지나고 진행 중 출고가 없으면 `COMPLETED`.
 - 출고지시 `tracking_sla_hours`(거점, 기본 24): 물류사 접수 후 이 시간 안에 송장이 없으면 업무 `FULFILLMENT_TRACKING_MISSING`. `PATCH /fulfillment-nodes/{id} {tracking_sla_hours}`.
+
+## 8. 클레임·반품 입고/검수·환불·폐기 (O6, DLG-137~146)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `GET /claims?business_entity_id&type&status(OPEN 포함)&order_id&q` | `order.read` + 사업자·판매계정 범위 | |
+| `POST /claims {order_id, claim_type, reason_code, reason_note?, fault_party?, items[{order_item_id, quantity, replacement_sku_id?, replacement_quantity?}], return_shipping_fee?, price_difference?, ship_before_return?}` | `order.update` + 쓰기 범위 | 수량 한도: 취소 = 활성 − 출고 − 대기 취소, 반품·교환 = 출고 − 접수된 반품·교환(`422 CLAIM_QUANTITY_EXCEEDED`). 플랫폼 물류 주문은 채널 수집만 |
+| `GET /claims/{id}` | `order.read` | 상품·환불·이력 포함 |
+| `POST /claims/{id}/approve {note?}` · `/reject {note}` · `/withdraw {note?}` | `order.update` | 거부·철회는 회수품 입고·환불 진행·취소 반영 전까지 |
+| `POST /claims/{id}/return-shipment {carrier_code, tracking_no}` | `order.update` | 회수 `IN_TRANSIT` |
+| `POST /claims/{id}/channel-action/manual-done` | `order.update` | 채널 처리 수동 완료 |
+| `POST /claims/{id}/refund-requests {amount, executor(CHANNEL·PG·MANUAL), note?}` + `Idempotency-Key` | `claim.refund` ★ | 요청 합 ≤ 환불 예정액(`422 REFUND_EXCEEDS_EXPECTED`), 같은 키 재요청 = 기존 결과 |
+| `POST /refunds/{id}/confirm {confirmed_amount, external_ref?, confirmed_at?}` · `/refunds/{id}/fail {reason}` | `claim.refund` ★ | 확정액 ≤ 요청액 |
+| `GET /returns/receipts?business_entity_id&status&identification&claim_id` · `GET /returns/receipts/{id}` | `inventory.read` + 사업자·거점 범위 | |
+| `POST /returns/receipts {node_id, claim_id? \| business_entity_id, received_at?, carrier_code?, tracking_no?, note?, lines[{sku_id, quantity, claim_item_id?, lot_code?, expires_on?}]}` | `inventory.operate` + 거점 쓰기 | 일치 줄 = 검수대기, 불일치·원주문 없음 = 미확정(보류 `UNIDENTIFIED_RETURN`) + 업무 `UNIDENTIFIED_RETURN`. 3PL 거점은 재고 이동 없음 |
+| `POST /returns/receipts/{id}/inspections {lines[{receipt_line_id, decisions[{condition, quantity, reason?}]}]}` | `inventory.operate` | 판정 = `SELLABLE·REPACK·DEFECTIVE·DAMAGED·EXPIRED·DISPOSAL_PENDING·UNDETERMINED`, 줄마다 합 = 남은 입고 수량(`422 INSPECTION_QUANTITY_MISMATCH`). 불일치 줄은 `422 RETURN_LINE_UNIDENTIFIED` |
+| `POST /inventory/disposals {stock_id, quantity, reason, evidence_ref?}` + `Idempotency-Key` | 요청 `inventory.operate`, 승인 `approval.decide` + `inventory.dispose` ★(요청자 ≠ 승인자) | `202 {approval_id, book_value}`. 폐기대기·불량·파손·만료 버킷만, 3PL 거점 불가 |
+| `POST /integrations/{connectionId}/sync-jobs {job_type: "CLAIM_FETCH"}` | `integration.sync` + `CLAIM_CANCEL·CLAIM_RETURN·CLAIM_EXCHANGE/READ` 중 하나 | 확인된 유형 행만 반영 |
+
+- 상태축: 클레임 `REQUESTED → APPROVED → PROCESSING → COMPLETED`(`REJECTED`·`CANCELLED`), 회수 `NOT_REQUIRED·REQUESTED·IN_TRANSIT·RECEIVED·INSPECTED`, 환불 `NOT_REQUIRED·EXPECTED·REQUESTED·PARTIALLY_CONFIRMED·CONFIRMED·FAILED·CANCELLED`, 재출고 `NOT_REQUIRED·PENDING·SHIPPED`, 채널 반영 `NOT_REQUIRED·PENDING·SENT·MANUAL_REQUIRED·MANUAL_DONE·FAILED`. 완료 = 취소 반영·회수 검수·환불 확정·재출고가 각각 끝났거나 필요 없음.
+- 주문 영향: 취소 승인 → `canceled_qty`(출고 전이면 즉시, 물류 전달 후면 출고 취소 확인 뒤), 검수 → `returned_qty`, 교환 → 0원 `EXCHANGE_REPLACEMENT` 주문상품 + 출고 배정, 환불 확정 → 결제 `PARTIALLY_REFUNDED·REFUNDED`. 열린 클레임이 있으면 주문 완료로 넘기지 않는다.
+- 금액(부가세 포함 원): 상품 환불 = (상품 금액 − 판매자·채널 할인) × 수량 비례(원 미만 버림, 마지막 수량이 나머지), 출고 전 전체 취소면 배송비 환불, 고객 부담 반품 배송비는 환불에서 차감. 교환 차액 +는 고객 추가 결제, −는 환불 예정. 매출·원가·평가손실 원장 반영은 M5(N1·N5).

@@ -20,7 +20,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 배송 운영 감시(M4 O5).
  * <ul>
  *   <li>송장 미수신 SLA(docs/04 §9): 물류사 접수 후 거점의 SLA 시간이 지나도 출고 확정·송장이 없으면 업무함.</li>
- *   <li>주문 완료(DLG-134): 전부 출고·전 송장 배송완료 후 청약철회 기간(기본 8일)이 지나고 진행 중 출고가 없으면 COMPLETED.
+ *   <li>주문 완료(DLG-134): 전부 출고·전 송장 배송완료 후 청약철회 기간(기본 8일)이 지나고 진행 중 출고·열린 클레임이 없으면 COMPLETED.
  *       배송완료만으로 주문완료를 만들지 않는다(docs/04 §2).</li>
  * </ul>
  */
@@ -84,6 +84,7 @@ public class ShipmentWatch {
                      where o.status = 'PROCESSING' and o.shipping_status = 'DELIVERED' and o.delivered_at + make_interval(days => :d) < :now
                        and not exists (select 1 from fulfillment_order f where f.order_id = o.id
                                           and f.status in ('ALLOCATED', 'REQUESTED', 'ACCEPTED', 'PICKING', 'PACKING', 'CANCEL_REQUESTED', 'FAILED'))
+                       and not exists (select 1 from claim c where c.order_id = o.id and c.status in ('REQUESTED', 'REVIEWING', 'APPROVED', 'PROCESSING'))
                      limit 1000
                     """).param("d", completeAfterDays).param("now", com.commerceos.shared.db.Db.ts(now)).query().listOfRows();
             int n = 0;

@@ -8,6 +8,7 @@ import { api, ApiError, qs } from "@/lib/api";
 import { formatDateTime, formatWon } from "@/lib/format";
 import { EVENT_KO, GWP_SKIP_KO, HOLD_KO, ORDER_STATUS, OrderDetail, OrderRow, PAYMENT_KO, PII_STATE_KO, RAW_RESULT_KO, SOURCE_TYPE_KO } from "@/lib/orders";
 import { ALLOCATION_KO, AllocationResult, CHANNEL_DISPATCH, DISPATCH_MODE_KO, FO_STATUS, FulfillmentOrder, Shipment, SHIP_STATUS, SHIPPING_KO } from "@/lib/fulfillment";
+import { Claim, CLAIM_STATUS, CLAIM_TYPE_KO, REASON_KO, REFUND_STATUS } from "@/lib/claims";
 import { useSession } from "@/lib/session";
 
 export default function OrdersPage() {
@@ -83,7 +84,9 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
   const [revealing, setRevealing] = useState(false);
   const [reason, setReason] = useState("");
   const [pii, setPii] = useState<{ buyer: Record<string, string | null>; recipient: Record<string, string | null> } | null>(null);
-  const [tab, setTab] = useState<"items" | "components" | "fulfillment" | "events" | "raws">("items");
+  const [tab, setTab] = useState<"items" | "components" | "fulfillment" | "claims" | "events" | "raws">("items");
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [claiming, setClaiming] = useState(false);
   const [fos, setFos] = useState<FulfillmentOrder[] | null>(null);
   const [ships, setShips] = useState<Shipment[]>([]);
   const [allocMsg, setAllocMsg] = useState<string | null>(null);
@@ -92,6 +95,7 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
   const loadFos = () => {
     api<FulfillmentOrder[]>(`/fulfillment-orders?order_id=${id}`).then((r) => setFos(r.data)).catch(() => setFos([]));
     api<Shipment[]>(`/shipments?order_id=${id}`).then((r) => setShips(r.data)).catch(() => setShips([]));
+    api<Claim[]>(`/claims?order_id=${id}`).then((r) => setClaims(r.data)).catch(() => setClaims([]));
   };
   useEffect(() => { load(); loadFos(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   const allocate = async () => {
@@ -137,6 +141,7 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
       <button className="btn" type="button" onClick={() => run(`/orders/${id}/revalidate`, {})}>다시 연결·검증</button>
       {can("inventory.operate") && !o.on_hold && d.composition_status === "FIXED" && ["PENDING", "FAILED"].includes(d.allocation_status) && o.status !== "CANCELLED"
         && <button className="btn" type="button" onClick={allocate}>출고 배정</button>}
+      {o.source_type !== "PLATFORM_FULFILLMENT" && o.status !== "RECEIVED" && <button className="btn" type="button" onClick={() => setClaiming(true)}>클레임 접수</button>}
       {manual ? <button className="btn" type="button" onClick={() => run(`/orders/${id}/release-hold`, {}, d.version)}>직접 보류 해제</button>
         : <button className="btn dan" type="button" onClick={() => setHolding(true)}>보류</button>}</> : undefined}>
       {err && <div className="note n-err" role="alert">{err}</div>}
@@ -158,7 +163,7 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
       <div className="kv"><span>출고 배정 · 배송</span><span>{ALLOCATION_KO[d.allocation_status] ?? d.allocation_status} · {SHIPPING_KO[d.shipping_status] ?? d.shipping_status}
         {d.delivered_at && <span className="ctx"> ({formatDateTime(d.delivered_at)})</span>}</span></div>
       <nav className="row-gap" aria-label="주문 상세">
-        {([["items", "주문상품"], ["components", "출고 구성"], ["fulfillment", "출고"], ["events", "변경 이력"], ["raws", "원본 수집 이력"]] as const).map(([k, l]) =>
+        {([["items", "주문상품"], ["components", "출고 구성"], ["fulfillment", "출고"], ["claims", "클레임"], ["events", "변경 이력"], ["raws", "원본 수집 이력"]] as const).map(([k, l]) =>
           <button key={k} className="btn" type="button" aria-current={tab === k ? "page" : undefined} onClick={() => setTab(k)}>{l}</button>)}
       </nav>
       {tab === "items" && <DataTable caption="주문상품" rows={d.items} rowKey={(i) => i.id} empty={<Empty title="주문상품이 없습니다." />} columns={[
@@ -187,6 +192,14 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
         { key: "s", header: "배송", render: (s) => <Chip kind={SHIP_STATUS[s.status][0]}>{SHIP_STATUS[s.status][1]}</Chip> },
         { key: "c", header: "채널 발송처리", render: (s) => <Chip kind={CHANNEL_DISPATCH[s.channel_dispatch_status][0]}>{CHANNEL_DISPATCH[s.channel_dispatch_status][1]}</Chip> },
       ]} />}
+      {tab === "claims" && <DataTable caption="클레임" rows={claims} rowKey={(c) => c.id} empty={<Empty title="클레임이 없습니다." />} columns={[
+        { key: "no", header: "클레임번호", render: (c) => <a className="mono" href={`/claims?open=${c.id}`}>{c.claim_no}</a> },
+        { key: "t", header: "유형", render: (c) => `${CLAIM_TYPE_KO[c.claim_type]} · ${REASON_KO[c.reason_code]}` },
+        { key: "i", header: "상품", render: (c) => c.items.map((i) => `${i.product_name} ×${i.quantity}`).join(", ") },
+        { key: "s", header: "진행", render: (c) => <><Chip kind={CLAIM_STATUS[c.status][0]}>{CLAIM_STATUS[c.status][1]}</Chip>{c.refund_status !== "NOT_REQUIRED" &&
+          <> <Chip kind={REFUND_STATUS[c.refund_status][0]}>{REFUND_STATUS[c.refund_status][1]}</Chip></>}</> },
+      ]} />}
+      {claiming && <ClaimModal order={d} onClose={() => setClaiming(false)} onDone={() => { setClaiming(false); loadFos(); load(); setTab("claims"); }} />}
       {tab === "events" && <DataTable caption="변경 이력" rows={d.events} rowKey={(e) => e.id} empty={<Empty title="이력이 없습니다." />} columns={[
         { key: "t", header: "시각", render: (e) => <span className="ctx">{formatDateTime(e.occurred_at)}</span> },
         { key: "e", header: "내용", render: (e) => `${EVENT_KO[e.event_type] ?? e.event_type}${e.from_value || e.to_value ? ` (${e.from_value ?? "—"} → ${e.to_value ?? "—"})` : ""}` },
@@ -212,5 +225,42 @@ function OrderDrawer({ id, onClose, onChanged }: { id: string; onClose: () => vo
         <label className="fld">열람 사유(필수)<input className="inp" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={200} placeholder="예: 배송지 확인 문의 CS-11" /></label>
       </ConfirmModal>}
     </Drawer>
+  );
+}
+
+function ClaimModal({ order, onClose, onDone }: { order: OrderDetail; onClose: () => void; onDone: () => void }) {
+  const [type, setType] = useState("RETURN");
+  const [reason, setReason] = useState("CHANGE_OF_MIND");
+  const [note, setNote] = useState("");
+  const [fee, setFee] = useState(0);
+  const [qty, setQty] = useState<Record<string, number>>({});
+  const [err, setErr] = useState<string | null>(null);
+  const items = order.items.filter((i) => i.item_kind === "ORIGINAL" && (type === "CANCEL" ? i.active_qty - i.shipped_qty > 0 : i.shipped_qty - i.returned_qty > 0));
+  const max = (i: OrderDetail["items"][number]) => (type === "CANCEL" ? i.active_qty - i.shipped_qty : i.shipped_qty - i.returned_qty);
+  const chosen = Object.entries(qty).filter(([, q]) => q > 0);
+  const submit = async () => {
+    setErr(null);
+    try {
+      await api("/claims", { method: "POST", body: { order_id: order.order.id, claim_type: type, reason_code: reason, reason_note: note || undefined,
+        return_shipping_fee: type === "CANCEL" ? undefined : fee, items: chosen.map(([id, q]) => ({ order_item_id: id, quantity: q })) } });
+      onDone();
+    } catch (x) {
+      setErr(x instanceof ApiError ? x.message : "클레임을 접수하지 못했습니다.");
+    }
+  };
+  return (
+    <ConfirmModal title="클레임 접수" confirmLabel="접수" onClose={onClose} confirmDisabled={chosen.length === 0}
+      impact={[["주문", order.order.order_no], ["효과", "접수만으로는 주문 수량·재고·매출이 바뀌지 않습니다. 승인 후 진행합니다"]]} onConfirm={submit}>
+      {err && <div className="note n-err" role="alert">{err}</div>}
+      <label className="fld">유형<select className="inp" value={type} onChange={(e) => { setType(e.target.value); setQty({}); }}>
+        <option value="CANCEL">취소(출고 전 수량)</option><option value="RETURN">반품(출고된 수량)</option><option value="EXCHANGE">교환(같은 상품)</option></select></label>
+      <label className="fld">사유<select className="inp" value={reason} onChange={(e) => setReason(e.target.value)}>
+        {Object.entries(REASON_KO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+      {items.length === 0 ? <div className="note n-warn">{type === "CANCEL" ? "출고 전 수량이 없습니다(출고된 상품은 반품으로)." : "출고된 수량이 없습니다(출고 전이면 취소로)."}</div>
+        : items.map((i) => <label key={i.id} className="fld">{`${i.product_name} (최대 ${max(i)})`}<input className="inp" type="number" min={0} max={max(i)} value={qty[i.id] ?? 0}
+          aria-label={`${i.product_name} 클레임 수량`} onChange={(e) => setQty({ ...qty, [i.id]: Math.min(max(i), Math.max(0, Number(e.target.value) || 0)) })} /></label>)}
+      {type !== "CANCEL" && <label className="fld">고객 부담 반품 배송비(원)<input className="inp" type="number" min={0} value={fee} onChange={(e) => setFee(Math.max(0, Number(e.target.value) || 0))} /></label>}
+      <label className="fld">메모<input className="inp" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} /></label>
+    </ConfirmModal>
   );
 }

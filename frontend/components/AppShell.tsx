@@ -6,8 +6,8 @@ import { SessionProvider, useSession, Me } from "@/lib/session";
 type Item = { href?: string; label: string; perm?: string; soon?: string };
 const MENU: { head?: string; items: Item[] }[] = [
   { items: [{ href: "/", label: "홈" }, { href: "/work-queue", label: "업무함", perm: "work_item.read" }] },
-  { head: "판매·주문", items: [{ href: "/products", label: "상품", perm: "catalog.read" }, { href: "/orders", label: "주문", perm: "order.read" }, { label: "CS", soon: "M4" }] },
-  { head: "재고·물류", items: [{ href: "/inventory", label: "재고", perm: "inventory.read" }, { href: "/fulfillment", label: "출고", perm: "order.read" }, { href: "/shipments", label: "배송", perm: "order.read" }, { href: "/logistics/nodes", label: "물류·3PL", perm: "logistics_account.read" }, { label: "발주·매입", soon: "M3" }] },
+  { head: "판매·주문", items: [{ href: "/products", label: "상품", perm: "catalog.read" }, { href: "/orders", label: "주문", perm: "order.read" }, { href: "/claims", label: "클레임", perm: "order.read" }] },
+  { head: "재고·물류", items: [{ href: "/inventory", label: "재고", perm: "inventory.read" }, { href: "/fulfillment", label: "출고", perm: "order.read" }, { href: "/shipments", label: "배송", perm: "order.read" }, { href: "/returns", label: "반품 입고", perm: "inventory.read" }, { href: "/logistics/nodes", label: "물류·3PL", perm: "logistics_account.read" }, { label: "발주·매입", soon: "M3" }] },
   { head: "재무", items: [{ label: "정산", soon: "M5" }, { label: "비용·원가", soon: "M5" }, { label: "손익", soon: "M5" }] },
   { head: "관리", items: [
     { href: "/approvals", label: "승인" },

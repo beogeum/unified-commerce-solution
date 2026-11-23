@@ -81,6 +81,7 @@ function PositionDrawer({ p, onClose, onChanged }: { p: Position; onClose: () =>
   const txns = useApi<Txn[]>(`/inventory/transactions${qs({ business_entity_id: p.business_entity_id, sku_id: p.sku_id, node_id: p.node_id, limit: "20" })}`);
   const [moving, setMoving] = useState<Stock | null>(null);
   const [adjusting, setAdjusting] = useState<Stock | null>(null);
+  const [disposing, setDisposing] = useState<Stock | null>(null);
   return (
     <Drawer title={`${p.sku_code} · ${p.node_name}`} onClose={onClose}>
       <div className="kv"><span>소유 사업자</span><span>{p.business_entity_name}</span></div>
@@ -99,10 +100,13 @@ function PositionDrawer({ p, onClose, onChanged }: { p: Position; onClose: () =>
               {can("inventory.operate") && (p.inventory_source === "INTERNAL" || s.quality_status !== "SELLABLE") &&
                 <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); setMoving(s); }}>품질 변경</button>}
               {can("inventory.adjust") && p.inventory_source === "INTERNAL" &&
-                <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); setAdjusting(s); }}>조정</button>}</span> },
+                <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); setAdjusting(s); }}>조정</button>}
+              {can("inventory.operate") && p.inventory_source === "INTERNAL" && ["DISPOSAL_PENDING", "DEFECTIVE", "DAMAGED", "EXPIRED"].includes(s.quality_status) &&
+                <button className="btn dan" type="button" onClick={(e) => { e.stopPropagation(); setDisposing(s); }}>폐기 요청</button>}</span> },
           ]} />)}
       <h3 style={{ fontSize: 14 }}>최근 원장</h3>
       {txns.loading ? <Loading /> : txns.error ? <ErrorState error={txns.error} onRetry={txns.reload} /> : <TxnList rows={txns.data ?? []} />}
+      {disposing && <DisposalModal stock={disposing} onClose={() => setDisposing(null)} />}
       {adjusting && <AdjustModal stock={adjusting} onClose={() => setAdjusting(null)} onDone={() => { setAdjusting(null); stocks.reload(); txns.reload(); onChanged(); }} />}
       {moving && <QualityModal stock={moving} external={p.inventory_source === "EXTERNAL"} committedGuard={p.sellable_on_hand - p.committed} onClose={() => setMoving(null)}
         onDone={() => { setMoving(null); stocks.reload(); txns.reload(); onChanged(); }} />}
@@ -148,6 +152,43 @@ function AdjustModal({ stock, onClose, onDone }: { stock: Stock; onClose: () => 
         <label className="fld">{mode === "ABSOLUTE" ? "맞출 수량" : "수량"}<input className="inp" type="number" min={0} value={qty} onChange={(e) => setQty(Math.max(0, Number(e.target.value) || 0))} /></label>
         <label className="fld">사유(필수)<input className="inp" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} /></label>
         <p className="ctx" style={{ margin: 0 }}>원가 영향이 사업자 승인 기준 이상이거나 기준 원가가 없으면 승인 요청이 됩니다. 실사 차이는 실사 화면에서 승인하세요.</p>
+      </>}
+    </ConfirmModal>
+  );
+}
+
+function DisposalModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
+  const [qty, setQty] = useState(stock.on_hand);
+  const [reason, setReason] = useState("");
+  const [evidence, setEvidence] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [done, setDone] = useState<{ book_value: string | null } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [key] = useState(newIdempotencyKey);
+  const submit = async () => {
+    if (done) { onClose(); return; }
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await api<{ book_value: string | null }>("/inventory/disposals", { method: "POST", idempotencyKey: key,
+        body: { stock_id: stock.id, quantity: qty, reason, evidence_ref: evidence || undefined } });
+      setDone(r.data);
+    } catch (x) {
+      setErr(x instanceof ApiError ? x.message : "폐기를 요청하지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <ConfirmModal title="재고 폐기 요청" danger confirmLabel={done ? "닫기" : "승인 요청"} busy={busy} onClose={onClose} onConfirm={submit}
+      confirmDisabled={!done && (!reason.trim() || qty < 1 || qty > stock.on_hand)}
+      impact={[["대상", `${stock.sku_code} · ${QUALITY_KO[stock.quality_status]} ${num(stock.on_hand)}개`], ["승인", "폐기 권한이 있는 다른 승인자가 승인해야 재고에서 빠집니다"],
+        ["재무", "이미 평가손실로 잡은 수량은 폐기 때 다시 손실로 잡지 않습니다"]]}>
+      {err && <div className="note n-err" role="alert">{err}</div>}
+      {done ? <div className="note n-warn">승인 요청을 만들었습니다{done.book_value ? `(장부가치 ${num(Number(done.book_value))}원)` : ""}. 승인 화면에서 처리됩니다.</div> : <>
+        <label className="fld">폐기 수량<input className="inp" type="number" min={1} max={stock.on_hand} value={qty} onChange={(e) => setQty(Number(e.target.value) || 1)} /></label>
+        <label className="fld">폐기 사유(필수)<input className="inp" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} /></label>
+        <label className="fld">증빙(사진·문서 위치)<input className="inp" value={evidence} onChange={(e) => setEvidence(e.target.value)} maxLength={500} /></label>
       </>}
     </ConfirmModal>
   );
