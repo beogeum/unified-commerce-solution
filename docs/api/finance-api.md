@@ -95,3 +95,6 @@
 
 분류: `CARD` 카드매출, `CASH_RECEIPT` 현금영수증, `MOBILE` 휴대폰, `OTHER` 기타, `TAX_INVOICE` 세금계산서, `FREE_CARD`·`FREE_CASH_RECEIPT`·`FREE_MOBILE`·`FREE_OTHER` 면세, `E_INVOICE` 전자계산서, `ZERO_RATED` 영세율(검토), `REVIEW` 검토 필요, `EXCLUDED` 제외(보정만).
 
+## 10. 추정 영업이익 (DLG-214)
+고정비 항목 `FIXED_LABOR`·`FIXED_RENT`·`FIXED_SOFTWARE`·`FIXED_OTHER` 는 `POST /finance/cost-entries`·`POST /finance/cost-allocations` 로 기록한다. `GET /finance/profit` 행에 `fixed_costs`, `fixed_total`, `operating_profit_estimate`(= 공헌이익 − 고정비)가 추가되며 `costs`·`contribution` 에는 포함되지 않는다.
+

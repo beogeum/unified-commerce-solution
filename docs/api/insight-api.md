@@ -20,3 +20,14 @@
 | `POST /insights/{id}/dismiss {reason}` | `work_item.update` | 사유 필수, 해결될 때까지 유지 |
 
 규칙: `MARGIN_DROP`, `STOCKOUT_RISK`, `SLOW_MOVING`, `EXPIRY_RISK`, `SETTLEMENT_MISSING`, `UNDEPOSITED`. 임계값 설정 `commerce.insight.*`(margin-drop-pp 3, min-net-sales 50000, window-days 30, cover-days 7, slow-days 90, expiry-days 60, settlement-missing-days 30, undeposited-grace-days 7, cron `0 17 6 * * *`).
+
+## 3. 손익 시뮬레이션 (DLG-207~209)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `POST /simulations/profit {business_entity_id, channel_account_id?, sku_id?, from?, to?, price_change_pct?, elasticity?, extra_demand_pct?, commission_rate_pp?, free_shipping?, shipping_cost_change_pct?, stop_gifts?, gift_cost_change_pct?}` | `profit.read` + 사업자 범위 | `{base, simulated, contribution_delta, volume_factor, breakeven_volume_change_pct, assumptions, unconfirmed}`. 순매출 없으면 `SIMULATION_NO_SALES` |
+| `POST /simulations/profit/work-item` (같은 본문 + note?) | `work_item.update` | 검토 업무 `SIMULATION_REVIEW` |
+
+## 4. 상품정보 품질 점검 (DLG-212·213)
+| `GET /catalog/quality?business_entity_id` | `catalog.read`(원가 점검은 `cost.read`) | `{counts, issues[{code, severity, title, business_entity_id, sku_id, sku_code, listing_id, detail, fix}]}` |
+|---|---|---|
+

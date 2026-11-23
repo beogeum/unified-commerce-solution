@@ -1,5 +1,5 @@
 export type ProfitRow = { key: string; label: string; net_sales: string; other_revenue: string; costs: Record<string, string>; total_cost: string; contribution: string;
-  margin_pct: string | null; estimated_cost: string; missing_cost_lines: number };
+  margin_pct: string | null; estimated_cost: string; missing_cost_lines: number; fixed_costs: Record<string, string>; fixed_total: string; operating_profit_estimate: string };
 export type Profit = { from: string; to: string; group_by: string; rows: ProfitRow[]; total: ProfitRow; basis_note: string; elimination: Elimination | null };
 export type Entry = { id: string; business_entity_id: string; business_entity_name: string; channel_account_id: string | null; order_id: string | null;
   order_no: string | null; order_item_id: string | null; claim_id: string | null; fulfillment_order_id: string | null; sku_id: string | null; sku_code: string | null;
@@ -14,10 +14,12 @@ export const CATEGORY_KO: Record<string, string> = {
   PRODUCT_COGS: "상품 원가", SELLING_FEE: "판매수수료", PAYMENT_FEE: "결제수수료", ADVERTISING: "광고비", OUTBOUND_SHIPPING: "출고 배송비", THIRD_PARTY_PICK: "3PL 피킹비",
   PACK: "포장비", STORAGE: "보관비", INBOUND_SERVICE: "입고 작업비", MATERIAL: "부자재", GWP: "사은품(판촉비)", RETURN_SHIPPING: "반품 회수비", RETURN_INSPECTION: "반품 검수비",
   REPACK: "재포장비", EXCHANGE_SHIPPING: "교환 배송비", INVENTORY_IMPAIRMENT: "재고 평가·폐기손실", DISPOSAL_SERVICE: "폐기 처리비", CHANNEL_PENALTY: "채널 패널티", OTHER: "기타",
+  FIXED_LABOR: "고정비·인건비", FIXED_RENT: "고정비·임차료", FIXED_SOFTWARE: "고정비·소프트웨어", FIXED_OTHER: "고정비·기타",
 };
 export const COST_ORDER = ["PRODUCT_COGS", "GWP", "SELLING_FEE", "PAYMENT_FEE", "ADVERTISING", "OUTBOUND_SHIPPING", "THIRD_PARTY_PICK", "PACK", "MATERIAL", "STORAGE",
   "INBOUND_SERVICE", "RETURN_SHIPPING", "RETURN_INSPECTION", "REPACK", "EXCHANGE_SHIPPING", "INVENTORY_IMPAIRMENT", "DISPOSAL_SERVICE", "CHANNEL_PENALTY", "OTHER"];
-export const MANUAL_COST_CATEGORIES = COST_ORDER.filter((c) => c !== "PRODUCT_COGS" && c !== "INVENTORY_IMPAIRMENT");
+export const FIXED_CATEGORIES = ["FIXED_LABOR", "FIXED_RENT", "FIXED_SOFTWARE", "FIXED_OTHER"];
+export const MANUAL_COST_CATEGORIES = [...COST_ORDER.filter((c) => c !== "PRODUCT_COGS" && c !== "INVENTORY_IMPAIRMENT"), ...FIXED_CATEGORIES];
 export const RULE_CATEGORIES = ["SELLING_FEE", "PAYMENT_FEE", "OUTBOUND_SHIPPING", "THIRD_PARTY_PICK", "PACK", "MATERIAL", "RETURN_SHIPPING", "RETURN_INSPECTION", "EXCHANGE_SHIPPING"];
 export const METHOD_KO: Record<string, string> = { RATE_OF_NET_SALES: "순매출 대비 요율", PER_UNIT: "개당", PER_ORDER: "출고지시당", PER_SHIPMENT: "송장(박스)당", PER_RETURN: "반품 건당" };
 export const BASIS_KO: Record<string, string> = { ESTIMATED: "예상", ACTUAL: "실제" };

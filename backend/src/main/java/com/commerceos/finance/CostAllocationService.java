@@ -107,7 +107,8 @@ public class CostAllocationService {
     }
 
     private AllocationView post(CurrentActor a, String no, int version, UUID supersedes, NewAllocation in, String idemKey) {
-        if (in == null || in.category() == null || !FinanceService.COSTS.contains(in.category()) || "PRODUCT_COGS".equals(in.category())
+        if (in == null || in.category() == null || !(FinanceService.COSTS.contains(in.category()) || FinanceService.FIXED.contains(in.category()))
+                || "PRODUCT_COGS".equals(in.category())
                 || "INVENTORY_IMPAIRMENT".equals(in.category())) {
             throw Errors.validation("category", "배부할 비용 항목을 선택하세요(매출원가·평가손실 제외).");
         }

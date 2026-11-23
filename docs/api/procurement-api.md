@@ -23,3 +23,10 @@
 | `GET /purchase-orders/inbound?business_entity_id&sku_id` | `inventory.read` | 입고예정(사업자 × SKU × 거점, 가장 빠른 예정일) |
 
 입고 부대비용: `POST /finance/landed-costs` 에 `purchase_order_id` 를 주면 그 발주 입고분에 배부(DLG-196). 재고 리포트 행에 `inbound_qty`(입고예정).
+
+## 3. 발주 제안 (DLG-210·211)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `GET /purchase-orders/suggestions?business_entity_id&cover_days(14)` | `inventory.read`(금액은 원가·발주 권한) | 일평균·가용·입고예정·리드타임·목표 일수·부족·제안 수량(MOQ·발주단위)·근거 |
+| `POST /purchase-orders/from-suggestions {node_id, items[{supplier_sku_id, quantity}]}` | `purchase.manage` | 공급처별 작성 중 발주 |
+

@@ -40,6 +40,8 @@ public class FinanceService {
     static final Set<String> COSTS = Set.of("PRODUCT_COGS", "SELLING_FEE", "PAYMENT_FEE", "ADVERTISING", "OUTBOUND_SHIPPING", "THIRD_PARTY_PICK", "PACK", "STORAGE",
             "INBOUND_SERVICE", "MATERIAL", "GWP", "RETURN_SHIPPING", "RETURN_INSPECTION", "REPACK", "EXCHANGE_SHIPPING", "INVENTORY_IMPAIRMENT", "DISPOSAL_SERVICE",
             "CHANNEL_PENALTY", "OTHER");
+    /** 고정비(추정 영업이익용, 공헌이익 밖, DLG-214). */
+    static final Set<String> FIXED = Set.of("FIXED_LABOR", "FIXED_RENT", "FIXED_SOFTWARE", "FIXED_OTHER");
     private final JdbcClient jdbc;
     private final AccessGuard guard;
     private final Ledger ledger;
@@ -80,7 +82,8 @@ public class FinanceService {
     }
 
     public record ProfitRow(String key, String label, BigDecimal netSales, BigDecimal otherRevenue, Map<String, BigDecimal> costs, BigDecimal totalCost,
-                            BigDecimal contribution, BigDecimal marginPct, BigDecimal estimatedCost, int missingCostLines) {
+                            BigDecimal contribution, BigDecimal marginPct, BigDecimal estimatedCost, int missingCostLines, Map<String, BigDecimal> fixedCosts,
+                            BigDecimal fixedTotal, BigDecimal operatingProfitEstimate) {
     }
 
     public record Profit(LocalDate from, LocalDate to, String groupBy, List<ProfitRow> rows, ProfitRow total, String basisNote, GroupElimination.Elimination elimination) {
@@ -102,7 +105,8 @@ public class FinanceService {
             throw Errors.validation("business_entity_id", "비용을 귀속할 사업자를 선택하세요.");
         }
         guard.checkWrite("BUSINESS_ENTITY", c.businessEntityId(), c.businessEntityId(), c.channelAccountId());
-        if (c.category() == null || !COSTS.contains(c.category()) || "PRODUCT_COGS".equals(c.category()) || "INVENTORY_IMPAIRMENT".equals(c.category())) {
+        if (c.category() == null || !(COSTS.contains(c.category()) || FIXED.contains(c.category())) || "PRODUCT_COGS".equals(c.category())
+                || "INVENTORY_IMPAIRMENT".equals(c.category())) {
             throw Errors.validation("category", "비용 항목을 선택하세요(매출원가·평가손실은 출고·재고 평가에서 자동 기록).");
         }
         String basis = c.basis() == null ? "ACTUAL" : c.basis();
@@ -327,6 +331,7 @@ public class FinanceService {
         BigDecimal estimated = BigDecimal.ZERO;
         int missing;
         final Map<String, BigDecimal> costs = new java.util.TreeMap<>();
+        final Map<String, BigDecimal> fixed = new java.util.TreeMap<>();
 
         ProfitAcc(String key, String label) {
             this.key = key;
@@ -338,6 +343,8 @@ public class FinanceService {
                 netSales = netSales.add(amt);
             } else if (OTHER_REVENUE.contains(category)) {
                 other = other.add(amt);
+            } else if (FIXED.contains(category)) {
+                fixed.merge(category, amt, BigDecimal::add);
             } else if (COSTS.contains(category)) {
                 costs.merge(category, amt, BigDecimal::add);
                 if ("ESTIMATED".equals(basis)) {
@@ -351,7 +358,9 @@ public class FinanceService {
             BigDecimal totalCost = costs.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal contribution = netSales.add(other).subtract(totalCost);
             BigDecimal margin = netSales.signum() > 0 ? contribution.multiply(BigDecimal.valueOf(100)).divide(netSales, 2, RoundingMode.HALF_UP) : null;
-            return new ProfitRow(key, label, netSales, other, Map.copyOf(costs), totalCost, contribution, margin, estimated, missing);
+            BigDecimal fixedTotal = fixed.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+            return new ProfitRow(key, label, netSales, other, Map.copyOf(costs), totalCost, contribution, margin, estimated, missing, Map.copyOf(fixed), fixedTotal,
+                    contribution.subtract(fixedTotal));
         }
     }
 

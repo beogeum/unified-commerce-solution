@@ -1173,6 +1173,29 @@ test.describe.serial("Foundation", () => {
     await expect(d.getByRole("status")).toContainText("채널 등록 완료로 표시했습니다.");
   });
 
+  test("분석·운영: 손익 시뮬레이션 계산 → 발주 제안 → 상품 품질 점검 (X3·X5·X6)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    await page.getByRole("link", { name: "손익 시뮬레이션" }).click();
+    await page.getByLabel("시뮬레이션 사업자").selectOption({ label: NAMES.a });
+    await page.getByLabel("가격 변경(%)").fill("-10");
+    await page.getByRole("button", { name: "계산", exact: true }).click();
+    await expect(page.getByRole("row", { name: /^공헌이익/ })).toBeVisible();
+    await expect(page.getByText("인과 효과가 아닌 단순 추정입니다.", { exact: false }).first()).toBeVisible();
+    await page.getByRole("button", { name: "검토 업무로 남기기" }).click();
+    await expect(page.getByRole("status")).toContainText("검토 업무로 남겼습니다.");
+    await page.getByRole("link", { name: "발주·매입" }).click();
+    await page.getByRole("button", { name: "발주 제안" }).click();
+    await expect(page.getByRole("table", { name: /^발주 제안/ }).or(page.getByText("지금 발주가 필요한 SKU 가 없습니다."))).toBeVisible();
+    await page.getByRole("link", { name: "상품 품질 점검" }).click();
+    await expect(page.getByRole("heading", { name: "상품정보 품질 점검" })).toBeVisible();
+    await expect(page.getByRole("table", { name: /^품질 점검 결과/ }).or(page.getByText("발견된 문제가 없습니다."))).toBeVisible();
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");

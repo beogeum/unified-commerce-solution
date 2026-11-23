@@ -33,6 +33,7 @@ export default function ProfitPage() {
   if (!can("profit.read")) return <Forbidden />;
   const rows = data ? [...data.rows, data.total] : [];
   const usedCosts = COST_ORDER.filter((c) => rows.some((r) => Number(r.costs[c] ?? 0) !== 0));
+  const hasFixed = rows.some((r) => Number(r.fixed_total ?? 0) !== 0);
   return (
     <>
       <div className="page-head"><div><h1>손익</h1><p>관리 공헌이익입니다(부가세 제외 공급가). 순매출 − 상품 원가 − 수수료·물류·사은품·반품 관련 비용 − 재고 손실 = 공헌이익. 여러 사업자·계정의 이익률은 이익 합계 ÷ 순매출 합계입니다.</p></div></div>
@@ -53,6 +54,8 @@ export default function ProfitPage() {
             ...usedCosts.map((c) => ({ key: c, header: CATEGORY_KO[c], num: true, render: (r: ProfitRow) => won(r.costs[c] ?? 0) })),
             { key: "c", header: "공헌이익", num: true, render: (r) => <b>{won(r.contribution)}</b> },
             { key: "m", header: "이익률", num: true, render: (r) => (r.margin_pct === null ? "—" : `${r.margin_pct}%`) },
+            ...(hasFixed ? [{ key: "fx", header: "고정비(배부 포함)", num: true, render: (r: ProfitRow) => won(r.fixed_total) },
+              { key: "op", header: "추정 영업이익", num: true, render: (r: ProfitRow) => <span title="공헌이익 − 고정비. 고정비 배부 기준에 따라 달라지는 추정치입니다.">{won(r.operating_profit_estimate)}</span> }] : []),
             { key: "e", header: "예상 비용", num: true, render: (r) => <span className="ctx">{won(r.estimated_cost)}{r.missing_cost_lines > 0 ? ` · 원가 미등록 ${r.missing_cost_lines}` : ""}</span> },
           ]} />
       )}
