@@ -38,7 +38,8 @@ public class AnalyticsService {
 
     public record InventoryRow(UUID businessEntityId, String businessEntityName, UUID skuId, String skuCode, String skuName, int sellableOnHand, int nonSellableOnHand,
                                int committed, int atp, int sold28d, BigDecimal avgDailySales, BigDecimal daysOfCover, java.time.Instant lastSaleAt,
-                               LocalDate nearestExpiry, BigDecimal unitCost, BigDecimal bookValue, boolean stockoutRisk, boolean slowMoving, boolean expiryRisk) {
+                               LocalDate nearestExpiry, BigDecimal unitCost, BigDecimal bookValue, boolean stockoutRisk, boolean slowMoving, boolean expiryRisk,
+                               int inboundQty) {
     }
 
     public record InventoryReport(LocalDate asOf, int coverDays, int slowDays, int expiryDays, List<InventoryRow> rows, Map<String, Object> totals) {
@@ -92,11 +93,16 @@ public class AnalyticsService {
                      group by 1, 2),
                 first_in as (
                     select owner_business_entity_id as be, sku_id, min(occurred_at) as first_receipt
-                      from inventory_transaction where workspace_id = :ws and on_hand_delta > 0 and owner_business_entity_id in (:bes) group by 1, 2)
-                select st.*, coalesce(pos.committed, 0) as committed, coalesce(pos.restricted, 0) as restricted, coalesce(sales.sold28, 0) as sold28, sales.last_sale,
+                      from inventory_transaction where workspace_id = :ws and on_hand_delta > 0 and owner_business_entity_id in (:bes) group by 1, 2),
+                inb as (
+                    select o.business_entity_id as be, l.sku_id, sum(l.quantity - l.received_qty - l.rejected_qty) as inbound
+                      from purchase_order o join purchase_order_line l on l.po_id = o.id
+                     where o.workspace_id = :ws and o.business_entity_id in (:bes) and o.node_id in (:nodes)
+                       and o.status in ('PLACED', 'SUPPLIER_CONFIRMED', 'PARTIALLY_RECEIVED') group by 1, 2)
+                select st.*, coalesce(inb.inbound, 0) as inbound, coalesce(pos.committed, 0) as committed, coalesce(pos.restricted, 0) as restricted, coalesce(sales.sold28, 0) as sold28, sales.last_sale,
                        fi.first_receipt, be.display_name as be_name, k.sku_code, k.name as sku_name
                   from st left join pos on pos.be = st.be and pos.sku_id = st.sku_id left join sales on sales.be = st.be and sales.sku_id = st.sku_id
-                  left join first_in fi on fi.be = st.be and fi.sku_id = st.sku_id
+                  left join first_in fi on fi.be = st.be and fi.sku_id = st.sku_id left join inb on inb.be = st.be and inb.sku_id = st.sku_id
                   join business_entity be on be.id = st.be join sku k on k.id = st.sku_id
                  where st.sellable + st.non_sellable > 0 or coalesce(sales.sold28, 0) > 0
                  order by be.display_name, k.sku_code
@@ -133,7 +139,7 @@ public class AnalyticsService {
             slowCount += slowMoving ? 1 : 0;
             expCount += expiryRisk ? 1 : 0;
             out.add(new InventoryRow(be, (String) r.get("be_name"), sku, (String) r.get("sku_code"), (String) r.get("sku_name"), sellable, non, committed, atp, sold, avg,
-                    days, last, expiry, unit, book, stockout, slowMoving, expiryRisk));
+                    days, last, expiry, unit, book, stockout, slowMoving, expiryRisk, ((Number) r.get("inbound")).intValue()));
         }
         Map<String, Object> totals = new LinkedHashMap<>();
         totals.put("sku_rows", out.size());

@@ -12,6 +12,7 @@
 | `catalog.manage` | 상품·SKU·브랜드 등록·변경 | ● | ● | ● |  |  |  |  |  |  |  |  |
 | `cost.manage` ★ | 원가 등록 | ● |  |  |  |  |  |  | ● |  |  |  |
 | `approval.decide` ★ | 승인 요청 승인·반려 | ● | ● |  |  |  |  |  |  |  |  |  |
+| `purchase.manage` | 공급처·발주 관리 | ● | ● | ● |  |  |  |  |  |  |  |  |
 | `inventory.read` | 재고·원장·확보 조회 | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● |
 | `inventory.operate` | 입고·품질 변경·확보·출고 확정 | ● | ● |  |  |  | ● | ● |  |  |  |  |
 | `channel_account.read` | 판매계정·판매단위 조회 | ● | ● | ● | ● | ● | ● |  | ● | ● | ● | ● |
@@ -52,3 +53,4 @@
 - `settlement.manage`(M5 2차, DLG-161): 정산 파일·수기 정산 반영, 입금 등록·연결·연결 취소. 정산/재무·최고관리자.
 - 월 재개방 승인자는 `approval.decide` 와 `period.close` 를 모두 가져야 한다(DLG-168). 기본 역할로는 최고관리자만 해당하므로, 재무 담당이 승인하려면 사용자별 ALLOW 로 `approval.decide` 를 부여한다.
 - `vat.manage`(M6 2차, DLG-183·188): 신고자료 가져오기·보정·확정. 확정은 그 묶음에 파일을 올리지 않은 담당자만(작성자-검토자 분리). 조회는 `settlement.read`, 내보내기는 `export.create` 추가.
+- `purchase.manage`(P1, DLG-190·193): 공급처·공급 SKU·발주 작성·승인 요청·취소·종료. 발주 승인자는 `approval.decide` + `purchase.manage`(기본: 최고관리자·운영관리자). 입고는 `inventory.operate`.

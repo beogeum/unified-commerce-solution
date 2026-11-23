@@ -1074,6 +1074,43 @@ test.describe.serial("Foundation", () => {
     await expect(page.getByTestId("vat-export-download")).toBeVisible({ timeout: 25000 });
   });
 
+  test("발주·매입: 공급처 등록 → 공급 SKU(MOQ) → 발주 작성 → 승인 요청 (P1 FR-FIN-01)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    await page.getByRole("link", { name: "발주·매입" }).click();
+    await page.getByRole("button", { name: "공급처 등록" }).click();
+    let m = page.getByRole("alertdialog");
+    await m.getByLabel("공급처 사업자").selectOption({ label: NAMES.a });
+    await m.getByLabel("공급처 이름").fill(`공급 ${RUN}`);
+    await m.getByRole("button", { name: "등록", exact: true }).click();
+    const sd = page.getByRole("dialog", { name: `공급처 공급 ${RUN}` });
+    await sd.getByRole("button", { name: "공급 SKU 추가·변경" }).click();
+    m = page.getByRole("alertdialog");
+    await m.getByLabel("SKU 검색").fill(`AMP-50-${RUN}`);
+    await m.getByRole("button", { name: new RegExp(`AMP-50-${RUN}`) }).click();
+    await m.getByLabel("단가(원, 공급가)").fill("5000");
+    await m.getByLabel("최소 발주수량(MOQ)").fill("10");
+    await m.getByRole("button", { name: "저장", exact: true }).click();
+    await expect(sd.getByRole("row", { name: new RegExp(`AMP-50-${RUN}`) })).toContainText("5,000");
+    await sd.getByRole("button", { name: "닫기", exact: true }).click();
+
+    await page.getByRole("button", { name: "발주 작성" }).click();
+    m = page.getByRole("alertdialog");
+    await m.getByLabel("발주 공급처").selectOption({ label: `${NAMES.a} · 공급 ${RUN}` });
+    await m.getByLabel(`AMP-50-${RUN} 수량`).fill("12");
+    await expect(m.getByLabel("MOQ·발주단위 예외 사유")).toHaveCount(0);
+    await m.getByRole("button", { name: "작성", exact: true }).click();
+    const pd = page.getByRole("dialog", { name: /^발주 PO-/ });
+    await expect(pd.getByText("작성 중")).toBeVisible();
+    await pd.getByRole("button", { name: "승인 요청" }).click();
+    await expect(pd.getByRole("status")).toContainText("승인을 요청했습니다.");
+    await expect(pd.getByText("승인 대기")).toBeVisible();
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");

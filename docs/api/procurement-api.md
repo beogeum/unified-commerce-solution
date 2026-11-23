@@ -1,0 +1,25 @@
+# 발주·매입 API (P1, FR-FIN-01)
+
+금액은 원 단위 정수(공급가 기준, 부가세 별도). 단가·금액은 `cost.read` 또는 `purchase.manage` 가 있을 때만 값이 나오고 아니면 `null`.
+
+## 1. 공급처 (DLG-190)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `GET /suppliers?business_entity_id&q` · `GET /suppliers/{id}` | `inventory.read` + 사업자 범위 | 공급 SKU 수 포함 |
+| `POST /suppliers {business_entity_id, name, business_registration_no?, lead_time_days?, payment_terms?, memo?}` | `purchase.manage` | 사업자 안에서 이름 유일(`409 SUPPLIER_DUPLICATE`) |
+| `PATCH /suppliers/{id}` (+ If-Match 선택) | `purchase.manage` | 상태 ACTIVE·INACTIVE |
+| `GET /suppliers/{id}/skus` · `PUT /suppliers/{id}/skus {sku_id, unit_cost, tax_type?, moq?, order_multiple?, lead_time_days?, supplier_sku_code?, status?}` | 조회 `inventory.read` / 저장 `purchase.manage` | 공급처 × SKU 하나(덮어쓰기, 감사 이력) |
+
+## 2. 발주 (DLG-191~195)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `POST /purchase-orders {supplier_id, node_id, expected_on?, memo?, lines[{sku_id, quantity, unit_cost?, moq_override_reason?}]}` | `purchase.manage` | DRAFT. `SUPPLIER_SKU_MISSING`, `MOQ_NOT_MET`, `NODE_INVENTORY_EXTERNAL` |
+| `PATCH /purchase-orders/{id}` (+ If-Match) | `purchase.manage` | 작성 중만(`409 PO_NOT_DRAFT`), lines 를 주면 전체 교체 |
+| `POST /purchase-orders/{id}/submit` | `purchase.manage` | 승인 요청 `PURCHASE_ORDER` → `POST /approvals/{id}/decision`(본인 불가, 승인자 `purchase.manage`) |
+| `POST /purchase-orders/{id}/supplier-confirm {expected_on?, supplier_ref?}` | `purchase.manage` | PLACED → SUPPLIER_CONFIRMED |
+| `POST /purchase-orders/{id}/receipts {note?, lines[{po_line_id, good_qty, rejected_qty?, unit_cost?, reject_reason?, lot_code?, manufactured_on?, expires_on?, location_code?}]}` | `inventory.operate` + 거점 범위 | 정상 → 재고 입고(실매입 단가), 불량 → 반송 업무. `PO_OVER_RECEIPT` |
+| `POST /purchase-orders/{id}/cancel {reason}` · `POST /purchase-orders/{id}/close {reason}` | `purchase.manage` | 입고 전 취소 / 부분 입고 후 잔량 종료 |
+| `GET /purchase-orders?business_entity_id&status&supplier_id` · `GET /purchase-orders/{id}` | `inventory.read` | 발주·입고·반송 수량, 단가 차이, 입고 이력 |
+| `GET /purchase-orders/inbound?business_entity_id&sku_id` | `inventory.read` | 입고예정(사업자 × SKU × 거점, 가장 빠른 예정일) |
+
+입고 부대비용: `POST /finance/landed-costs` 에 `purchase_order_id` 를 주면 그 발주 입고분에 배부(DLG-196). 재고 리포트 행에 `inbound_qty`(입고예정).

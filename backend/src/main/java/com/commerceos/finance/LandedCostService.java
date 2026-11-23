@@ -52,7 +52,7 @@ public class LandedCostService {
     }
 
     public record NewLandedCost(UUID businessEntityId, String costType, BigDecimal supplyAmount, BigDecimal vatAmount, String method, String sourceRef, String memo,
-                                List<Target> receipts) {
+                                List<Target> receipts, UUID purchaseOrderId) {
     }
 
     public record LineView(UUID receiptTxnId, UUID skuId, String skuCode, int quantity, BigDecimal basisValue, BigDecimal allocated, BigDecimal capitalized,
@@ -99,6 +99,21 @@ public class LandedCostService {
             throw Errors.conflict("COST_ALREADY_EXPENSED", "같은 근거번호의 청구가 이미 비용으로 기록되어 있습니다. 취득원가로 다시 반영하면 이중 차감됩니다.");
         }
         List<Target> targets = in.receipts() == null ? List.of() : in.receipts();
+        if (targets.isEmpty() && in.purchaseOrderId() != null) {
+            // 발주 입고분 전체(발주 단위 부대비용 배부)
+            UUID poBe = jdbc.sql("select business_entity_id from purchase_order where workspace_id = :ws and id = :id").param("ws", a.workspaceId())
+                    .param("id", in.purchaseOrderId()).query(UUID.class).optional().orElseThrow(() -> Errors.notFound("PURCHASE_ORDER"));
+            if (!poBe.equals(be)) {
+                throw Errors.validation("purchase_order_id", "다른 사업자의 발주입니다.");
+            }
+            targets = jdbc.sql("""
+                    select rl.inventory_txn_id from po_receipt_line rl join po_receipt r on r.id = rl.receipt_id
+                     where r.workspace_id = :ws and r.po_id = :po and rl.inventory_txn_id is not null order by r.received_at
+                    """).param("ws", a.workspaceId()).param("po", in.purchaseOrderId()).query(UUID.class).list().stream().map(t -> new Target(t, null)).toList();
+            if (targets.isEmpty()) {
+                throw Errors.unprocessable("PO_NOT_RECEIVED", "이 발주는 아직 입고된 수량이 없습니다.");
+            }
+        }
         if (targets.isEmpty() || targets.size() > 200) {
             throw Errors.validation("receipts", "배부할 입고 내역을 1~200건 선택하세요.");
         }
