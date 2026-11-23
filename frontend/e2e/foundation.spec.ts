@@ -1196,6 +1196,20 @@ test.describe.serial("Foundation", () => {
     await expect(page.getByRole("table", { name: /^품질 점검 결과/ }).or(page.getByText("발견된 문제가 없습니다."))).toBeVisible();
   });
 
+  test("관리: 운영 현황(처리 적체·연동·업무·보안 이벤트) (M7)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    await page.getByRole("link", { name: "운영 현황" }).click();
+    await expect(page.getByRole("heading", { name: "운영 현황" })).toBeVisible();
+    await expect(page.getByText(/^전체 (정상|주의|위험)$/)).toBeVisible();
+    await expect(page.getByRole("group", { name: "처리 현황" })).toBeVisible();
+    await expect(page.getByRole("table", { name: /^판매계정별 마지막 주문/ })).toBeVisible();
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");

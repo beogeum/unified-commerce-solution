@@ -18,6 +18,23 @@
 - Metrics: 계정별 수집 최근 성공, 오류율/재시도 수/대기 큐 길이, 비용 원장 누락, 사업자 권한 거부 이벤트.
 - 감사: 재고 조정·폐기·환불·월마감·사업자 소유권 변경·접근정책 변경을 추적.
 
+### 구현된 운영 도구(M7, 2026-11-23)
+- **운영 현황**(`관리 > 운영 현황`, `GET /api/v1/ops/status`, 권한 `audit.read`): 전체 판정(정상·주의·위험)과 점검 항목.
+  - 위험: 전달 실패한 내부 이벤트(`OUTBOX_FAILED`), 인증 만료 연동, 긴급 업무.
+  - 주의: 이벤트 적체 10분 초과(`commerce.ops.outbox-warn`), 멈춘 작업(lease 만료), 24시간 실패 작업, 확인 필요 작업, 연동 연속 실패·24시간 동기화 없음(`commerce.ops.sync-stale`)·14일 내 인증 만료, 권한 거부 24시간 20건 이상.
+  - 판매계정별 마지막 주문 수신 시각, 최근 7일 실패 작업 유형, 개인정보 원문 열람·내보내기 건수.
+- **보관기간 정리**(매일 03:47 KST, `commerce.retention.*`): 만료 후 24시간 지난 내보내기 파일(본문·기록)과 만료된 멱등키 기록 삭제, 감사로그 `RETENTION_PURGED`. 원본 payload·감사로그·원장은 지우지 않는다(주문 개인정보 파기는 별도 작업 04:23).
+- 정기 작업 시각(KST): 재고 검증 03:17, 보관기간 정리 03:47, 주문 개인정보 정리 04:23, 인사이트 분석 06:17, CS 응답기한 30분마다, 송장 감시 30분마다.
+
+## 백업·복구(M7, DLG-218)
+- 백업: `PGHOST=… PGUSER=… PGPASSWORD=… PGDATABASE=commerce_os BACKUP_DIR=/secure/backups scripts/db-backup.sh` — pg_dump 사용자 지정 형식 + SHA-256, `BACKUP_KEEP_DAYS`(기본 14) 지난 파일 정리. 백업에는 개인정보 암호문이 있으므로 접근 제한 저장소·암호화 볼륨에 둔다. 암호화 키(`CRYPTO_KEY_*`)는 백업과 **다른 곳**에 보관(키 없이는 개인정보 복호화 불가).
+- 복구 리허설: `scripts/db-restore-check.sh <백업 파일>` — 임시 PostgreSQL(도커)에 복구 후 체크섬·마이그레이션 이력·핵심 테이블 행 수·추가 전용 트리거·RLS 정책을 점검하고 지운다(운영 DB 를 건드리지 않음). CI 의 `restore-rehearsal` 작업이 매 빌드마다 새 스키마로 같은 절차를 돈다.
+- 첨부·업로드 파일(`FILES_ROOT` 또는 객체 저장소)은 DB 와 같은 시점으로 별도 백업한다.
+- RPO/RTO·백업 주기·보관 기간 수치는 운영계약 후 확정(docs/08 §6). 권장 초기값: 매일 전체 백업 + WAL 아카이브(시점 복구), 분기 1회 복구 리허설 기록.
+
+## 로컬 실행
+- `cd backend && mvn -B -DskipTests package && cd .. && docker compose up --build` (`.env` 에 `CRYPTO_KEY_K1`·`CRYPTO_HMAC_KEY`·`BOOTSTRAP_OWNER_PASSWORD`). 화면 http://localhost:3000.
+
 ## 운영 사고 처리
 - 계정 인증 만료: 해당 연결 중지, 업무함·관리자 알림, 다른 계정은 운영 지속.
 - 3PL 주문 전송 타임아웃: 외부 ID 조회/중복 확인, 안전 재처리.

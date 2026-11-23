@@ -1,0 +1,51 @@
+# 로컬 실행(docs/16 §개발환경). 실 운영 비밀값은 넣지 말고 .env 로 주입한다(.env.example 참고).
+#   cd backend && mvn -B -DskipTests package && cd .. && docker compose up --build
+#   화면: http://localhost:3000  (부트스트랩 관리자: BOOTSTRAP_OWNER_EMAIL / BOOTSTRAP_OWNER_PASSWORD)
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: commerce_os
+      POSTGRES_USER: commerce_os
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-commerce_os}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U commerce_os"]
+      interval: 5s
+      retries: 20
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/commerce_os
+      DB_USER: commerce_os
+      DB_PASSWORD: ${DB_PASSWORD:-commerce_os}
+      CRYPTO_ACTIVE_KEY_ID: ${CRYPTO_ACTIVE_KEY_ID:-k1}
+      CRYPTO_KEY_K1: ${CRYPTO_KEY_K1:?CRYPTO_KEY_K1 을 .env 에 넣으세요(head -c32 /dev/urandom | base64)}
+      CRYPTO_HMAC_KEY: ${CRYPTO_HMAC_KEY:?CRYPTO_HMAC_KEY 를 .env 에 넣으세요}
+      MOCK_CONNECTORS_ENABLED: ${MOCK_CONNECTORS_ENABLED:-true}
+      BOOTSTRAP_ENABLED: ${BOOTSTRAP_ENABLED:-true}
+      BOOTSTRAP_WORKSPACE_CODE: ${BOOTSTRAP_WORKSPACE_CODE:-demo}
+      BOOTSTRAP_OWNER_EMAIL: ${BOOTSTRAP_OWNER_EMAIL:-admin@example.com}
+      BOOTSTRAP_OWNER_PASSWORD: ${BOOTSTRAP_OWNER_PASSWORD:?BOOTSTRAP_OWNER_PASSWORD 를 .env 에 넣으세요}
+    volumes:
+      - files:/data/files
+    ports:
+      - "8080:8080"
+  frontend:
+    build: ./frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      BACKEND_URL: http://backend:8080
+      DEFAULT_WORKSPACE_CODE: ${BOOTSTRAP_WORKSPACE_CODE:-demo}
+      COOKIE_INSECURE: "true"
+    ports:
+      - "3000:3000"
+volumes:
+  db-data:
+  files:

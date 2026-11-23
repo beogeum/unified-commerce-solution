@@ -7,4 +7,7 @@ public interface FileStorage {
     void put(String key, byte[] content);
 
     InputStream open(String key);
+
+    /** 본문 삭제(없으면 무시). 보관기간이 끝난 내보내기 파일 정리용. */
+    void delete(String key);
 }

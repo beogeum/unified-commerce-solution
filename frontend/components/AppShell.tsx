@@ -12,6 +12,7 @@ const MENU: { head?: string; items: Item[] }[] = [
   { head: "재무", items: [{ href: "/finance/settlements", label: "정산·입금", perm: "settlement.read" }, { href: "/finance/costs", label: "비용·원가", perm: "cost.read" }, { href: "/finance/profit", label: "손익", perm: "profit.read" }, { href: "/finance/periods", label: "월 마감", perm: "profit.read" }, { href: "/finance/vat", label: "부가세 신고자료", perm: "settlement.read" }] },
   { head: "관리", items: [
     { href: "/approvals", label: "승인" },
+    { href: "/ops", label: "운영 현황", perm: "audit.read" },
     { href: "/integrations", label: "연동 관리", perm: "integration.read" },
     { href: "/settings/business-entities", label: "사업자 관리", perm: "business_entity.read" },
     { href: "/settings/channel-accounts", label: "판매계정", perm: "channel_account.read" },
