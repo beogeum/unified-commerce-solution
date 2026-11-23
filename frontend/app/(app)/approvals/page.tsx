@@ -11,7 +11,7 @@ import { useApi } from "@/lib/useApi";
 
 type Approval = { id: string; request_type: string; status: string; reason: string; impact: Record<string, string | null>;
   requested_by: string; requested_by_name: string; requested_at: string; decided_by_name: string | null; decision_note: string | null };
-const TYPE_KO: Record<string, string> = { SKU_MIN_PRICE_CHANGE: "최저판매가 변경", INVENTORY_ADJUSTMENT: "재고 조정", INVENTORY_DISPOSAL: "재고 폐기", PERIOD_REOPEN: "월 마감 재개방" };
+const TYPE_KO: Record<string, string> = { SKU_MIN_PRICE_CHANGE: "최저판매가 변경", INVENTORY_ADJUSTMENT: "재고 조정", INVENTORY_DISPOSAL: "재고 폐기", PERIOD_REOPEN: "월 마감 재개방", INTERCOMPANY_TRANSFER: "사업자 간 재고 이전" };
 const STATUS: Record<string, ["warn" | "ok" | "err" | "mute", string]> = {
   PENDING: ["warn", "대기"], APPROVED: ["ok", "승인"], REJECTED: ["err", "반려"], CANCELLED: ["mute", "취소"],
 };

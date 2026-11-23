@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { AllocationTab, LandedCostTab } from "@/components/CostExtras";
 import { DataTable } from "@/components/DataTable";
 import { ConfirmModal } from "@/components/Overlay";
 import { Empty, ErrorState, Forbidden, Loading } from "@/components/States";
@@ -11,7 +12,7 @@ import { useSession } from "@/lib/session";
 
 export default function CostsPage() {
   const { can, selected, entities } = useSession();
-  const [tab, setTab] = useState<"entries" | "rules">("entries");
+  const [tab, setTab] = useState<"entries" | "rules" | "landed" | "alloc">("entries");
   const [category, setCategory] = useState("");
   const [tick, setTick] = useState(0);
   const [entries, setEntries] = useState<Entry[] | null>(null);
@@ -23,6 +24,7 @@ export default function CostsPage() {
   useEffect(() => {
     if (!can("cost.read")) return;
     setError(null);
+    if (tab === "landed" || tab === "alloc") return;
     const p = tab === "entries" ? api<Entry[]>(url).then((r) => setEntries(r.data)) : api<CostRule[]>("/finance/cost-rules").then((r) => setRules(r.data));
     p.catch((e: unknown) => setError(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "불러오지 못했습니다.")));
   }, [tab, url, tick, can]);
@@ -38,10 +40,12 @@ export default function CostsPage() {
       <nav className="row-gap" aria-label="비용 메뉴">
         <button className="btn" type="button" aria-current={tab === "entries" ? "page" : undefined} onClick={() => setTab("entries")}>원장</button>
         <button className="btn" type="button" aria-current={tab === "rules" ? "page" : undefined} onClick={() => setTab("rules")}>예상 비용 규칙</button>
+        <button className="btn" type="button" aria-current={tab === "landed" ? "page" : undefined} onClick={() => setTab("landed")}>입고 부대비용</button>
+        <button className="btn" type="button" aria-current={tab === "alloc" ? "page" : undefined} onClick={() => setTab("alloc")}>공통비 배부</button>
       </nav>
       {tab === "entries" && <div className="row-gap"><label className="fld">항목<select className="inp" value={category} onChange={(e) => setCategory(e.target.value)}>
         <option value="">전체</option>{Object.entries(CATEGORY_KO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label></div>}
-      {error ? <ErrorState error={error} onRetry={() => setTick(tick + 1)} /> : tab === "entries" ? (entries === null ? <Loading /> : (
+      {tab === "landed" ? <LandedCostTab /> : tab === "alloc" ? <AllocationTab /> : error ? <ErrorState error={error} onRetry={() => setTick(tick + 1)} /> : tab === "entries" ? (entries === null ? <Loading /> : (
         <DataTable caption="원장" rows={entries} rowKey={(e) => e.id} empty={<Empty title="원장이 없습니다." />} columns={[
           { key: "d", header: "귀속일", render: (e) => <span className="ctx">{e.period_date}</span> },
           { key: "b", header: "사업자", render: (e) => e.business_entity_name },

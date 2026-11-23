@@ -27,7 +27,14 @@ public class Ledger {
     public record Entry(UUID workspaceId, UUID businessEntityId, UUID channelAccountId, UUID orderId, UUID orderItemId, UUID claimId, UUID foId, UUID shipmentId,
                         UUID skuId, UUID nodeId, String entryClass, String category, String basis, BigDecimal supply, BigDecimal vat, String taxType, Integer quantity,
                         BigDecimal unitCost, LocalDate periodDate, String sourceType, String sourceRef, String sourceKey, UUID reversesId, String scopeKey, String memo,
-                        UUID createdBy) {
+                        UUID createdBy, boolean intercompany, UUID counterpartyBusinessEntityId) {
+        public Entry(UUID workspaceId, UUID businessEntityId, UUID channelAccountId, UUID orderId, UUID orderItemId, UUID claimId, UUID foId, UUID shipmentId,
+                     UUID skuId, UUID nodeId, String entryClass, String category, String basis, BigDecimal supply, BigDecimal vat, String taxType, Integer quantity,
+                     BigDecimal unitCost, LocalDate periodDate, String sourceType, String sourceRef, String sourceKey, UUID reversesId, String scopeKey, String memo,
+                     UUID createdBy) {
+            this(workspaceId, businessEntityId, channelAccountId, orderId, orderItemId, claimId, foId, shipmentId, skuId, nodeId, entryClass, category, basis, supply, vat,
+                    taxType, quantity, unitCost, periodDate, sourceType, sourceRef, sourceKey, reversesId, scopeKey, memo, createdBy, false, null);
+        }
     }
 
     /**
@@ -46,17 +53,17 @@ public class Ledger {
         return jdbc.sql("""
                 insert into financial_entry (id, workspace_id, business_entity_id, channel_account_id, order_id, order_item_id, claim_id, fo_id, shipment_id, sku_id, node_id,
                     entry_class, category, basis, supply_amount, vat_amount, tax_type, quantity, unit_cost, period_date, source_type, source_ref, source_key, reverses_id,
-                    scope_key, memo, created_by, original_period_date)
+                    scope_key, memo, created_by, original_period_date, intercompany, counterparty_business_entity_id)
                 values (:id, :ws, :be, cast(:ca as uuid), cast(:o as uuid), cast(:oi as uuid), cast(:c as uuid), cast(:f as uuid), cast(:s as uuid), cast(:k as uuid),
                     cast(:n as uuid), :cls, :cat, :b, :sup, :vat, :tt, cast(:q as integer), cast(:uc as numeric), :pd, :st, cast(:sr as text), :sk, cast(:rv as uuid),
-                    cast(:sc as text), cast(:m as text), cast(:by as uuid), cast(:op as date))
+                    cast(:sc as text), cast(:m as text), cast(:by as uuid), cast(:op as date), :ic, cast(:cp as uuid))
                 on conflict (workspace_id, source_key) do nothing
                 """).param("id", Ids.newId()).param("ws", e.workspaceId()).param("be", e.businessEntityId()).param("ca", e.channelAccountId()).param("o", e.orderId())
                 .param("oi", e.orderItemId()).param("c", e.claimId()).param("f", e.foId()).param("s", e.shipmentId()).param("k", e.skuId()).param("n", e.nodeId())
                 .param("cls", e.entryClass()).param("cat", e.category()).param("b", e.basis()).param("sup", e.supply()).param("vat", e.vat() == null ? BigDecimal.ZERO : e.vat())
                 .param("tt", e.taxType() == null ? "TAXABLE" : e.taxType()).param("q", e.quantity()).param("uc", e.unitCost()).param("pd", period).param("op", original)
                 .param("st", e.sourceType()).param("sr", e.sourceRef()).param("sk", e.sourceKey()).param("rv", e.reversesId()).param("sc", e.scopeKey()).param("m", memo)
-                .param("by", e.createdBy()).update() > 0;
+                .param("by", e.createdBy()).param("ic", e.intercompany()).param("cp", e.counterpartyBusinessEntityId()).update() > 0;
     }
 
     /** 마감되지 않은 가장 이른 날(해당 날짜가 속한 달이 마감이면 다음 달 1일, 연속 마감이면 그 뒤). */

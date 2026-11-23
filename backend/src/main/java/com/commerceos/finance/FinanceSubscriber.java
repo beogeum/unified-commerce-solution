@@ -22,7 +22,7 @@ public class FinanceSubscriber implements OutboxSubscriber {
     @Override
     public boolean supports(String eventType) {
         return switch (eventType) {
-            case "ShipmentRecorded", "ReturnInspected", "ClaimCompleted", "InventoryDisposed" -> true;
+            case "ShipmentRecorded", "ReturnInspected", "ClaimCompleted", "InventoryDisposed", "IntercompanyTransferCompleted" -> true;
             default -> false;
         };
     }
@@ -34,6 +34,7 @@ public class FinanceSubscriber implements OutboxSubscriber {
             case "ShipmentRecorded" -> posting.onShipment(ws, UUID.fromString(e.payload().get("fulfillment_order_id").asString()));
             case "ReturnInspected" -> posting.onReturnInspected(ws, UUID.fromString(e.payload().get("return_receipt_id").asString()));
             case "ClaimCompleted" -> posting.onClaimCompleted(ws, UUID.fromString(e.payload().get("claim_id").asString()));
+            case "IntercompanyTransferCompleted" -> posting.onIntercompanyTransfer(ws, UUID.fromString(e.payload().get("transfer_id").asString()));
             default -> posting.onDisposed(ws, UUID.fromString(e.payload().get("approval_id").asString()), UUID.fromString(e.payload().get("stock_id").asString()),
                     e.payload().get("quantity").asInt());
         }

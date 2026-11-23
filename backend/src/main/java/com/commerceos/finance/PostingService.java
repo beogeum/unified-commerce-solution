@@ -321,6 +321,41 @@ public class PostingService {
         }
     }
 
+    // ---------------------------------------------------------------- 사업자 간 재고 이전(T35)
+
+    /**
+     * 보내는 사업자에 내부 매출(공급가·부가세)과 내부 매출원가(승인 시점 단가)를 내부거래로 기록(DLG-033·034·174).
+     * 받는 사업자는 손익이 아니라 재고 자산(이전 단가로 이동평균)이므로 원장 행이 없다.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void onIntercompanyTransfer(UUID ws, UUID transferId) {
+        Map<String, Object> t = jdbc.sql("select * from intercompany_transfer where workspace_id = :ws and id = :id and status = 'COMPLETED'").param("ws", ws)
+                .param("id", transferId).query().listOfRows().stream().findFirst().orElse(null);
+        if (t == null) {
+            return;
+        }
+        UUID from = (UUID) t.get("from_business_entity_id");
+        UUID to = (UUID) t.get("to_business_entity_id");
+        UUID sku = (UUID) t.get("sku_id");
+        UUID node = (UUID) t.get("node_id");
+        int qty = ((Number) t.get("quantity")).intValue();
+        LocalDate period = Ledger.period(instant(t.get("completed_at")));
+        String ref = transferId.toString();
+        String tax = (String) t.get("tax_type");
+        ledger.post(new Ledger.Entry(ws, from, null, null, null, null, null, null, sku, node, "REVENUE", "SALES", "ACTUAL", (BigDecimal) t.get("supply_amount"),
+                (BigDecimal) t.get("vat_amount"), tax, qty, null, period, "INTERCOMPANY_TRANSFER", ref, "ICT:" + transferId + ":SALES", null, null,
+                "사업자 간 재고 이전(내부 매출, 세금계산서 발행 대상)", null, true, to));
+        BigDecimal unit = (BigDecimal) t.get("unit_cost");
+        ledger.post(new Ledger.Entry(ws, from, null, null, null, null, null, null, sku, node, "COST", "PRODUCT_COGS", unit == null ? "ESTIMATED" : "ACTUAL",
+                unit == null ? BigDecimal.ZERO : Ledger.won(unit.multiply(BigDecimal.valueOf(qty))), BigDecimal.ZERO, "OUT_OF_SCOPE", qty, unit, period,
+                "INTERCOMPANY_TRANSFER", ref, "ICT:" + transferId + ":COGS", null, null, "사업자 간 재고 이전(내부 매출원가)", null, true, to));
+        if (unit == null) {
+            workItems.raise(new WorkItemService.Raise(ws, from, null, null, "FINANCE_COST_MISSING", "MEDIUM", "사업자 간 이전 원가 미등록 SKU",
+                    "원가가 없는 SKU 를 다른 사업자로 이전해 내부 매출원가를 0 으로 기록했습니다.", "원가를 등록한 뒤 비용 등록으로 보정하세요.", "cost-missing:" + from + ":" + sku,
+                    Map.of("sku_id", sku.toString())));
+        }
+    }
+
     /** 이 버킷에서 장부가가 이미 0 인(평가손실·불량 반품) 아직 폐기되지 않은 수량. */
     int impairedPool(UUID stockId) {
         return jdbc.sql("""

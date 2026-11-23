@@ -35,6 +35,7 @@ export const QUALITY_KO: Record<string, string> = {
 export const TXN_KO: Record<string, string> = {
   RECEIPT: "입고", QUALITY_CHANGE: "품질 변경", RESERVE: "예약", ALLOCATE: "할당", PICK: "피킹", CONSUME: "출고 확정", RELEASE: "확보 해제",
   EXTERNAL_SYNC: "외부 재고 동기화", ADJUSTMENT: "조정", TRANSFER_OUT: "이동 출고", TRANSFER_IN: "이동 입고", ASSEMBLY_OUT: "조립 투입", ASSEMBLY_IN: "조립 완성", DISPOSAL: "폐기",
+  LOCATION_MOVE: "로케이션 이동", OWNERSHIP_TRANSFER_OUT: "사업자 간 이전(출고)", OWNERSHIP_TRANSFER_IN: "사업자 간 이전(입고)",
 };
 export const RES_STATE: Record<string, ["info" | "ok" | "warn" | "mute", string]> = {
   RESERVED: ["info", "예약"], ALLOCATED: ["warn", "할당"], PICKING: ["warn", "피킹"], CONSUMED: ["ok", "출고 확정"], RELEASED: ["mute", "해제"],

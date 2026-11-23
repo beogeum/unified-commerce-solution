@@ -48,9 +48,11 @@ public class FinanceService {
     private final WorkItemService workItems;
     private final AuditService audit;
     private final BigDecimal varianceThreshold;
+    private final GroupElimination elimination;
 
     public FinanceService(JdbcClient jdbc, AccessGuard guard, Ledger ledger, UnitCosts costs, PostingService posting, WorkItemService workItems, AuditService audit,
-                          @Value("${commerce.finance.variance-review-threshold:100}") BigDecimal varianceThreshold) {
+                          @Value("${commerce.finance.variance-review-threshold:100}") BigDecimal varianceThreshold, GroupElimination elimination) {
+        this.elimination = elimination;
         this.jdbc = jdbc;
         this.guard = guard;
         this.ledger = ledger;
@@ -81,7 +83,7 @@ public class FinanceService {
                             BigDecimal contribution, BigDecimal marginPct, BigDecimal estimatedCost, int missingCostLines) {
     }
 
-    public record Profit(LocalDate from, LocalDate to, String groupBy, List<ProfitRow> rows, ProfitRow total, String basisNote) {
+    public record Profit(LocalDate from, LocalDate to, String groupBy, List<ProfitRow> rows, ProfitRow total, String basisNote, GroupElimination.Elimination elimination) {
     }
 
     public record EntryView(UUID id, UUID businessEntityId, String businessEntityName, UUID channelAccountId, UUID orderId, String orderNo, UUID orderItemId,
@@ -118,6 +120,10 @@ public class FinanceService {
                 .optional().orElse(null);
         if (existing != null) {
             return new CostResult(existing, List.of(), null, null, null, false);
+        }
+        if (c.sourceRef() != null && !c.sourceRef().isBlank() && jdbc.sql("select count(*) from landed_cost where business_entity_id = :be and source_ref = :r")
+                .param("be", c.businessEntityId()).param("r", c.sourceRef().trim()).query(Integer.class).single() > 0) {
+            throw Errors.conflict("LANDED_COST_CAPITALIZED", "같은 근거번호의 청구가 입고 부대비용으로 이미 취득원가에 반영되어 있습니다. 비용으로 다시 기록하면 이중 차감됩니다.");
         }
         String scopeKey = scopeKey(c.category(), c.scope());
         UUID orderId = c.orderId();
@@ -272,7 +278,7 @@ public class FinanceService {
         LocalDate f = from == null ? LocalDate.now(Ledger.KST).withDayOfMonth(1) : from;
         LocalDate t = to == null ? LocalDate.now(Ledger.KST) : to;
         if (bes.isEmpty()) {
-            return new Profit(f, t, g, List.of(), emptyRow(), BASIS_NOTE);
+            return new Profit(f, t, g, List.of(), emptyRow(), BASIS_NOTE, null);
         }
         Map<String, Object> p = new LinkedHashMap<>(Map.of("ws", guard.actor().workspaceId(), "bes", bes, "f", f, "t", t));
         StringBuilder where = new StringBuilder(" where e.workspace_id = :ws and e.business_entity_id in (:bes) and e.period_date between :f and :t and e.entry_class <> 'MEMO'");
@@ -297,7 +303,13 @@ public class FinanceService {
                 target.add((String) r.get("category"), (String) r.get("basis"), (BigDecimal) r.get("amt"), ((Number) r.get("missing")).intValue());
             }
         }
-        return new Profit(f, t, g, rows.values().stream().map(ProfitAcc::row).toList(), total.row(), BASIS_NOTE);
+        // 운영그룹 합계: 범위 안 사업자 간 내부거래 제거(사업자별 행은 그대로, DLG-033). 판매계정 필터가 있으면 내부거래 행이 범위 밖이므로 적용하지 않는다.
+        GroupElimination.Elimination el = channelAccountId != null ? null : elimination.compute(guard.actor().workspaceId(), bes, f, t);
+        if (el != null) {
+            total.add("SALES", "ACTUAL", el.internalSales().negate(), 0);
+            total.add("PRODUCT_COGS", "ACTUAL", el.cogsAdjustment(), 0);
+        }
+        return new Profit(f, t, g, rows.values().stream().map(ProfitAcc::row).toList(), total.row(), BASIS_NOTE, el);
     }
 
     static final String BASIS_NOTE = "관리 손익(부가세 제외 공급가 기준)이며 법정 재무제표·세무 신고와 다릅니다. 매출은 출고 확정 시, 반품은 회수 검수 완료 시 반영합니다. "

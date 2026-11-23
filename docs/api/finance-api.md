@@ -55,3 +55,28 @@
 
 마감 월에는 원장을 기록할 수 없다(DB 트리거). 마감 후 사건은 다음 열린 달 1일로 귀속하고 `original_period_date`·메모 "마감 후 발생(원 귀속 YYYY-MM)"으로 원거래 월과 연결한다.
 
+## 6. 입고 부대비용 (T33, DLG-169·170)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `POST /finance/landed-costs {business_entity_id, cost_type(FREIGHT·DUTY·CUSTOMS·INSPECTION·OTHER), supply_amount, vat_amount?, method(QUANTITY·AMOUNT·MANUAL), source_ref, memo?, receipts[{receipt_txn_id, amount?}]}` | `cost.manage` + 사업자 쓰기·거점 범위 | 입고 행(`GET /inventory/transactions?txn_type=RECEIPT`)에 배부. 보유분 → 이동평균 원가, 출고분 → `PRODUCT_COGS`. 오류: `RECEIPT_COST_MISSING`(금액 기준인데 입고 단가 없음), `ALLOCATION_TOTAL_MISMATCH`(직접 지정 합계 ≠ 공급가), `409 LANDED_COST_DUPLICATE`, `409 COST_ALREADY_EXPENSED` |
+| `GET /finance/landed-costs?business_entity_id` · `GET /finance/landed-costs/{id}` | `cost.read` | 줄별 배부·취득원가·매출원가·배부 시점 보유 수량 |
+
+`POST /finance/cost-entries` 는 같은 사업자·근거번호가 부대비용으로 반영돼 있으면 `409 LANDED_COST_CAPITALIZED`.
+`POST /inventory/receipts` 에 `unit_cost` 를 주면 입고 단가가 보존된다(금액 기준 배부 근거).
+
+## 7. 공통비 배부 (T34, DLG-171·172)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `POST /finance/cost-allocations {category, supply_amount, vat_amount?, period_date?, method(NET_SALES·EQUAL·MANUAL_RATIO), basis_from?, basis_to?, targets[{business_entity_id, ratio?}], source_ref?, memo?}` + `Idempotency-Key` | `cost.manage` + 모든 대상 사업자 쓰기 범위 | 대상 2곳 이상. 사업자별 실제 비용 원장(`COST_ALLOCATION`), 줄마다 분자·분모 보존. `ALLOCATION_BASE_ZERO` |
+| `POST /finance/cost-allocations/{id}/reallocate {method?, targets, basis_from?, basis_to?, memo?}` | 〃 | 새 버전, 이전 버전 원장 반대 거래, 이전 상태 `SUPERSEDED`(`409 ALLOCATION_SUPERSEDED`) |
+| `GET /finance/cost-allocations?business_entity_id` · `GET /finance/cost-allocations/{id}` | `cost.read` | 범위 밖 사업자 몫은 금액 숨김 |
+
+## 8. 사업자 간 재고 이전·내부거래 제거 (T35, DLG-173~176)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `POST /inventory/ownership-transfers {stock_id, to_business_entity_id, quantity, unit_price, tax_type?, reason}` (+ `Idempotency-Key` 선택) | `inventory.adjust` + 양쪽 사업자 쓰기 범위 | `202` 승인 요청(`INTERCOMPANY_TRANSFER`). 판매가능·자체 원장 거점만, 같은 사업자 `VALIDATION_FAILED`, 수량 초과 `STOCK_INSUFFICIENT` |
+| `POST /approvals/{approval_id}/decision` | `approval.decide` + `cost.manage`(`APPROVER_NEEDS_COST_MANAGE`) | 본인 승인 불가. 승인 시 소유자 변경·재고 원장·내부 매출·원가 |
+| `GET /inventory/ownership-transfers?business_entity_id` · `GET /inventory/ownership-transfers/{id}` | `inventory.read`(보낸·받은 사업자 중 하나 조회 범위) | 상태 `PENDING·COMPLETED·REJECTED·CANCELLED`, `tax_invoice_required` |
+
+`GET /finance/profit` 응답의 `elimination`(범위에 양쪽 사업자가 있을 때): `internal_sales`, `unrealized_at_start`, `unrealized_at_end`, `cogs_adjustment`, `note`. 합계 행에만 반영되고 사업자별 행은 그대로다.
+

@@ -126,8 +126,14 @@ public class InventoryService {
         if (r.unitCost() != null) {
             updateMovingCost(a.workspaceId(), r.businessEntityId(), r.skuId(), qty, r.unitCost());
         }
-        ledger.record(a.workspaceId(), new Txn("RECEIPT", p, stockId, quality, qty, sellable, 0, null, null, null,
+        UUID txnId = ledger.record(a.workspaceId(), new Txn("RECEIPT", p, stockId, quality, qty, sellable, 0, null, null, null,
                 trimOrNull(r.referenceType()), trimOrNull(r.referenceId()), trimOrNull(r.reason()), a.memberId()));
+        if (r.unitCost() != null) {
+            // 입고 단가 보존(입고 부대비용 금액 기준 배부 근거, T33)
+            jdbc.sql("insert into inventory_receipt_cost (txn_id, workspace_id, business_entity_id, sku_id, quantity, unit_cost) values (:t, :ws, :b, :s, :q, :c)")
+                    .param("t", txnId).param("ws", a.workspaceId()).param("b", r.businessEntityId()).param("s", r.skuId()).param("q", qty).param("c", r.unitCost())
+                    .update();
+        }
         if (sellable > 0) {
             availabilityChanged(a.workspaceId(), p);
         }
@@ -373,6 +379,32 @@ public class InventoryService {
     /**
      * 이동평균 원가 갱신(M5, DLG-035·156): 사업자·SKU 전 거점 실물(입고 전) × 기존 평균 + 입고 수량 × 입고 단가. 반품 입고는 단가 없이 들어와 평균을 바꾸지 않는다.
      */
+    /**
+     * 입고 부대비용 중 아직 보유 중인 수량분을 이동평균 원가에 더한다(T33). 보유 수량이 0 이면 더할 곳이 없으므로 호출하지 않는다.
+     * @return 갱신 후 평균 단가
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public BigDecimal capitalize(UUID ws, UUID be, UUID sku, BigDecimal amount) {
+        int onHand = jdbc.sql("select coalesce(sum(on_hand), 0) from inventory_stock where owner_business_entity_id = :b and sku_id = :s").param("b", be).param("s", sku)
+                .query(Integer.class).single();
+        if (onHand <= 0) {
+            throw new IllegalStateException("no stock to capitalize");
+        }
+        java.util.Optional<BigDecimal> cur = jdbc.sql("select avg_unit_cost from sku_moving_cost where business_entity_id = :b and sku_id = :s for update").param("b", be)
+                .param("s", sku).query(BigDecimal.class).optional();
+        BigDecimal base = cur.orElseGet(() -> unitCost(ws, be, sku).orElse(BigDecimal.ZERO));
+        BigDecimal avg = base.multiply(BigDecimal.valueOf(onHand)).add(amount).divide(BigDecimal.valueOf(onHand), 4, java.math.RoundingMode.HALF_UP);
+        jdbc.sql("insert into sku_moving_cost (workspace_id, business_entity_id, sku_id, avg_unit_cost, basis_quantity) values (:ws, :b, :s, :a, :q) "
+                + "on conflict (business_entity_id, sku_id) do update set avg_unit_cost = excluded.avg_unit_cost, basis_quantity = excluded.basis_quantity, updated_at = now()")
+                .param("ws", ws).param("b", be).param("s", sku).param("a", avg).param("q", onHand).update();
+        return avg;
+    }
+
+    /** 다른 사업자로부터 소유권을 넘겨받은 입고(내부 매입)의 이동평균 반영. */
+    void updateMovingCostForTransfer(UUID ws, UUID be, UUID sku, int qty, BigDecimal unitCost) {
+        updateMovingCost(ws, be, sku, qty, unitCost);
+    }
+
     private void updateMovingCost(UUID ws, UUID be, UUID sku, int qty, BigDecimal unitCost) {
         if (unitCost.signum() < 0) {
             throw Errors.validation("unit_cost", "입고 단가는 0 이상입니다.");

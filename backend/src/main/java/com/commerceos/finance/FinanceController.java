@@ -21,10 +21,51 @@ import org.springframework.web.bind.annotation.RestController;
 public class FinanceController {
     private final FinanceService finance;
     private final CostRuleService rules;
+    private final LandedCostService landed;
+    private final CostAllocationService allocations;
 
-    public FinanceController(FinanceService finance, CostRuleService rules) {
+    public FinanceController(FinanceService finance, CostRuleService rules, LandedCostService landed, CostAllocationService allocations) {
         this.finance = finance;
         this.rules = rules;
+        this.landed = landed;
+        this.allocations = allocations;
+    }
+
+    @GetMapping("/landed-costs")
+    public ApiResponse<List<LandedCostService.LandedCostView>> landedCosts(@RequestParam(name = "business_entity_id", required = false) List<String> be) {
+        return ApiResponse.of(landed.list(be));
+    }
+
+    @GetMapping("/landed-costs/{id}")
+    public ApiResponse<LandedCostService.LandedCostView> landedCost(@org.springframework.web.bind.annotation.PathVariable UUID id) {
+        return ApiResponse.of(landed.get(id));
+    }
+
+    @PostMapping("/landed-costs")
+    public ResponseEntity<ApiResponse<LandedCostService.LandedCostView>> createLandedCost(@RequestBody LandedCostService.NewLandedCost body) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.of(landed.create(body)));
+    }
+
+    @GetMapping("/cost-allocations")
+    public ApiResponse<List<CostAllocationService.AllocationView>> allocations(@RequestParam(name = "business_entity_id", required = false) List<String> be) {
+        return ApiResponse.of(allocations.list(be));
+    }
+
+    @GetMapping("/cost-allocations/{id}")
+    public ApiResponse<CostAllocationService.AllocationView> allocation(@org.springframework.web.bind.annotation.PathVariable UUID id) {
+        return ApiResponse.of(allocations.get(id));
+    }
+
+    @PostMapping("/cost-allocations")
+    public ResponseEntity<ApiResponse<CostAllocationService.AllocationView>> allocate(@RequestHeader(value = "Idempotency-Key", required = false) String key,
+                                                                                      @RequestBody CostAllocationService.NewAllocation body) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.of(allocations.create(body, key)));
+    }
+
+    @PostMapping("/cost-allocations/{id}/reallocate")
+    public ResponseEntity<ApiResponse<CostAllocationService.AllocationView>> reallocate(@org.springframework.web.bind.annotation.PathVariable UUID id,
+                                                                                        @RequestBody CostAllocationService.NewAllocation body) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.of(allocations.reallocate(id, body)));
     }
 
     @GetMapping("/profit")

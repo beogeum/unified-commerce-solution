@@ -56,6 +56,8 @@ export default function ProfitPage() {
             { key: "e", header: "예상 비용", num: true, render: (r) => <span className="ctx">{won(r.estimated_cost)}{r.missing_cost_lines > 0 ? ` · 원가 미등록 ${r.missing_cost_lines}` : ""}</span> },
           ]} />
       )}
+      {data?.elimination && <div className="note n-info" role="note"><b>운영그룹 합계 내부거래 제거</b> · 내부 매출 −{won(data.elimination.internal_sales)}원 · 매출원가 조정 {won(data.elimination.cogs_adjustment)}원
+        · 받은 사업자 보유 재고의 미실현 내부 이익 {won(data.elimination.unrealized_at_end)}원. {data.elimination.note}</div>}
       {drill && <EntriesDrawer title={`${GROUP_KO[group]} ${drill.label} 원장`} filter={group === "order" && drill.key !== "-" ? { order_id: drill.key }
         : group === "business_entity" ? { business_entity_id: drill.key } : { business_entity_id: selected ?? undefined }} from={from} to={to} onClose={() => setDrill(null)} />}
     </>

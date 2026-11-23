@@ -1,6 +1,6 @@
 export type ProfitRow = { key: string; label: string; net_sales: string; other_revenue: string; costs: Record<string, string>; total_cost: string; contribution: string;
   margin_pct: string | null; estimated_cost: string; missing_cost_lines: number };
-export type Profit = { from: string; to: string; group_by: string; rows: ProfitRow[]; total: ProfitRow; basis_note: string };
+export type Profit = { from: string; to: string; group_by: string; rows: ProfitRow[]; total: ProfitRow; basis_note: string; elimination: Elimination | null };
 export type Entry = { id: string; business_entity_id: string; business_entity_name: string; channel_account_id: string | null; order_id: string | null;
   order_no: string | null; order_item_id: string | null; claim_id: string | null; fulfillment_order_id: string | null; sku_id: string | null; sku_code: string | null;
   entry_class: string; category: string; basis: string; supply_amount: string; vat_amount: string; tax_type: string; quantity: number | null; unit_cost: string | null;
@@ -50,3 +50,18 @@ export const LINE_TYPE_KO: Record<string, string> = { SALE: "판매", SHIPPING_F
 export const APPLIED_KO: Record<string, string> = { LEDGER: "원장 반영", RECON_ONLY: "대사용", REVIEW: "검토 필요" };
 export const MATCH_KO: Record<string, string> = { ITEM: "주문상품", ORDER: "주문", PERIOD: "기간(주문 없음)", UNMATCHED: "원주문 없음" };
 export const RUN_STATUS_KO: Record<string, string> = { IMPORTED: "가져옴", RECONCILED: "대사 완료", ISSUES: "확인 필요" };
+
+// ---------------------------------------------------------------- 입고 부대비용·공통비 배부·내부거래 제거(M5 3차)
+export type LandedCostLine = { receipt_txn_id: string; sku_id: string; sku_code: string; quantity: number; basis_value: string; allocated: string; capitalized: string;
+  expensed: string; on_hand_at_allocation: number };
+export type LandedCost = { id: string; business_entity_id: string; business_entity_name: string; cost_type: string; supply_amount: string; vat_amount: string; method: string;
+  source_ref: string; memo: string | null; capitalized: string; expensed: string; lines: LandedCostLine[]; created_at: string };
+export type AllocationLine = { business_entity_id: string; business_entity_name: string; numerator: string | null; denominator: string | null; supply_amount: string | null;
+  vat_amount: string | null; entry_id: string | null };
+export type Allocation = { id: string; allocation_no: string; version: number; supersedes_id: string | null; status: string; category: string; supply_amount: string;
+  vat_amount: string; period_date: string; method: string; basis_from: string | null; basis_to: string | null; source_ref: string | null; memo: string | null;
+  lines: AllocationLine[]; created_at: string };
+export type Elimination = { internal_sales: string; unrealized_at_start: string; unrealized_at_end: string; cogs_adjustment: string; note: string };
+export const LANDED_TYPE_KO: Record<string, string> = { FREIGHT: "운임", DUTY: "관세", CUSTOMS: "통관", INSPECTION: "검사", OTHER: "기타" };
+export const LANDED_METHOD_KO: Record<string, string> = { QUANTITY: "수량 비중", AMOUNT: "입고 금액 비중", MANUAL: "직접 지정" };
+export const ALLOC_METHOD_KO: Record<string, string> = { NET_SALES: "순매출 비중", EQUAL: "균등", MANUAL_RATIO: "직접 비율" };

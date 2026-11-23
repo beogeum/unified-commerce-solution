@@ -963,6 +963,56 @@ test.describe.serial("Foundation", () => {
     await expect(pd.getByRole("button", { name: "재개방 승인 대기 중" })).toBeDisabled();
   });
 
+  test("재무: 입고 부대비용 → 공통비 균등 배부 → 사업자 간 재고 이전 요청(승인 대기) (M5 T33·T34·T35)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    await page.getByRole("link", { name: "비용·원가" }).click();
+    await page.getByRole("button", { name: "입고 부대비용", exact: true }).click();
+    await page.getByRole("button", { name: "입고 부대비용 반영" }).click();
+    let m = page.getByRole("alertdialog");
+    await m.getByLabel("부대비용 사업자").selectOption({ label: NAMES.a });
+    await m.getByRole("checkbox").first().check();
+    await m.getByLabel("공급가(원)").fill("3000");
+    await m.getByLabel("근거번호(청구서·수입신고)").fill(`FRT-${RUN}`);
+    await m.getByRole("button", { name: "반영", exact: true }).click();
+    await expect(page.getByRole("status").filter({ hasText: "재고 원가에" })).toBeVisible();
+    await expect(page.getByRole("row", { name: new RegExp(`FRT-${RUN}`) })).toContainText("3,000");
+
+    await page.getByRole("button", { name: "공통비 배부", exact: true }).click();
+    await page.getByRole("button", { name: "공통비 배부", exact: true }).nth(1).click();
+    m = page.getByRole("alertdialog");
+    await m.getByLabel("공급가(원)").fill("1001");
+    await m.getByLabel("근거번호").fill(`ADS-${RUN}`);
+    await m.getByLabel("배부 기준").selectOption({ label: "균등" });
+    await m.getByRole("checkbox", { name: NAMES.a }).check();
+    await m.getByRole("checkbox", { name: NAMES.b }).check();
+    await m.getByRole("button", { name: "배부", exact: true }).click();
+    const allocNote = page.getByRole("status").filter({ hasText: /AL-\d+ v1:/ });
+    await expect(allocNote).toContainText("500원");
+    await expect(allocNote).toContainText("501원");
+
+    await page.getByRole("link", { name: "사업자 간 이전" }).click();
+    await page.getByRole("button", { name: "이전 요청" }).click();
+    m = page.getByRole("alertdialog");
+    await m.getByLabel("보내는 사업자").selectOption({ label: NAMES.a });
+    await m.getByLabel("받는 사업자").selectOption({ label: NAMES.b });
+    // 자체 WMS 거점 재고(물류사 거점은 받는 사업자 화주계정이 없으면 섞을 수 없음)
+    const stockSel = m.getByLabel("이전 재고");
+    const selfOpt = await stockSel.locator("option", { hasText: `SELF-${RUN}`.toUpperCase() }).first().getAttribute("value");
+    await stockSel.selectOption(selfOpt!);
+    await m.getByLabel("이전 단가(원, 공급가)").fill("10000");
+    await m.getByLabel("사유").fill("B 판매용 이관");
+    await m.getByRole("button", { name: "승인 요청" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "이전 승인을 요청했습니다." })).toBeVisible();
+    await expect(page.getByRole("row", { name: /B 판매용 이관/ })).toContainText("승인 대기");
+    await page.getByRole("link", { name: "승인", exact: true }).click();
+    await expect(page.getByRole("row", { name: /사업자 간 재고 이전/ }).first()).toBeVisible();
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");
