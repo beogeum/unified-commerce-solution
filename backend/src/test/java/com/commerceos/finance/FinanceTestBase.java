@@ -20,21 +20,21 @@ import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 
 /** 재무 통합 테스트 공통 준비(사업자·판매계정·SKU·원가·입고·주문·출고). */
-abstract class FinanceTestBase extends IntegrationTest {
+public abstract class FinanceTestBase extends IntegrationTest {
     @Autowired
     PostingService posting;
     @Autowired
     PlatformTransactionManager tm;
 
-    record Ctx(Fixtures.Ws ws, Api o, UUID be, UUID acc, UUID amp, UUID amp50, UUID gift, UUID hs) {
+    public record Ctx(Fixtures.Ws ws, Api o, UUID be, UUID acc, UUID amp, UUID amp50, UUID gift, UUID hs) {
     }
 
-    Ctx ctx(String beName) {
+    protected Ctx ctx(String beName) {
         Fixtures.Ws ws = fx.workspace();
         return ctx(ws, beName, "AMP");
     }
 
-    Ctx ctx(Fixtures.Ws ws, String beName, String prefix) {
+    protected Ctx ctx(Fixtures.Ws ws, String beName, String prefix) {
         Api o = ws.owner();
         UUID be = fx.businessEntity(o, beName);
         UUID acc = fx.channelAccount(o, be, "NAVER_SMARTSTORE", beName + " 스토어");
@@ -58,7 +58,7 @@ abstract class FinanceTestBase extends IntegrationTest {
         return c;
     }
 
-    UUID sku(Api o, UUID product, String code, String type) {
+    protected UUID sku(Api o, UUID product, String code, String type) {
         Map<String, Object> body = new LinkedHashMap<>(Map.of("product_id", product.toString(), "sku_code", code, "sku_type", type));
         if ("GIFT".equals(type)) {
             body.put("sellable", true);
@@ -68,17 +68,17 @@ abstract class FinanceTestBase extends IntegrationTest {
         return r.id();
     }
 
-    void map(Api o, UUID unit, String product, UUID sku) {
+    protected void map(Api o, UUID unit, String product, UUID sku) {
         Api.Res l = o.post("/api/v1/channel-listings", Map.of("sales_unit_id", unit.toString(), "external_product_id", product, "external_option_id", "", "title", product));
         o.post("/api/v1/channel-listings/" + l.data().get("listing").get("id").asString() + "/mapping", Map.of("sku_id", sku.toString()));
     }
 
-    void cost(Ctx c, UUID sku, int unitCost) {
+    protected void cost(Ctx c, UUID sku, int unitCost) {
         Api.Res r = c.o().post("/api/v1/business-entities/" + c.be() + "/sku-costs/" + sku, Map.of("unit_cost", unitCost, "reason", "기준 원가"));
         assertThat(r.status()).as(r.body().toString()).isEqualTo(201);
     }
 
-    void rule(Ctx c, String category, String method, Integer amount, Integer bps, boolean node) {
+    protected void rule(Ctx c, String category, String method, Integer amount, Integer bps, boolean node) {
         Map<String, Object> b = new LinkedHashMap<>();
         b.put("business_entity_id", c.be().toString());
         if (node) {
@@ -98,7 +98,7 @@ abstract class FinanceTestBase extends IntegrationTest {
     }
 
     /** items: (상품번호, 수량, 단가, 판매자할인, 채널할인, 사은품) */
-    String order(Ctx c, String key, Object[]... items) {
+    protected String order(Ctx c, String key, Object[]... items) {
         Instant now = Instant.now();
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("external_order_key", key);
@@ -130,7 +130,7 @@ abstract class FinanceTestBase extends IntegrationTest {
         return r.data().get("results").get(0).get("order_id").asString();
     }
 
-    String shipOrder(Ctx c, String orderId) {
+    protected String shipOrder(Ctx c, String orderId) {
         JsonNode f = c.o().get("/api/v1/fulfillment-orders?order_id=" + orderId).data().get(0);
         Api.Res r = c.o().post("/api/v1/fulfillment-orders/" + f.get("id").asString() + "/ship", Map.of("shipped_at", Instant.now().minusSeconds(5).toString(),
                 "parcels", List.of(Map.of("carrier_code", "CJ", "tracking_no", "6" + Math.abs(UUID.randomUUID().getMostSignificantBits() % 100000000000L)))));
@@ -139,18 +139,18 @@ abstract class FinanceTestBase extends IntegrationTest {
         return f.get("id").asString();
     }
 
-    JsonNode total(Api api, UUID be) {
+    protected JsonNode total(Api api, UUID be) {
         Api.Res r = api.get("/api/v1/finance/profit?business_entity_id=" + be);
         assertThat(r.status()).as(r.body().toString()).isEqualTo(200);
         return r.data().get("total");
     }
 
-    static int cost(JsonNode row, String category) {
+    protected static int cost(JsonNode row, String category) {
         JsonNode v = row.get("costs").get(category);
         return v == null ? 0 : v.asInt();
     }
 
-    String itemId(Ctx c, String orderId, String product) {
+    protected String itemId(Ctx c, String orderId, String product) {
         for (JsonNode i : c.o().get("/api/v1/orders/" + orderId).data().get("items")) {
             if (i.get("external_product_id").asString().equals(product)) {
                 return i.get("id").asString();
@@ -159,7 +159,7 @@ abstract class FinanceTestBase extends IntegrationTest {
         throw new AssertionError();
     }
 
-    String returnAndInspect(Ctx c, String orderId, String type, String condition, Map<String, Object> extra) {
+    protected String returnAndInspect(Ctx c, String orderId, String type, String condition, Map<String, Object> extra) {
         Map<String, Object> body = new LinkedHashMap<>(Map.of("order_id", orderId, "claim_type", type, "reason_code", "CHANGE_OF_MIND",
                 "items", List.of(Map.of("order_item_id", itemId(c, orderId, "P-100"), "quantity", 1))));
         body.putAll(extra);

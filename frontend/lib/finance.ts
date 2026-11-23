@@ -65,3 +65,20 @@ export type Elimination = { internal_sales: string; unrealized_at_start: string;
 export const LANDED_TYPE_KO: Record<string, string> = { FREIGHT: "운임", DUTY: "관세", CUSTOMS: "통관", INSPECTION: "검사", OTHER: "기타" };
 export const LANDED_METHOD_KO: Record<string, string> = { QUANTITY: "수량 비중", AMOUNT: "입고 금액 비중", MANUAL: "직접 지정" };
 export const ALLOC_METHOD_KO: Record<string, string> = { NET_SALES: "순매출 비중", EQUAL: "균등", MANUAL_RATIO: "직접 비율" };
+
+// ---------------------------------------------------------------- 운영 리포트·인사이트(M6)
+export type InsightCard = { id: string; rule: string; severity: "HIGH" | "MEDIUM" | "LOW"; status: string; business_entity_id: string; business_entity_name: string;
+  channel_account_id: string | null; sku_id: string | null; title: string; summary: string; metric: Record<string, unknown>;
+  causes: { code: string; label: string; delta_pp?: string; certainty?: string; current_amount?: string; previous_amount?: string }[];
+  evidence: Record<string, unknown>; unconfirmed: string[]; observed_on: string; first_detected_at: string; last_detected_at: string; resolved_at: string | null;
+  work_item_id: string | null; dismiss_reason: string | null };
+export const RULE_KO: Record<string, string> = { MARGIN_DROP: "공헌이익률 급락", STOCKOUT_RISK: "품절 위험", SLOW_MOVING: "장기 미판매 재고", EXPIRY_RISK: "유통기한 임박",
+  SETTLEMENT_MISSING: "정산 누락 의심", UNDEPOSITED: "미입금 정산" };
+export const INSIGHT_STATUS_KO: Record<string, string> = { OPEN: "열림", ACTIONED: "검토 업무 생성", DISMISSED: "무시", RESOLVED: "해결" };
+export const METRIC_KO: Record<string, string> = { current_margin_pct: "최근 이익률(%)", previous_margin_pct: "직전 이익률(%)", delta_pp: "변화(%p)",
+  current_net_sales: "최근 순매출", previous_net_sales: "직전 순매출", current_contribution: "최근 공헌이익", previous_contribution: "직전 공헌이익",
+  current_from: "최근 기간 시작", current_to: "최근 기간 끝", previous_from: "직전 기간 시작", previous_to: "직전 기간 끝", atp: "판매가능(확보 제외)",
+  sold_28d: "최근 28일 판매", avg_daily_sales: "일평균 판매", days_of_cover: "재고일수", threshold_days: "기준 일수", on_hand: "보유 수량",
+  days_without_sale: "미판매 기준 일수", last_sale_at: "마지막 출고", book_value: "장부가(원)", lot_code: "LOT", expires_on: "유통기한", days_left: "남은 일수",
+  sellable_qty: "판매가능 수량", orders: "주문 수", order_amount: "주문금액(원)", days_after_shipment: "출고 후 기준 일수", runs: "정산 수",
+  undeposited_amount: "미입금액(원)", oldest_payout_date: "가장 오래된 지급예정일", grace_days: "유예 일수" };

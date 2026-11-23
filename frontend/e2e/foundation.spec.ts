@@ -1013,6 +1013,27 @@ test.describe.serial("Foundation", () => {
     await expect(page.getByRole("row", { name: /사업자 간 재고 이전/ }).first()).toBeVisible();
   });
 
+  test("분석: 운영 리포트(재고·판매·물류) → 인사이트 다시 분석 (M6 1차)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    await page.getByRole("link", { name: "운영 리포트" }).click();
+    await expect(page.getByRole("heading", { name: "운영 리포트" })).toBeVisible();
+    await expect(page.getByRole("row", { name: new RegExp(NAMES.a) }).first()).toBeVisible();
+    await page.getByRole("button", { name: "판매", exact: true }).click();
+    await expect(page.getByRole("row", { name: /^합계/ })).toBeVisible();
+    await page.getByRole("button", { name: "물류", exact: true }).click();
+    await expect(page.getByRole("columnheader", { name: "출고지시 · 송장" })).toBeVisible();
+    await page.getByRole("link", { name: "인사이트" }).click();
+    await expect(page.getByText("아직 분석 전")).toBeVisible();
+    await page.getByRole("button", { name: "지금 다시 분석" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "다시 분석했습니다." })).toBeVisible();
+    await expect(page.getByText(/^마지막 분석 /)).toBeVisible();
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");
