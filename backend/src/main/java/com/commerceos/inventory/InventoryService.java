@@ -18,6 +18,7 @@ import com.commerceos.shared.id.Ids;
 import com.commerceos.shared.web.ApiResponse;
 import com.commerceos.shared.web.PageQuery;
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -56,7 +57,8 @@ public class InventoryService {
     }
 
     public record Receipt(UUID businessEntityId, UUID skuId, UUID nodeId, Integer quantity, String qualityStatus, String holdReason, String lotCode,
-                          LocalDate manufacturedOn, LocalDate expiresOn, String locationCode, String referenceType, String referenceId, String reason) {
+                          LocalDate manufacturedOn, LocalDate expiresOn, String locationCode, String referenceType, String referenceId, String reason,
+                          BigDecimal unitCost) {
     }
 
     public record QualityChange(UUID stockId, Integer quantity, String toQualityStatus, String toHoldReason, String reason) {
@@ -121,6 +123,9 @@ public class InventoryService {
         UUID stockId = ledger.addToBucket(a.workspaceId(), new Bucket(r.businessEntityId(), r.skuId(), r.nodeId(), locationId, lotId, quality, hold), qty);
         int sellable = "SELLABLE".equals(quality) ? qty : 0;
         ledger.applyToPosition(p, sellable, 0);
+        if (r.unitCost() != null) {
+            updateMovingCost(a.workspaceId(), r.businessEntityId(), r.skuId(), qty, r.unitCost());
+        }
         ledger.record(a.workspaceId(), new Txn("RECEIPT", p, stockId, quality, qty, sellable, 0, null, null, null,
                 trimOrNull(r.referenceType()), trimOrNull(r.referenceId()), trimOrNull(r.reason()), a.memberId()));
         if (sellable > 0) {
@@ -363,6 +368,26 @@ public class InventoryService {
                 select unit_cost from sku_cost where workspace_id = :ws and business_entity_id = :b and sku_id = :s and effective_from <= now()
                  order by effective_from desc limit 1
                 """).param("ws", ws).param("b", businessEntityId).param("s", skuId).query(java.math.BigDecimal.class).optional();
+    }
+
+    /**
+     * 이동평균 원가 갱신(M5, DLG-035·156): 사업자·SKU 전 거점 실물(입고 전) × 기존 평균 + 입고 수량 × 입고 단가. 반품 입고는 단가 없이 들어와 평균을 바꾸지 않는다.
+     */
+    private void updateMovingCost(UUID ws, UUID be, UUID sku, int qty, BigDecimal unitCost) {
+        if (unitCost.signum() < 0) {
+            throw Errors.validation("unit_cost", "입고 단가는 0 이상입니다.");
+        }
+        int before = jdbc.sql("select coalesce(sum(on_hand), 0) from inventory_stock where owner_business_entity_id = :b and sku_id = :s").param("b", be).param("s", sku)
+                .query(Integer.class).single() - qty; // 이미 버킷에 더해진 이번 입고분 제외
+        java.util.Optional<BigDecimal> cur = jdbc.sql("select avg_unit_cost from sku_moving_cost where business_entity_id = :b and sku_id = :s for update").param("b", be)
+                .param("s", sku).query(BigDecimal.class).optional();
+        BigDecimal base = cur.orElseGet(() -> unitCost(ws, be, sku).orElse(unitCost));
+        int basis = Math.max(0, before);
+        BigDecimal avg = base.multiply(BigDecimal.valueOf(basis)).add(unitCost.multiply(BigDecimal.valueOf(qty)))
+                .divide(BigDecimal.valueOf(basis + qty), 4, java.math.RoundingMode.HALF_UP);
+        jdbc.sql("insert into sku_moving_cost (workspace_id, business_entity_id, sku_id, avg_unit_cost, basis_quantity) values (:ws, :b, :s, :a, :q) "
+                + "on conflict (business_entity_id, sku_id) do update set avg_unit_cost = excluded.avg_unit_cost, basis_quantity = excluded.basis_quantity, updated_at = now()")
+                .param("ws", ws).param("b", be).param("s", sku).param("a", avg).param("q", basis + qty).update();
     }
 
     int safetyStock(UUID ws, UUID businessEntityId, UUID skuId) {

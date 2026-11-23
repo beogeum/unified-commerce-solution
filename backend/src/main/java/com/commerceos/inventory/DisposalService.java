@@ -39,9 +39,10 @@ public class DisposalService implements ApprovalHandler {
     private final CountLocks locks;
     private final ApprovalService approvals;
     private final AuditService audit;
+    private final com.commerceos.platform.outbox.OutboxPublisher outbox;
 
     public DisposalService(JdbcClient jdbc, AccessGuard guard, InventoryLedger ledger, InventoryService inventory, CountLocks locks, @Lazy ApprovalService approvals,
-                           AuditService audit) {
+                           AuditService audit, com.commerceos.platform.outbox.OutboxPublisher outbox) {
         this.jdbc = jdbc;
         this.guard = guard;
         this.ledger = ledger;
@@ -49,6 +50,7 @@ public class DisposalService implements ApprovalHandler {
         this.locks = locks;
         this.approvals = approvals;
         this.audit = audit;
+        this.outbox = outbox;
     }
 
     public record Request(UUID stockId, Integer quantity, String reason, String evidenceRef) {
@@ -149,6 +151,9 @@ public class DisposalService implements ApprovalHandler {
         locks.requireUnlocked(a.workspaceId(), owner, s.bucket().nodeId(), s.bucket().skuId(), s.bucket().locationId(), "폐기");
         String reason = r.payload().get("reason").asString();
         ledger.changeBucket(a.workspaceId(), p, s.bucket(), -qty, "DISPOSAL", "APPROVAL_REQUEST", r.id().toString(), reason, r.requestedBy());
+        // 재무(M5): 장부가 기준 폐기손실(이미 평가손실·장부가 0 인 수량은 다시 잡지 않음)
+        outbox.publish(a.workspaceId(), owner, "INVENTORY_STOCK", stockId, "InventoryDisposed", Map.of("approval_id", r.id().toString(), "stock_id", stockId.toString(),
+                "quantity", qty));
         audit.record(AuditEntry.builder(a.workspaceId(), "INVENTORY_DISPOSED", "INVENTORY_STOCK", stockId).actor(ActorType.APPROVER, a.memberId(), a.displayName())
                 .scope(owner, null).reason(reason).after(Map.of("quantity", qty, "approval_id", r.id().toString(), "quality_status", s.bucket().quality())).build());
     }

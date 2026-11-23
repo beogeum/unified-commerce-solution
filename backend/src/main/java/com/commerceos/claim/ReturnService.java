@@ -45,9 +45,10 @@ public class ReturnService {
     private final WorkItemService workItems;
     private final AuditService audit;
     private final Clock clock;
+    private final com.commerceos.platform.outbox.OutboxPublisher outbox;
 
     public ReturnService(JdbcClient jdbc, AccessGuard guard, InventoryService inventory, ClaimService claims, WorkItemService workItems, AuditService audit,
-                         Clock clock) {
+                         Clock clock, com.commerceos.platform.outbox.OutboxPublisher outbox) {
         this.jdbc = jdbc;
         this.guard = guard;
         this.inventory = inventory;
@@ -55,6 +56,7 @@ public class ReturnService {
         this.workItems = workItems;
         this.audit = audit;
         this.clock = clock;
+        this.outbox = outbox;
     }
 
     public record LineInput(UUID skuId, Integer quantity, UUID claimItemId, String lotCode, LocalDate expiresOn) {
@@ -183,7 +185,7 @@ public class ReturnService {
                 // 검수 전에는 판매가능이 아니다(T16). 원주문 불명·불일치는 미확정 보류(T37)
                 InventoryService.StockView st = inventory.receive(new InventoryService.Receipt(be, in.skuId(), r.nodeId(), in.quantity(),
                         matchItem != null ? "PENDING_INSPECTION" : "UNDETERMINED", matchItem != null ? null : "UNIDENTIFIED_RETURN", in.lotCode(), null, in.expiresOn(),
-                        null, "RETURN_RECEIPT", no, "반품 입고 " + no));
+                        null, "RETURN_RECEIPT", no, "반품 입고 " + no, null));
                 stockId = st.id();
             }
             jdbc.sql("""
@@ -292,6 +294,11 @@ public class ReturnService {
             }
             claims.refresh(claimId);
         }
+        // 재무(M5): 검수 판정별 원가 환입·장부가 0 기록, 반품 확정 시 매출 차감
+        Map<String, Object> ev = new LinkedHashMap<>();
+        ev.put("return_receipt_id", receiptId.toString());
+        ev.put("claim_id", claimId == null ? null : claimId.toString());
+        outbox.publish(ws, (UUID) rc.get("business_entity_id"), "RETURN_RECEIPT", receiptId, "ReturnInspected", ev);
         audit.record(AuditEntry.builder(ws, "RETURN_INSPECTED", "RETURN_RECEIPT", receiptId).actor(ActorType.USER, a.memberId(), a.displayName())
                 .scope((UUID) rc.get("business_entity_id"), null).after(Map.of("receipt_no", receiptNo, "lines", in.lines().size(), "applied_to_stock", !external)).build());
         return get(receiptId);

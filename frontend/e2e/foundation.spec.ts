@@ -857,6 +857,46 @@ test.describe.serial("Foundation", () => {
     expect(await atA01()).toBe(before - 1);
   });
 
+  test("재무: 손익(출고 매출·반품 차감 반영) → 원장 드릴다운 → 예상 비용 규칙 → 실제 비용 등록 (M5 N1·N2·N6)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    await page.getByRole("link", { name: "손익", exact: true }).click();
+    await expect(page.getByText("관리 손익(부가세 제외 공급가 기준)")).toBeVisible();
+    const row = page.getByRole("row", { name: new RegExp(NAMES.a) });
+    await expect(row).toBeVisible();
+    await expect(page.getByRole("row", { name: /^합계/ })).toBeVisible();
+    await row.click();
+    const ed = page.getByRole("dialog", { name: /원장$/ });
+    await expect(ed.getByRole("row", { name: /상품 매출/ }).first()).toBeVisible();
+    await expect(ed.getByRole("row", { name: /반품 매출 차감/ })).toBeVisible();
+    await ed.getByRole("button", { name: "닫기", exact: true }).click();
+
+    await page.getByRole("link", { name: "비용·원가" }).click();
+    await page.getByRole("button", { name: "예상 비용 규칙 추가" }).click();
+    let m = page.getByRole("alertdialog");
+    await m.getByLabel("규칙 사업자").selectOption({ label: NAMES.a });
+    await m.getByLabel("항목").selectOption({ label: "판매수수료" });
+    await m.getByLabel("요율(%)").fill("5.5");
+    await m.getByRole("button", { name: "저장" }).click();
+    await expect(page.getByRole("row", { name: /판매수수료/ })).toContainText("5.50%");
+    await page.getByRole("button", { name: "실제 비용 등록" }).click();
+    m = page.getByRole("alertdialog");
+    await m.getByLabel("비용 사업자").selectOption({ label: NAMES.a });
+    await m.getByLabel("항목").selectOption({ label: "광고비" });
+    await m.getByLabel("공급가(원, 부가세 제외)").fill("5000");
+    await m.getByLabel("청구 근거").fill(`네이버 광고 ${RUN}`);
+    await m.getByRole("button", { name: "기록" }).click();
+    await expect(page.getByRole("status")).toContainText("실제 비용을 기록했습니다.");
+    await expect(page.getByRole("row", { name: new RegExp(`네이버 광고 ${RUN}`) })).toContainText("5,000");
+    await page.getByRole("link", { name: "손익", exact: true }).click();
+    await expect(page.getByRole("columnheader", { name: "광고비" })).toBeVisible();
+    await expect(page.getByRole("row", { name: new RegExp(NAMES.a) })).toContainText("5,000");
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");

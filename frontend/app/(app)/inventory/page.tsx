@@ -83,6 +83,7 @@ function PositionDrawer({ p, onClose, onChanged }: { p: Position; onClose: () =>
   const [adjusting, setAdjusting] = useState<Stock | null>(null);
   const [disposing, setDisposing] = useState<Stock | null>(null);
   const [relocating, setRelocating] = useState<Stock | null>(null);
+  const [impairing, setImpairing] = useState<Stock | null>(null);
   return (
     <Drawer title={`${p.sku_code} · ${p.node_name}`} onClose={onClose}>
       <div className="kv"><span>소유 사업자</span><span>{p.business_entity_name}</span></div>
@@ -104,11 +105,14 @@ function PositionDrawer({ p, onClose, onChanged }: { p: Position; onClose: () =>
                 <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); setAdjusting(s); }}>조정</button>}
               {can("inventory.operate") && p.inventory_source === "INTERNAL" &&
                 <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); setRelocating(s); }}>로케이션 이동</button>}
+              {can("cost.manage") && s.quality_status !== "SELLABLE" &&
+                <button className="btn" type="button" onClick={(e) => { e.stopPropagation(); setImpairing(s); }}>평가손실</button>}
               {can("inventory.operate") && p.inventory_source === "INTERNAL" && ["DISPOSAL_PENDING", "DEFECTIVE", "DAMAGED", "EXPIRED"].includes(s.quality_status) &&
                 <button className="btn dan" type="button" onClick={(e) => { e.stopPropagation(); setDisposing(s); }}>폐기 요청</button>}</span> },
           ]} />)}
       <h3 style={{ fontSize: 14 }}>최근 원장</h3>
       {txns.loading ? <Loading /> : txns.error ? <ErrorState error={txns.error} onRetry={txns.reload} /> : <TxnList rows={txns.data ?? []} />}
+      {impairing && <ImpairModal stock={impairing} onClose={() => setImpairing(null)} />}
       {relocating && <MoveModal stock={relocating} onClose={() => setRelocating(null)} onDone={() => { setRelocating(null); stocks.reload(); txns.reload(); onChanged(); }} />}
       {disposing && <DisposalModal stock={disposing} onClose={() => setDisposing(null)} />}
       {adjusting && <AdjustModal stock={adjusting} onClose={() => setAdjusting(null)} onDone={() => { setAdjusting(null); stocks.reload(); txns.reload(); onChanged(); }} />}
@@ -156,6 +160,33 @@ function AdjustModal({ stock, onClose, onDone }: { stock: Stock; onClose: () => 
         <label className="fld">{mode === "ABSOLUTE" ? "맞출 수량" : "수량"}<input className="inp" type="number" min={0} value={qty} onChange={(e) => setQty(Math.max(0, Number(e.target.value) || 0))} /></label>
         <label className="fld">사유(필수)<input className="inp" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} /></label>
         <p className="ctx" style={{ margin: 0 }}>원가 영향이 사업자 승인 기준 이상이거나 기준 원가가 없으면 승인 요청이 됩니다. 실사 차이는 실사 화면에서 승인하세요.</p>
+      </>}
+    </ConfirmModal>
+  );
+}
+
+function ImpairModal({ stock, onClose }: { stock: Stock; onClose: () => void }) {
+  const [qty, setQty] = useState(stock.on_hand);
+  const [reason, setReason] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const submit = async () => {
+    if (done) { onClose(); return; }
+    setErr(null);
+    try {
+      const r = await api<{ loss: string }>("/finance/impairments", { method: "POST", body: { stock_id: stock.id, quantity: qty, reason } });
+      setDone(r.data.loss);
+    } catch (x) {
+      setErr(x instanceof ApiError ? x.message : "기록하지 못했습니다.");
+    }
+  };
+  return (
+    <ConfirmModal title="재고 평가손실" danger confirmLabel={done ? "닫기" : "평가손실 기록"} onClose={onClose} onConfirm={submit} confirmDisabled={!done && (!reason.trim() || qty < 1)}
+      impact={[["대상", `${stock.sku_code} · ${QUALITY_KO[stock.quality_status]} ${num(stock.on_hand)}개`], ["효과", "장부가를 0 으로 낮추고 손실을 기록합니다. 이후 폐기 때 같은 손실을 다시 잡지 않습니다"]]}>
+      {err && <div className="note n-err" role="alert">{err}</div>}
+      {done ? <div className="note n-ok">평가손실 {num(Number(done))}원을 기록했습니다.</div> : <>
+        <label className="fld">수량<input className="inp" type="number" min={1} max={stock.on_hand} value={qty} onChange={(e) => setQty(Number(e.target.value) || 1)} /></label>
+        <label className="fld">평가 근거(필수)<input className="inp" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} placeholder="예: 파손 — 판매·반품 불가" /></label>
       </>}
     </ConfirmModal>
   );

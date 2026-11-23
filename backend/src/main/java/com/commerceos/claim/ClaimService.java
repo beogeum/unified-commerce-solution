@@ -878,6 +878,9 @@ public class ClaimService {
                     """).param("s", next).param("r", refund).param("rs", reship).param("id", claimId).update();
             if (!next.equals(st)) {
                 event(a, claimId, "STATUS_CHANGED", st, next, Map.of());
+                if ("COMPLETED".equals(next)) {
+                    outbox.publish(a.workspaceId(), (UUID) c.get("business_entity_id"), "CLAIM", claimId, "ClaimCompleted", Map.of("claim_id", claimId.toString()));
+                }
             }
             if (!refund.equals(c.get("refund_status"))) {
                 event(a, claimId, "REFUND_STATUS_CHANGED", (String) c.get("refund_status"), refund, Map.of());

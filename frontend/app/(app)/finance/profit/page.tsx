@@ -1,0 +1,63 @@
+"use client";
+import { useEffect, useMemo, useState } from "react";
+import { DataTable } from "@/components/DataTable";
+import { EntriesDrawer } from "@/components/FinanceEntries";
+import { Empty, ErrorState, Forbidden, Loading } from "@/components/States";
+import { api, ApiError, qs } from "@/lib/api";
+import { CATEGORY_KO, COST_ORDER, GROUP_KO, Profit, ProfitRow, won } from "@/lib/finance";
+import { useSession } from "@/lib/session";
+
+const today = () => new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+const monthStart = () => today().slice(0, 8) + "01";
+
+export default function ProfitPage() {
+  const { can, selected } = useSession();
+  const [from, setFrom] = useState(monthStart());
+  const [to, setTo] = useState(today());
+  const [group, setGroup] = useState("business_entity");
+  const url = useMemo(() => `/finance/profit${qs({ business_entity_id: selected, from, to, group_by: group })}`, [selected, from, to, group]);
+  const [data, setData] = useState<Profit | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<ApiError | null>(null);
+  const [tick, setTick] = useState(0);
+  const [drill, setDrill] = useState<ProfitRow | null>(null);
+  useEffect(() => {
+    if (!can("profit.read")) return;
+    let alive = true;
+    setLoading(true);
+    setError(null);
+    api<Profit>(url).then((r) => alive && setData(r.data)).catch((e: unknown) => alive && setError(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "불러오지 못했습니다.")))
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
+  }, [url, tick, can]);
+  if (!can("profit.read")) return <Forbidden />;
+  const rows = data ? [...data.rows, data.total] : [];
+  const usedCosts = COST_ORDER.filter((c) => rows.some((r) => Number(r.costs[c] ?? 0) !== 0));
+  return (
+    <>
+      <div className="page-head"><div><h1>손익</h1><p>관리 공헌이익입니다(부가세 제외 공급가). 순매출 − 상품 원가 − 수수료·물류·사은품·반품 관련 비용 − 재고 손실 = 공헌이익. 여러 사업자·계정의 이익률은 이익 합계 ÷ 순매출 합계입니다.</p></div></div>
+      {data && <div className="note n-info">{data.basis_note}</div>}
+      <div className="row-gap">
+        <label className="fld">시작일<input className="inp" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+        <label className="fld">종료일<input className="inp" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+        <label className="fld">묶음<select className="inp" value={group} onChange={(e) => setGroup(e.target.value)}>
+          {Object.entries(GROUP_KO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+      </div>
+      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => setTick(tick + 1)} /> : (
+        <DataTable caption="손익" rows={rows} rowKey={(r) => r.key} onRowClick={(r) => r.key !== "TOTAL" && setDrill(r)}
+          empty={<Empty title="기간 안의 손익 원장이 없습니다." hint="출고 확정되면 매출·원가가 자동으로 기록됩니다." />}
+          columns={[
+            { key: "l", header: GROUP_KO[group], render: (r) => r.key === "TOTAL" ? <b>합계</b> : r.label },
+            { key: "n", header: "순매출", num: true, render: (r) => won(r.net_sales) },
+            { key: "o", header: "배송비·반품비 수익", num: true, render: (r) => won(r.other_revenue) },
+            ...usedCosts.map((c) => ({ key: c, header: CATEGORY_KO[c], num: true, render: (r: ProfitRow) => won(r.costs[c] ?? 0) })),
+            { key: "c", header: "공헌이익", num: true, render: (r) => <b>{won(r.contribution)}</b> },
+            { key: "m", header: "이익률", num: true, render: (r) => (r.margin_pct === null ? "—" : `${r.margin_pct}%`) },
+            { key: "e", header: "예상 비용", num: true, render: (r) => <span className="ctx">{won(r.estimated_cost)}{r.missing_cost_lines > 0 ? ` · 원가 미등록 ${r.missing_cost_lines}` : ""}</span> },
+          ]} />
+      )}
+      {drill && <EntriesDrawer title={`${GROUP_KO[group]} ${drill.label} 원장`} filter={group === "order" && drill.key !== "-" ? { order_id: drill.key }
+        : group === "business_entity" ? { business_entity_id: drill.key } : { business_entity_id: selected ?? undefined }} from={from} to={to} onClose={() => setDrill(null)} />}
+    </>
+  );
+}
