@@ -151,7 +151,22 @@ public class PostingService {
         // 출고 물류 예상 비용(출고지시 범위 — 3PL·택배 청구가 오면 같은 범위를 대체, T26)
         int parcels = jdbc.sql("select count(*) from shipment where fo_id = :f").param("f", foId).query(Integer.class).single();
         int componentUnits = lines.stream().mapToInt(l -> ((Number) l.get("quantity")).intValue()).sum();
+        // 포장 부자재를 이 출고에서 차감했으면 부자재 원가는 차감 기록(고정 단가)에서만 — MATERIAL 규칙과 중복하지 않는다(CHG-011, DLG-248)
+        List<Map<String, Object>> mats = jdbc.sql("select sku_id, required_qty, shortfall_qty, unit_cost from fo_material_consumption where fo_id = :f order by sku_id")
+                .param("f", foId).query().listOfRows();
+        for (Map<String, Object> m : mats) {
+            BigDecimal unit = (BigDecimal) m.get("unit_cost");
+            int q = ((Number) m.get("required_qty")).intValue();
+            boolean actual = unit != null && ((Number) m.get("shortfall_qty")).intValue() == 0;
+            BigDecimal amt = unit == null ? BigDecimal.ZERO : Ledger.won(unit.multiply(BigDecimal.valueOf(q)));
+            ledger.post(new Ledger.Entry(ws, be, ca, orderId, null, null, foId, null, (UUID) m.get("sku_id"), node, "COST", "MATERIAL", actual ? "ACTUAL" : "ESTIMATED", amt,
+                    BigDecimal.ZERO, "OUT_OF_SCOPE", q, unit, period, "SHIPMENT", foRef, "SHIP:" + foId + ":MATERIAL:" + m.get("sku_id"), null, null,
+                    unit == null ? "부자재 원가 미등록" : actual ? "포장 부자재 차감" : "부자재 재고 부족분 포함(필요 수량 기준)", null));
+        }
         for (String cat : List.of("OUTBOUND_SHIPPING", "THIRD_PARTY_PICK", "PACK", "MATERIAL")) {
+            if ("MATERIAL".equals(cat) && !mats.isEmpty()) {
+                continue;
+            }
             Optional<CostRuleService.Rule> r = rules.find(ws, be, ca, node, cat, at);
             if (r.isEmpty()) {
                 continue;

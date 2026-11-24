@@ -121,6 +121,7 @@ function NodeDrawer({ id, onClose, onChanged }: { id: string; onClose: () => voi
       <div className="kv"><span>상태</span><span><StatusChip status={n.status} /></span></div>
       <RoutingPriority node={n} manage={manage} onSaved={() => { node.reload(); onChanged(); }} />
       {n.inventory_source === "EXTERNAL" && <ExternalRules node={n} manage={manage} onSaved={() => { node.reload(); onChanged(); }} />}
+      {n.inventory_source !== "EXTERNAL" && <PackagingProfile nodeId={id} manage={manage} />}
       {n.provider_kind === "SELF_WMS" ? (
         <>
           <h3 style={{ fontSize: 14 }}>로케이션</h3>
@@ -221,6 +222,37 @@ function RoutingPriority({ node, manage, onSaved }: { node: Node; manage: boolea
           onChange={(e) => setSla(Math.min(720, Math.max(1, Number(e.target.value) || 1)))} /></label>
         {manage && <button className="btn" type="button" onClick={save} disabled={p === node.routing_priority && sla === node.tracking_sla_hours} style={{ alignSelf: "flex-end" }}>우선순위 저장</button>}
       </div>
+    </section>
+  );
+}
+
+/** 포장 부자재 출고 차감(DLG-246~249): 포장 프로필을 지정하면 출고 확정 때 유효 포장 BOM × 박스 수만큼 부자재 재고를 차감하고 부자재 원가를 그 기록으로 잡는다. */
+function PackagingProfile({ nodeId, manage }: { nodeId: string; manage: boolean }) {
+  const p = useApi<{ packaging_profile_code: string | null; effective_bom_version: number | null }>(`/fulfillment-nodes/${nodeId}/packaging`);
+  const [code, setCode] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const v = code ?? p.data?.packaging_profile_code ?? "";
+  const save = async (value: string) => {
+    setMsg(null);
+    try {
+      await api(`/fulfillment-nodes/${nodeId}/packaging`, { method: "PUT", body: { packaging_profile_code: value || null } });
+      setCode(null);
+      p.reload();
+      setMsg(value ? "포장 프로필을 지정했습니다." : "부자재 차감을 끄고 부자재 비용 규칙으로 계산합니다.");
+    } catch (x) {
+      setMsg(x instanceof ApiError ? x.message : "저장하지 못했습니다.");
+    }
+  };
+  return (
+    <section aria-label="포장 부자재">
+      <h3 style={{ fontSize: 14 }}>포장 부자재 차감</h3>
+      <p className="ctx">{p.data?.packaging_profile_code ? `포장 프로필 ${p.data.packaging_profile_code} · 유효 BOM v${p.data.effective_bom_version ?? "—"} — 출고 확정 때 박스 수만큼 부자재 재고를 차감하고, 부자재 원가는 이 차감 기록에서만 잡습니다(부자재 비용 규칙과 중복 없음).`
+        : "지정하지 않음 — 부자재는 비용 규칙(출고지시당·개당)으로만 계산합니다."}</p>
+      {msg && <div className="note n-info" role="status">{msg}</div>}
+      {manage && <div className="row-gap">
+        <label className="fld">포장 프로필 코드<input className="inp mono" value={v} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="DEFAULT" aria-label="포장 프로필 코드" /></label>
+        <button className="btn" type="button" style={{ alignSelf: "end" }} onClick={() => save(v.trim())}>저장</button>
+      </div>}
     </section>
   );
 }

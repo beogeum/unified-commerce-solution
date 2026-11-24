@@ -53,9 +53,11 @@ public class ShipmentService {
     private final AuditService audit;
     private final Clock clock;
     private final WmsPickPlans picks;
+    private final com.commerceos.inventory.MaterialService materials;
 
     public ShipmentService(JdbcClient jdbc, AccessGuard guard, ReservationService reservations, FulfillmentService fulfillment, WorkItemService workItems,
-                           OutboxPublisher outbox, AuditService audit, Clock clock, WmsPickPlans picks) {
+                           OutboxPublisher outbox, AuditService audit, Clock clock, WmsPickPlans picks, com.commerceos.inventory.MaterialService materials) {
+        this.materials = materials;
         this.jdbc = jdbc;
         this.guard = guard;
         this.reservations = reservations;
@@ -191,6 +193,8 @@ public class ShipmentService {
                         Map.of("reservation_id", r.toString(), "state", state));
             }
         }
+        // 포장 부자재: 거점 포장 프로필의 유효 포장 BOM × 박스 수 차감(DLG-246~249). 확보 수량과 별개, 부족해도 출고는 진행하고 업무로
+        materials.consumeForShipment(ws, foId, (UUID) f.get("business_entity_id"), (UUID) f.get("node_id"), parcels.size(), shippedAt, foNo, a.memberId());
         Map<String, Object> order = jdbc.sql("select order_no, source_type from sales_order where id = :o").param("o", f.get("order_id")).query().listOfRows().get(0);
         String channelStatus = "MANUAL".equals(order.get("source_type")) ? "NOT_REQUIRED" : "PENDING";
         Map<Integer, Integer> lineLeft = new LinkedHashMap<>();
