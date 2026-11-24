@@ -1109,6 +1109,12 @@ test.describe.serial("Foundation", () => {
     await pd.getByRole("button", { name: "승인 요청" }).click();
     await expect(pd.getByRole("status")).toContainText("승인을 요청했습니다.");
     await expect(pd.getByText("승인 대기")).toBeVisible();
+    await expect(pd.getByRole("button", { name: "입고예정 등록" })).toHaveCount(0); // 승인 전에는 입고예정 불가
+    await pd.getByRole("button", { name: "닫기", exact: true }).click();
+    // 단계별 입고 탭: 진행 중 입고 건 목록(없으면 빈 상태)
+    await page.getByRole("button", { name: "입고 처리" }).click();
+    await expect(page.getByLabel("입고 건 상태")).toHaveValue("OPEN");
+    await expect(page.getByRole("table", { name: /^입고 건/ }).or(page.getByText("입고 건이 없습니다."))).toBeVisible();
   });
 
   test("주문: B2B 수동 주문 작성 → 주문 목록에 종류·거래처 표시 (FR-ORD-04)", async ({ page }) => {

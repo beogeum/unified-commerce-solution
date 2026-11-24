@@ -283,6 +283,7 @@ public class PurchaseOrderService implements ApprovalHandler {
         if (!Set.of("DRAFT", "APPROVAL_PENDING", "PLACED", "SUPPLIER_CONFIRMED").contains(st)) {
             throw Errors.conflict("PO_INVALID_STATE", "입고가 시작된 발주는 취소할 수 없습니다. 잔량 종료를 사용하세요.", Map.of("status", st));
         }
+        requireNoActiveShipment(id, null);
         String why = SupplierService.trim(reason, 500, "reason");
         if (why == null && !"DRAFT".equals(st)) {
             throw Errors.validation("reason", "취소 사유를 입력하세요.");
@@ -312,6 +313,7 @@ public class PurchaseOrderService implements ApprovalHandler {
         if (why == null) {
             throw Errors.validation("reason", "잔량 종료 사유를 입력하세요.");
         }
+        requireNoActiveShipment(id, null);
         jdbc.sql("update purchase_order set status = 'CLOSED', close_reason = :r, updated_at = now(), version = version + 1 where id = :id").param("r", why).param("id", id)
                 .update();
         audit.record(AuditEntry.builder(a.workspaceId(), "PURCHASE_ORDER_CLOSED", "PURCHASE_ORDER", id).actor(ActorType.USER, a.memberId(), a.displayName())
@@ -336,13 +338,33 @@ public class PurchaseOrderService implements ApprovalHandler {
         if (in == null || in.lines() == null || in.lines().isEmpty()) {
             throw Errors.validation("lines", "입고할 품목을 입력하세요.");
         }
+        requireNoActiveShipment(id, in.lines().stream().map(ReceiveLine::poLineId).toList());
+        Posted r = postReceipt(a, po, in.lines(), in.note(), "SELLABLE", null);
+        // 단계별 입고와 공용인 행 잠금·잔량 검사는 postReceipt 안에서
+        String no = r.receiptNo();
+        int rejectedTotal = r.rejected();
+        int open = r.openQty();
+        audit.record(AuditEntry.builder(a.workspaceId(), "PURCHASE_ORDER_RECEIVED", "PURCHASE_ORDER", id).actor(ActorType.USER, a.memberId(), a.displayName())
+                .scope(be, null).after(Map.of("receipt_no", no, "lines", in.lines().size(), "rejected", rejectedTotal, "open_qty", open)).build());
+        return get(id);
+    }
+
+    /** 입고 확인 한 건(즉시 입고·단계별 입고 검수 확정 공용). 정상 수량은 재고 원장 입고, 불량은 반송 업무. */
+    record Posted(UUID receiptId, String receiptNo, Map<UUID, UUID> stockByPoLine, int rejected, int openQty) {
+    }
+
+    Posted postReceipt(CurrentActor a, Map<String, Object> po, List<ReceiveLine> lines, String note, String quality, String hold) {
+        UUID id = (UUID) po.get("id");
+        UUID be = (UUID) po.get("business_entity_id");
+        UUID node = (UUID) po.get("node_id");
+        Map<UUID, UUID> stocks = new LinkedHashMap<>();
         UUID receiptId = Ids.newId();
         String no = nextNo(a.workspaceId(), "PO_RECEIPT", "GR");
         jdbc.sql("insert into po_receipt (id, workspace_id, receipt_no, po_id, note, created_by) values (:id, :ws, :no, :po, cast(:n as text), :by)").param("id", receiptId)
-                .param("ws", a.workspaceId()).param("no", no).param("po", id).param("n", SupplierService.trim(in.note(), 500, "note")).param("by", a.memberId()).update();
+                .param("ws", a.workspaceId()).param("no", no).param("po", id).param("n", SupplierService.trim(note, 500, "note")).param("by", a.memberId()).update();
         int rejectedTotal = 0;
         Set<UUID> seen = new HashSet<>();
-        for (ReceiveLine l : in.lines()) {
+        for (ReceiveLine l : lines) {
             if (l == null || l.poLineId() == null || !seen.add(l.poLineId())) {
                 throw Errors.validation("lines", "발주 품목이 비었거나 중복입니다.");
             }
@@ -370,8 +392,8 @@ public class PurchaseOrderService implements ApprovalHandler {
             UUID lineId = Ids.newId();
             UUID txn = null;
             if (good > 0) {
-                inventory.receive(new InventoryService.Receipt(be, (UUID) pl.get("sku_id"), node, good, "SELLABLE", null, l.lotCode(), l.manufacturedOn(), l.expiresOn(),
-                        l.locationCode(), "PO_RECEIPT", lineId.toString(), "발주 입고 " + po.get("po_no"), unit));
+                stocks.put(l.poLineId(), inventory.receive(new InventoryService.Receipt(be, (UUID) pl.get("sku_id"), node, good, quality, hold, l.lotCode(), l.manufacturedOn(), l.expiresOn(),
+                        l.locationCode(), "PO_RECEIPT", lineId.toString(), "발주 입고 " + po.get("po_no"), unit)).id());
                 txn = jdbc.sql("select id from inventory_transaction where workspace_id = :ws and reference_type = 'PO_RECEIPT' and reference_id = :r and txn_type = 'RECEIPT'")
                         .param("ws", a.workspaceId()).param("r", lineId.toString()).query(UUID.class).single();
             }
@@ -394,9 +416,7 @@ public class PurchaseOrderService implements ApprovalHandler {
                     "입고 검수에서 불량 " + rejectedTotal + "개를 받지 않았습니다(재고 미반영).", "공급처에 반송·재발송 또는 대금 차감을 요청하세요.",
                     "po-reject:" + receiptId, Map.of("purchase_order_id", id.toString(), "receipt_id", receiptId.toString())));
         }
-        audit.record(AuditEntry.builder(a.workspaceId(), "PURCHASE_ORDER_RECEIVED", "PURCHASE_ORDER", id).actor(ActorType.USER, a.memberId(), a.displayName())
-                .scope(be, null).after(Map.of("receipt_no", no, "lines", in.lines().size(), "rejected", rejectedTotal, "open_qty", open)).build());
-        return get(id);
+        return new Posted(receiptId, no, stocks, rejectedTotal, open);
     }
 
     // ---------------------------------------------------------------- 조회
@@ -509,9 +529,25 @@ public class PurchaseOrderService implements ApprovalHandler {
                 o.get("placed_at") == null ? null : ((java.sql.Timestamp) o.get("placed_at")).toInstant(), ((Number) o.get("version")).intValue());
     }
 
+    static final Set<String> ACTIVE_SHIPMENT = Set.of("EXPECTED", "ARRIVED", "INSPECTING");
+
+    /** 진행 중(검수 확정 전) 입고 건이 잡은 품목은 즉시 입고·취소·잔량 종료로 건드리지 않는다(같은 수량 이중 입고 방지, DLG-221). */
+    void requireNoActiveShipment(UUID poId, List<UUID> poLineIds) {
+        List<String> nos = jdbc.sql("""
+                select distinct s.shipment_no from inbound_shipment s join inbound_shipment_line l on l.shipment_id = s.id
+                 where s.po_id = :po and s.status in ('EXPECTED', 'ARRIVED', 'INSPECTING') and (cast(:all as boolean) or l.po_line_id in (:lines))
+                 order by 1
+                """).param("po", poId).param("all", poLineIds == null).param("lines", poLineIds == null || poLineIds.isEmpty() ? List.of(new UUID(0, 0)) : poLineIds)
+                .query(String.class).list();
+        if (!nos.isEmpty()) {
+            throw Errors.conflict("INBOUND_SHIPMENT_ACTIVE", "진행 중인 입고 건(" + String.join(", ", nos) + ")이 있습니다. 해당 입고 건에서 처리하거나 먼저 취소하세요.",
+                    Map.of("shipments", nos));
+        }
+    }
+
     // ---------------------------------------------------------------- 내부
 
-    private Map<String, Object> lock(UUID ws, UUID id) {
+    Map<String, Object> lock(UUID ws, UUID id) {
         return jdbc.sql("select * from purchase_order where workspace_id = :ws and id = :id for update").param("ws", ws).param("id", id).query().listOfRows().stream()
                 .findFirst().orElseThrow(() -> Errors.notFound("PURCHASE_ORDER"));
     }

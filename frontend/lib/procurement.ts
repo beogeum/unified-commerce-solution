@@ -19,3 +19,15 @@ export const PO_STATUS: Record<string, ["ok" | "info" | "warn" | "err" | "mute",
 export type Suggestion = { business_entity_id: string; business_entity_name: string; sku_id: string; sku_code: string; supplier_id: string; supplier_name: string;
   supplier_sku_id: string; avg_daily_sales: string; atp: number; inbound: number; lead_time_days: number; target_days: number; days_of_cover: string | null; need: number;
   moq: number; order_multiple: number; suggested_qty: number; unit_cost: string | null; amount: string | null; reason: string };
+export type ShipmentLine = { id: string; po_line_id: string; sku_id: string; sku_code: string; sku_name: string | null; expected_qty: number; arrived_qty: number | null;
+  good_qty: number | null; rejected_qty: number | null; over_qty: number | null; reject_reason: string | null; putaway_qty: number; putaway_remaining: number;
+  difference: number | null };
+export type Shipment = { id: string; shipment_no: string; po_id: string; po_no: string; business_entity_id: string; business_entity_name: string; supplier_name: string;
+  node_id: string; node_name: string; status: string; expected_on: string | null; carrier: string | null; tracking_no: string | null; note: string | null;
+  receipt_no: string | null; has_discrepancy: boolean; arrived_at: string | null; inspected_at: string | null; completed_at: string | null; cancel_reason: string | null;
+  expected_qty: number; arrived_qty: number; good_qty: number; putaway_qty: number; lines: ShipmentLine[];
+  events: { from_status: string | null; to_status: string; actor_name: string | null; occurred_at: string; detail: string }[]; created_at: string; version: number };
+export const SHIPMENT_STATUS: Record<string, ["ok" | "info" | "warn" | "err" | "mute", string]> = {
+  EXPECTED: ["info", "입고예정"], ARRIVED: ["warn", "센터 도착"], INSPECTING: ["warn", "검수 중"], PUTAWAY: ["warn", "적치 대기"],
+  COMPLETED: ["ok", "입고 완료"], DISCREPANCY: ["err", "완료(수량 차이)"], CANCELLED: ["mute", "취소"],
+};

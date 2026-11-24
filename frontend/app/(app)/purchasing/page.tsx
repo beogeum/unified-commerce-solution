@@ -2,19 +2,22 @@
 import { useMemo, useState } from "react";
 import { DataTable } from "@/components/DataTable";
 import { ConfirmModal } from "@/components/Overlay";
+import { ShipmentDrawer, ShipmentStatus } from "@/components/InboundParts";
 import { NewPoModal, PoDrawer, PoStatus, SupplierDrawer } from "@/components/PurchaseParts";
 import { Empty, ErrorState, Forbidden, Loading } from "@/components/States";
 import { api, ApiError, qs } from "@/lib/api";
 import { won } from "@/lib/finance";
 import { Node } from "@/lib/inventory";
-import { Inbound, PO_STATUS, PurchaseOrder, Suggestion, Supplier } from "@/lib/procurement";
+import { Inbound, PO_STATUS, PurchaseOrder, Shipment, SHIPMENT_STATUS, Suggestion, Supplier } from "@/lib/procurement";
 import { useSession } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
 export default function PurchasingPage() {
   const { can, selected, entities } = useSession();
   const allowed = can("inventory.read");
-  const [tab, setTab] = useState<"orders" | "suppliers" | "inbound" | "suggest">("orders");
+  const [tab, setTab] = useState<"orders" | "suppliers" | "inbound" | "receiving" | "suggest">("orders");
+  const [shipStatus, setShipStatus] = useState("OPEN");
+  const [openShip, setOpenShip] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [openPo, setOpenPo] = useState<string | null>(null);
   const [openSup, setOpenSup] = useState<string | null>(null);
@@ -25,6 +28,7 @@ export default function PurchasingPage() {
   const suppliers = useApi<Supplier[]>(allowed ? `/suppliers${qs({ business_entity_id: selected })}` : null);
   const inbound = useApi<Inbound[]>(allowed && tab === "inbound" ? `/purchase-orders/inbound${qs({ business_entity_id: selected })}` : null);
   const nodes = useApi<Node[]>(allowed ? "/fulfillment-nodes" : null);
+  const shipments = useApi<Shipment[]>(allowed && tab === "receiving" ? `/inbound-shipments${qs({ business_entity_id: selected, status: shipStatus || undefined })}` : null);
   if (!allowed) return <Forbidden />;
   const manage = can("purchase.manage");
   const beName = (id: string) => entities.find((e) => e.id === id)?.display_name ?? "—";
@@ -39,6 +43,7 @@ export default function PurchasingPage() {
         <button className="btn" type="button" aria-current={tab === "orders" ? "page" : undefined} onClick={() => setTab("orders")}>발주</button>
         <button className="btn" type="button" aria-current={tab === "suppliers" ? "page" : undefined} onClick={() => setTab("suppliers")}>공급처</button>
         <button className="btn" type="button" aria-current={tab === "inbound" ? "page" : undefined} onClick={() => setTab("inbound")}>입고예정</button>
+        <button className="btn" type="button" aria-current={tab === "receiving" ? "page" : undefined} onClick={() => setTab("receiving")}>입고 처리</button>
         <button className="btn" type="button" aria-current={tab === "suggest" ? "page" : undefined} onClick={() => setTab("suggest")}>발주 제안</button>
       </nav>
       {tab === "orders" && <>
@@ -72,8 +77,25 @@ export default function PurchasingPage() {
           { key: "q", header: "입고예정 수량", num: true, render: (r) => r.inbound_qty },
           { key: "e", header: "가장 빠른 예정일", render: (r) => r.earliest_expected_on ?? "—" },
         ]} />))}
+      {tab === "receiving" && <>
+        <p className="ctx">입고예정 등록 → 센터 도착 → 검수 → 적치 순서로 처리합니다. 검수된 정상 수량은 적치를 마쳐야 판매가능이 되고, 불량·초과 도착은 재고에 넣지 않고 반송 업무로 남깁니다. 소량은 발주 상세의 '즉시 입고'로도 처리할 수 있습니다.</p>
+        <div className="row-gap"><label className="fld">상태<select className="inp" value={shipStatus} onChange={(e) => setShipStatus(e.target.value)} aria-label="입고 건 상태">
+          <option value="OPEN">진행 중</option><option value="">전체</option>
+          {Object.entries(SHIPMENT_STATUS).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select></label></div>
+        {shipments.loading ? <Loading /> : shipments.error ? <ErrorState error={shipments.error} onRetry={shipments.reload} /> : (
+          <DataTable caption="입고 건" rows={shipments.data ?? []} rowKey={(r) => r.id} onRowClick={(r) => setOpenShip(r.id)}
+            empty={<Empty title="입고 건이 없습니다." hint="발주 상세에서 '입고예정 등록'으로 입고 건을 만드세요." />} columns={[
+              { key: "n", header: "입고번호 · 발주", render: (r) => <><span className="mono">{r.shipment_no}</span> <span className="ctx">{r.po_no}</span></> },
+              { key: "s", header: "사업자 · 공급처", render: (r) => `${r.business_entity_name} · ${r.supplier_name}` },
+              { key: "d", header: "거점 · 예정일", render: (r) => <span className="ctx">{r.node_name} · {r.expected_on ?? "—"}</span> },
+              { key: "q", header: "예정 · 도착 · 정상 · 적치", num: true, render: (r) => `${r.expected_qty} · ${r.arrived_qty} · ${r.good_qty} · ${r.putaway_qty}` },
+              { key: "t", header: "상태", render: (r) => <ShipmentStatus s={r.status} /> },
+            ]} />)}
+      </>}
       {tab === "suggest" && <SuggestTab nodes={nodes.data ?? []} onCreated={(ids) => { setTab("orders"); orders.reload(); if (ids[0]) setOpenPo(ids[0]); }} />}
-      {openPo && <PoDrawer id={openPo} onClose={() => setOpenPo(null)} onChanged={orders.reload} />}
+      {openPo && <PoDrawer id={openPo} onClose={() => setOpenPo(null)} onChanged={orders.reload}
+        onShipment={(sid) => { setOpenPo(null); setTab("receiving"); setShipStatus("OPEN"); setOpenShip(sid); }} />}
+      {openShip && <ShipmentDrawer id={openShip} onClose={() => setOpenShip(null)} onChanged={shipments.reload} />}
       {openSup && <SupplierDrawer id={openSup} onClose={() => setOpenSup(null)} onChanged={suppliers.reload} />}
       {modal === "po" && <NewPoModal suppliers={suppliers.data ?? []} nodes={nodes.data ?? []} onClose={() => setModal(null)}
         onDone={(id) => { setModal(null); setTab("orders"); orders.reload(); setOpenPo(id); }} />}

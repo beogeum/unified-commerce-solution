@@ -24,6 +24,19 @@
 
 입고 부대비용: `POST /finance/landed-costs` 에 `purchase_order_id` 를 주면 그 발주 입고분에 배부(DLG-196). 재고 리포트 행에 `inbound_qty`(입고예정).
 
+## 2-1. 단계별 입고 (DLG-220~225)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `POST /purchase-orders/{id}/inbound-shipments {expected_on?, carrier?, tracking_no?, note?, lines[{po_line_id, quantity}]}` | `purchase.manage` | EXPECTED. `INBOUND_OVER_PLAN`(잔량 − 진행 중 다른 입고 건 초과) |
+| `POST /inbound-shipments/{id}/arrive {lines[{line_id, arrived_qty}], note?}` (+ If-Match) | `inventory.operate` + 거점 범위 | → ARRIVED, 전 품목 필수(안 온 품목 0). 재고 미반영 |
+| `POST /inbound-shipments/{id}/start-inspection` (+ If-Match) | 〃 | → INSPECTING |
+| `POST /inbound-shipments/{id}/inspect {lines[{line_id, good_qty, rejected_qty?, over_qty?, reject_reason?, unit_cost?, lot_code?, manufactured_on?, expires_on?}]}` (+ If-Match) | 〃 | 정상+불량+초과 = 도착. 정상 → 재고 입고(검수 대기·`PUTAWAY_PENDING`, 판매불가), 불량·초과 → 반송 업무, 차이 → `INBOUND_DISCREPANCY`. → PUTAWAY(정상 0 이면 완료) |
+| `POST /inbound-shipments/{id}/putaway {lines[{line_id, quantity?, location_code?}]}` (+ If-Match) | 〃 | 판매가능 전환 + 로케이션 이동, 부분 가능. 다 끝나면 COMPLETED \| DISCREPANCY |
+| `POST /inbound-shipments/{id}/cancel {reason}` (+ If-Match) | `purchase.manage` | 검수 확정 전만 |
+| `GET /inbound-shipments?business_entity_id&status(OPEN=진행 중)&po_id` · `GET /inbound-shipments/{id}` | `inventory.read` + 거점 범위 | 품목별 예정·도착·차이·정상·불량·초과·적치, 상태 전환 이력 |
+
+진행 중(EXPECTED·ARRIVED·INSPECTING) 입고 건이 있는 발주 품목은 `POST /purchase-orders/{id}/receipts`·`cancel`·`close` 가 `409 INBOUND_SHIPMENT_ACTIVE`.
+
 ## 3. 발주 제안 (DLG-210·211)
 | 메서드·경로 | 권한 | 비고 |
 |---|---|---|

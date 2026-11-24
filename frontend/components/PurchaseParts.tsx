@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Chip } from "@/components/Chip";
 import { DataTable } from "@/components/DataTable";
+import { PlanShipmentModal } from "@/components/InboundParts";
 import { ConfirmModal, Drawer } from "@/components/Overlay";
 import { SkuPicker } from "@/components/SkuPicker";
 import { Empty, ErrorState, Loading } from "@/components/States";
@@ -122,11 +123,11 @@ export function NewPoModal({ suppliers, nodes, onClose, onDone }: { suppliers: S
 }
 
 /** 발주 상세: 승인 요청·공급처 확인·입고(정상/불량·실매입 단가)·취소·잔량 종료. */
-export function PoDrawer({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
+export function PoDrawer({ id, onClose, onChanged, onShipment }: { id: string; onClose: () => void; onChanged: () => void; onShipment?: (shipmentId: string) => void }) {
   const { can } = useSession();
   const { data: po, error, loading, reload } = useApi<PurchaseOrder>(`/purchase-orders/${id}`);
   const [notice, setNotice] = useState<string | null>(null);
-  const [mode, setMode] = useState<null | "receive" | "cancel" | "close" | "confirm">(null);
+  const [mode, setMode] = useState<null | "receive" | "cancel" | "close" | "confirm" | "plan">(null);
   const [rows, setRows] = useState<Record<string, { good: number; rej: number; cost: string; reason: string; lot: string; exp: string }>>({});
   const [reason, setReason] = useState("");
   const [eta, setEta] = useState("");
@@ -158,7 +159,8 @@ export function PoDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
     <Drawer title={po ? `발주 ${po.po_no}` : "발주"} onClose={onClose} footer={po ? <>
       {manage && st === "DRAFT" && <button className="btn pri" type="button" onClick={() => run(api(`/purchase-orders/${id}/submit`, { method: "POST", body: {} }), "승인을 요청했습니다.")}>승인 요청</button>}
       {manage && ["PLACED", "SUPPLIER_CONFIRMED"].includes(st) && <button className="btn" type="button" onClick={() => setMode("confirm")}>공급처 확인 기록</button>}
-      {can("inventory.operate") && open && <button className="btn pri" type="button" onClick={() => setMode("receive")}>입고</button>}
+      {manage && open && <button className="btn pri" type="button" onClick={() => setMode("plan")}>입고예정 등록</button>}
+      {can("inventory.operate") && open && <button className="btn" type="button" onClick={() => setMode("receive")}>즉시 입고</button>}
       {manage && ["DRAFT", "APPROVAL_PENDING", "PLACED", "SUPPLIER_CONFIRMED"].includes(st) && <button className="btn" type="button" onClick={() => setMode("cancel")}>발주 취소</button>}
       {manage && st === "PARTIALLY_RECEIVED" && <button className="btn" type="button" onClick={() => setMode("close")}>잔량 종료</button>}
     </> : undefined}>
@@ -184,7 +186,7 @@ export function PoDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
               {x.unit_cost !== null && x.unit_cost !== x.po_unit_cost ? ` · 실매입 ${won(x.unit_cost)}(발주 ${won(x.po_unit_cost)})` : ""}{x.lot_code ? ` · LOT ${x.lot_code}` : ""}</div>)}
           </div>))}
       </>}
-      {mode === "receive" && po && <ConfirmModal title={`${po.po_no} 입고`} confirmLabel="입고 반영" onClose={() => setMode(null)}
+      {mode === "receive" && po && <ConfirmModal title={`${po.po_no} 즉시 입고`} confirmLabel="입고 반영" onClose={() => setMode(null)}
         onConfirm={() => run(api(`/purchase-orders/${id}/receipts`, { method: "POST", body: receiveBody() }), "입고를 반영했습니다.")}
         impact={[["정상", "재고 원장에 판매가능으로 입고(실매입 단가로 원가 반영)"], ["불량", "재고에 넣지 않고 공급처 반송 업무를 만듭니다"]]}>
         {po.lines.filter((l) => l.remaining_qty > 0).map((l) => (
@@ -199,6 +201,8 @@ export function PoDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
             <label className="fld">유통기한<input className="inp" type="date" value={rows[l.id]?.exp ?? ""} onChange={(e) => set(l.id, { exp: e.target.value })} /></label>
           </fieldset>))}
       </ConfirmModal>}
+      {mode === "plan" && po && <PlanShipmentModal po={po} onClose={() => setMode(null)}
+        onDone={(sh) => { setMode(null); setNotice(`입고 건 ${sh.shipment_no} 을 등록했습니다.`); reload(); onChanged(); onShipment?.(sh.id); }} />}
       {mode === "confirm" && <ConfirmModal title="공급처 확인 기록" confirmLabel="기록" onClose={() => setMode(null)}
         onConfirm={() => run(api(`/purchase-orders/${id}/supplier-confirm`, { method: "POST", body: { expected_on: eta || undefined, supplier_ref: ref || undefined } }), "공급처 확인을 기록했습니다.")}
         impact={[["효과", "입고 예정일을 공급처 회신으로 갱신합니다"]]}>
