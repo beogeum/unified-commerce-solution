@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # CI: 새 DB 에 마이그레이션 적용(백엔드 기동) → 백업 → 복구 리허설(M7, DLG-218).
 set -euo pipefail
+# CI 러너의 PostgreSQL 클라이언트는 서버(16)보다 새 버전일 수 있어 서버와 같은 이미지의 도구를 쓴다
+export PG_CLIENT_IMAGE="${PG_CLIENT_IMAGE:-postgres:16-alpine}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WORK="$(mktemp -d)"
 NAME="commerce-os-ci-src-$$"

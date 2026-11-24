@@ -3,8 +3,20 @@
 # 사용: scripts/db-restore-check.sh backups/commerce_os-20261123T000000Z.dump
 # 점검: 체크섬, 복구 성공, 스키마 마이그레이션 이력 마지막 버전·실패 없음, 핵심 테이블 행 수, 추가 전용 트리거·RLS 정책 존재.
 set -euo pipefail
+# 클라이언트 도구 버전은 서버와 같아야 한다(새 pg_dump 의 덤프는 옛 서버에서 복구되지 않을 수 있음).
+# PG_CLIENT_IMAGE(예: postgres:16-alpine)를 주면 그 이미지 안의 도구를 쓴다(호스트 네트워크, 작업 폴더만 연결).
+pgtool() {
+  if [[ -n "${PG_CLIENT_IMAGE:-}" ]]; then
+    docker run --rm -i --network host --user "$(id -u):$(id -g)" -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE \
+      -v "$PG_MOUNT:$PG_MOUNT" -w "$PG_MOUNT" "$PG_CLIENT_IMAGE" "$@"
+  else
+    "$@"
+  fi
+}
 DUMP="${1:?백업 파일 경로를 주세요}"
 [[ -f "$DUMP" ]] || { echo "파일이 없습니다: $DUMP"; exit 1; }
+DUMP="$(cd "$(dirname "$DUMP")" && pwd)/$(basename "$DUMP")"
+PG_MOUNT="$(dirname "$DUMP")"
 if [[ -f "$DUMP.sha256" ]]; then
   (cd "$(dirname "$DUMP")" && sha256sum -c "$(basename "$DUMP").sha256" >/dev/null) || { echo "체크섬 불일치"; exit 1; }
   echo "체크섬 확인"
@@ -20,13 +32,13 @@ ready=0; for i in $(seq 1 90); do docker exec "$NAME" pg_isready -h 127.0.0.1 -U
 export PGHOST=localhost PGPORT="$PORT" PGUSER=restore PGPASSWORD=restore PGDATABASE=restore_check
 # 원본의 역할(소유자·비소유 애플리케이션 역할)을 먼저 만들어 권한 설정까지 복구한다. 역할 이름: RESTORE_ROLES(공백 구분)
 for r in ${RESTORE_ROLES:-commerce_os commerce_app}; do
-  psql -q -v ON_ERROR_STOP=1 -c "do \$\$ begin if not exists (select 1 from pg_roles where rolname = '$r') then create role $r nologin; end if; end \$\$;"
+  pgtool psql -q -v ON_ERROR_STOP=1 -c "do \$\$ begin if not exists (select 1 from pg_roles where rolname = '$r') then create role $r nologin; end if; end \$\$;"
 done
 START=$(date +%s)
-pg_restore --no-owner --exit-on-error --dbname=restore_check "$DUMP"
+pgtool pg_restore --no-owner --exit-on-error --dbname=restore_check "$DUMP"
 echo "복구 완료($(( $(date +%s) - START ))초)"
 fail=0
-q() { psql -At -v ON_ERROR_STOP=1 -c "$1"; }
+q() { pgtool psql -At -v ON_ERROR_STOP=1 -c "$1"; }
 LAST=$(q "select max(version::int) from flyway_schema_history where success" 2>/dev/null || echo "")
 FAILED=$(q "select count(*) from flyway_schema_history where not success" 2>/dev/null || echo "?")
 echo "스키마 마지막 버전: V${LAST:-없음}, 실패한 마이그레이션: ${FAILED}"
