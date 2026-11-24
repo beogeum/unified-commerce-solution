@@ -50,6 +50,8 @@ export default function ReturnsPage() {
           columns={[
             { key: "no", header: "입고번호", render: (r) => <><b className="mono">{r.receipt_no}</b><div className="ctx mono">{r.claim_no ?? "클레임 없음"}{r.order_no ? ` · ${r.order_no}` : ""}</div></> },
             { key: "t", header: "입고 시각", render: (r) => <span className="ctx">{formatDateTime(r.received_at)}</span> },
+            { key: "due", header: "검수 기한", render: (r) => (r.status === "INSPECTED" || !r.inspection_due_at ? <span className="ctx">—</span>
+              : r.inspection_overdue ? <b style={{ color: "var(--err)" }}>{formatDateTime(r.inspection_due_at)} 지남</b> : <span className="ctx">{formatDateTime(r.inspection_due_at)}</span>) },
             { key: "n", header: "사업자 · 거점", render: (r) => `${r.business_entity_name} · ${r.node_name}` },
             { key: "l", header: "SKU · 수량", render: (r) => r.lines.map((l) => `${l.sku_code} ×${l.quantity}`).join(", ") },
             { key: "i", header: "식별", render: (r) => <Chip kind={IDENT[r.identification][0]}>{IDENT[r.identification][1]}</Chip> },
@@ -172,6 +174,7 @@ function ReceiptDrawer({ id, onClose, onChanged }: { id: string; onClose: () => 
       <div className="kv"><span>사업자 · 거점</span><span>{r.business_entity_name} · {r.node_name}</span></div>
       <div className="kv"><span>식별 · 검수</span><span><Chip kind={IDENT[r.identification][0]}>{IDENT[r.identification][1]}</Chip> <Chip kind={RECEIPT_STATUS[r.status][0]}>{RECEIPT_STATUS[r.status][1]}</Chip></span></div>
       <div className="kv"><span>입고 시각</span><span>{formatDateTime(r.received_at)}{r.note ? ` · ${r.note}` : ""}</span></div>
+      {r.inspection_due_at && r.status !== "INSPECTED" && <div className="kv"><span>검수 기한(입고 후 2영업일 마감)</span><span>{formatDateTime(r.inspection_due_at)}{r.inspection_overdue ? " — 지남" : ""}</span></div>}
       <DataTable caption="입고 상품" rows={r.lines} rowKey={(l) => l.id} empty={<Empty title="줄이 없습니다." />} columns={[
         { key: "s", header: "SKU", render: (l) => <span className="mono">{l.sku_code}</span> },
         { key: "q", header: "수량", num: true, render: (l) => l.quantity },

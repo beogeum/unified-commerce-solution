@@ -47,8 +47,14 @@ public class ReturnService {
     private final Clock clock;
     private final com.commerceos.platform.outbox.OutboxPublisher outbox;
 
+    private final com.commerceos.operations.calendar.BusinessCalendarService calendar;
+    private final int inspectionDays;
+
     public ReturnService(JdbcClient jdbc, AccessGuard guard, InventoryService inventory, ClaimService claims, WorkItemService workItems, AuditService audit,
-                         Clock clock, com.commerceos.platform.outbox.OutboxPublisher outbox) {
+                         Clock clock, com.commerceos.platform.outbox.OutboxPublisher outbox, com.commerceos.operations.calendar.BusinessCalendarService calendar,
+                         @org.springframework.beans.factory.annotation.Value("${commerce.returns.inspection-business-days:2}") int inspectionDays) {
+        this.calendar = calendar;
+        this.inspectionDays = inspectionDays;
         this.jdbc = jdbc;
         this.guard = guard;
         this.inventory = inventory;
@@ -84,7 +90,8 @@ public class ReturnService {
 
     public record ReceiptView(UUID id, String receiptNo, UUID nodeId, String nodeName, UUID businessEntityId, String businessEntityName, UUID claimId, String claimNo,
                               UUID orderId, String orderNo, String identification, String status, boolean externalInventory, String inspectionSupport,
-                              String carrierCode, String trackingNo, String note, Instant receivedAt, Instant createdAt, List<LineView> lines, int version) {
+                              String carrierCode, String trackingNo, String note, Instant receivedAt, Instant createdAt, Instant inspectionDueAt,
+                              boolean inspectionOverdue, List<LineView> lines, int version) {
     }
 
     // ---------------------------------------------------------------- 입고
@@ -176,6 +183,9 @@ public class ReturnService {
                 .param("sup", external ? "MANUAL_ONLY" : "INTERNAL").param("cc", r.carrierCode() == null ? null : r.carrierCode().trim().toUpperCase(java.util.Locale.ROOT))
                 .param("t", ClaimService.trim(r.trackingNo(), 40)).param("note", ClaimService.trim(r.note(), 500)).param("at", Db.ts(receivedAt)).param("by", a.memberId())
                 .update();
+        // 검수 기한 = 입고일 다음부터 n번째 영업일 마감(DLG-040·244, 영업 달력 기준)
+        jdbc.sql("update return_receipt set inspection_due_at = :d where id = :id").param("d", Db.ts(calendar.businessDayClose(ws, receivedAt, inspectionDays)))
+                .param("id", id).update();
         int lineNo = 1;
         for (Object[] l : lines) {
             LineInput in = (LineInput) l[0];
@@ -282,6 +292,9 @@ public class ReturnService {
                 .query(Integer.class).single();
         jdbc.sql("update return_receipt set status = :s, version = version + 1 where id = :id").param("s", open == 0 ? "INSPECTED" : "INSPECTING").param("id", receiptId)
                 .update();
+        if (open == 0) {
+            workItems.resolveByKey(ws, "return-inspect-overdue:" + receiptId);
+        }
         UUID claimId = (UUID) rc.get("claim_id");
         if (claimId != null) {
             updateReturnedQty(claimId);
@@ -377,8 +390,9 @@ public class ReturnService {
         return new ReceiptView(Db.uuid(rs, "id"), rs.getString("receipt_no"), Db.uuid(rs, "node_id"), rs.getString("node_name"), Db.uuid(rs, "business_entity_id"),
                 rs.getString("be_name"), Db.uuid(rs, "claim_id"), rs.getString("claim_no"), Db.uuid(rs, "order_id"), rs.getString("order_no"),
                 rs.getString("identification"), rs.getString("status"), rs.getBoolean("external_inventory"), rs.getString("inspection_support"),
-                rs.getString("carrier_code"), rs.getString("tracking_no"), rs.getString("note"), Db.instant(rs, "received_at"), Db.instant(rs, "created_at"), List.of(),
-                rs.getInt("version"));
+                rs.getString("carrier_code"), rs.getString("tracking_no"), rs.getString("note"), Db.instant(rs, "received_at"), Db.instant(rs, "created_at"),
+                Db.instant(rs, "inspection_due_at"), !"INSPECTED".equals(rs.getString("status")) && Db.instant(rs, "inspection_due_at") != null
+                        && Db.instant(rs, "inspection_due_at").isBefore(Instant.now()), List.of(), rs.getInt("version"));
     }
 
     private ReceiptView withLines(ReceiptView v) {
@@ -394,6 +408,6 @@ public class ReturnService {
         }
         return new ReceiptView(v.id(), v.receiptNo(), v.nodeId(), v.nodeName(), v.businessEntityId(), v.businessEntityName(), v.claimId(), v.claimNo(), v.orderId(),
                 v.orderNo(), v.identification(), v.status(), v.externalInventory(), v.inspectionSupport(), v.carrierCode(), v.trackingNo(), v.note(), v.receivedAt(),
-                v.createdAt(), lines, v.version());
+                v.createdAt(), v.inspectionDueAt(), v.inspectionOverdue(), lines, v.version());
     }
 }

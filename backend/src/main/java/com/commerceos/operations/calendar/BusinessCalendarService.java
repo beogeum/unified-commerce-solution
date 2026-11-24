@@ -106,6 +106,30 @@ public class BusinessCalendarService {
         throw Errors.unprocessable("CALENDAR_RANGE_EXCEEDED", "기한을 계산할 수 없습니다(영업일이 너무 적습니다).");
     }
 
+    /**
+     * 기준 시각이 속한 날 다음부터 센 n번째 영업일의 마감 시각(n = 0 이면 그날, 영업일이 아니면 다음 영업일 마감). 예: 월요일 입고 + 2영업일 = 수요일 마감.
+     */
+    public Instant businessDayClose(UUID ws, Instant from, int n) {
+        Map<Integer, Hours> hours = hoursMap(ws);
+        if (hours.isEmpty()) {
+            throw Errors.unprocessable("CALENDAR_NO_WORKING_DAY", "영업일이 하루도 없습니다. 영업시간을 설정하세요.");
+        }
+        LocalDate start = from.atZone(KST).toLocalDate();
+        Set<LocalDate> holidays = holidays(ws, start);
+        int count = 0;
+        for (int i = n == 0 ? 0 : 1; i < MAX_DAYS; i++) {
+            LocalDate d = start.plusDays(i);
+            Hours h = hours.get(d.getDayOfWeek().getValue());
+            if (h == null || holidays.contains(d)) {
+                continue;
+            }
+            if (n == 0 || ++count == n) {
+                return d.atTime(h.end()).atZone(KST).toInstant();
+            }
+        }
+        throw Errors.unprocessable("CALENDAR_RANGE_EXCEEDED", "기한을 계산할 수 없습니다(영업일이 너무 적습니다).");
+    }
+
     /** CS 응답기한(접수·재문의 시각 + 정책 시간 × 중요도 배수). */
     public Instant csDue(UUID ws, Instant from, String priority) {
         SlaPolicy p = policy(ws);

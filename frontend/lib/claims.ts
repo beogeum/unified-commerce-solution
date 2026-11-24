@@ -16,7 +16,7 @@ export type ReceiptLine = { id: string; line_no: number; sku_id: string; sku_cod
     inspected_at: string }[] };
 export type Receipt = { id: string; receipt_no: string; node_id: string; node_name: string; business_entity_id: string; business_entity_name: string; claim_id: string | null;
   claim_no: string | null; order_id: string | null; order_no: string | null; identification: string; status: string; external_inventory: boolean;
-  inspection_support: string; carrier_code: string | null; tracking_no: string | null; note: string | null; received_at: string; created_at: string;
+  inspection_support: string; carrier_code: string | null; tracking_no: string | null; note: string | null; received_at: string; created_at: string; inspection_due_at: string | null; inspection_overdue: boolean;
   lines: ReceiptLine[]; version: number };
 
 type Tone = "info" | "ok" | "warn" | "mute" | "err";
