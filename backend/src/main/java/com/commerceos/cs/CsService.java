@@ -34,7 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <ul>
  *   <li>채널 문의 API 는 미연동 — 담당자가 채널 문의를 옮겨 적거나(원본 채널 문의번호로 중복 방지) 전화·메일·채팅 문의를 기록한다.</li>
  *   <li>답변은 기록 후 담당자가 채널에 직접 등록하고 '채널 등록 완료'를 표시한다(자동 고객 전송 없음, FR-CS-05). 메시지는 추가 전용.</li>
- *   <li>응답기한(유형별 기본 시간) 지나면 업무함 `CS_RESPONSE_OVERDUE`. 고객 재문의는 다시 열고 표시한다.</li>
+ *   <li>응답기한(운영그룹 정책: 달력 시간 또는 영업시간·공휴일 반영, 중요도 배수, DLG-239~243) 지나면 업무함 `CS_RESPONSE_OVERDUE`. 고객 재문의는 다시 열고 표시한다.</li>
  *   <li>주문 문의는 주문의 사업자·판매계정을 따르고 구매자 정보는 주문 쪽(마스킹)을 쓴다. 주문 없는 문의의 고객 정보는 암호화·마스킹.</li>
  *   <li>권한: 조회 `order.read` + 사업자·판매계정 범위, 처리 `order.update`.</li>
  * </ul>
@@ -51,11 +51,12 @@ public class CsService {
     private final WorkItemService workItems;
     private final AuditService audit;
     private final Json json;
-    private final int defaultSlaHours;
+    private final com.commerceos.operations.calendar.BusinessCalendarService calendar;
     private final org.springframework.transaction.support.TransactionTemplate tx;
 
     public CsService(JdbcClient jdbc, AccessGuard guard, SecretCipher cipher, WorkItemService workItems, AuditService audit, Json json,
-                     @Value("${commerce.cs.response-sla-hours:24}") int defaultSlaHours, org.springframework.transaction.PlatformTransactionManager tm) {
+                     com.commerceos.operations.calendar.BusinessCalendarService calendar, org.springframework.transaction.PlatformTransactionManager tm) {
+        this.calendar = calendar;
         this.tx = new org.springframework.transaction.support.TransactionTemplate(tm);
         this.jdbc = jdbc;
         this.guard = guard;
@@ -63,7 +64,6 @@ public class CsService {
         this.workItems = workItems;
         this.audit = audit;
         this.json = json;
-        this.defaultSlaHours = defaultSlaHours;
     }
 
     public record NewInquiry(UUID channelAccountId, UUID orderId, UUID orderItemId, String source, String externalInquiryKey, String inquiryType, String title,
@@ -166,7 +166,7 @@ public class CsService {
                 """).param("id", id).param("ws", a.workspaceId()).param("no", nextNo(a.workspaceId())).param("be", be).param("ca", ca).param("o", orderId)
                 .param("oi", in.orderItemId()).param("src", source).param("ext", ext).param("t", type).param("title", title)
                 .param("st", in.assigneeMemberId() == null ? "OPEN" : "IN_PROGRESS").param("p", priority).param("as", in.assigneeMemberId())
-                .param("due", Db.ts(now.plus(Duration.ofHours(slaHours(priority))))).param("cc", enc == null ? null : enc.cipherText())
+                .param("due", Db.ts(calendar.csDue(a.workspaceId(), now, priority))).param("cc", enc == null ? null : enc.cipherText())
                 .param("ck", enc == null ? null : enc.keyId()).param("cm", masked).param("by", a.memberId()).update();
         message(a, id, "INBOUND", message, null);
         audit.record(AuditEntry.builder(a.workspaceId(), "CS_INQUIRY_CREATED", "CS_INQUIRY", id).actor(ActorType.USER, a.memberId(), a.displayName())
@@ -203,7 +203,7 @@ public class CsService {
                     update cs_inquiry set status = case when status in ('ANSWERED', 'WAITING_CUSTOMER', 'CLOSED') then 'OPEN' else status end,
                            customer_reply = status in ('ANSWERED', 'WAITING_CUSTOMER', 'CLOSED'), closed_at = null,
                            due_at = case when status in ('ANSWERED', 'WAITING_CUSTOMER', 'CLOSED') then :due else due_at end, updated_at = now(), version = version + 1 where id = :id
-                    """).param("due", Db.ts(now.plus(Duration.ofHours(slaHours((String) q.get("priority")))))).param("id", id).update();
+                    """).param("due", Db.ts(calendar.csDue(a.workspaceId(), now, (String) q.get("priority")))).param("id", id).update();
             default -> jdbc.sql("update cs_inquiry set updated_at = now(), version = version + 1 where id = :id").param("id", id).update();
         }
         if ("OUTBOUND".equals(direction)) {
@@ -519,15 +519,6 @@ public class CsService {
                 .query(Integer.class).single() == 0) {
             throw Errors.validation("assignee_member_id", "이 운영그룹의 활성 사용자가 아닙니다.");
         }
-    }
-
-    private int slaHours(String priority) {
-        return switch (priority) {
-            case "URGENT" -> Math.max(1, defaultSlaHours / 6);
-            case "HIGH" -> Math.max(1, defaultSlaHours / 2);
-            case "LOW" -> defaultSlaHours * 2;
-            default -> defaultSlaHours;
-        };
     }
 
     private String nextNo(UUID ws) {

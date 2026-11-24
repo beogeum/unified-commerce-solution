@@ -18,6 +18,7 @@ const MENU: { head?: string; items: Item[] }[] = [
     { href: "/settings/channel-accounts", label: "판매계정", perm: "channel_account.read" },
     { href: "/settings/brands", label: "브랜드·카테고리", perm: "catalog.read" },
     { href: "/settings/users", label: "사용자·권한", perm: "member.read" },
+    { href: "/settings/business-calendar", label: "영업일·CS 응답기한" },
   ] },
 ];
 

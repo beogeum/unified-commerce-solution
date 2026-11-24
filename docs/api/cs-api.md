@@ -14,3 +14,12 @@
 | `POST /cs/inquiries/{id}/claim {claim_id}` | `order.update` | 같은 주문의 클레임 연결 |
 | `GET /cs/templates?business_entity_id` · `POST /cs/templates` · `PUT /cs/templates/{id}` | 조회 `order.read` / 저장 `order.update` | 변수 {고객명} {주문번호} {상품} {송장번호} |
 | `GET /cs/inquiries/{id}/render?template_id` | `order.read` | `{body, missing_variables}` |
+
+## 영업일·CS 응답기한 (DLG-239~243)
+| 메서드·경로 | 권한 | 비고 |
+|---|---|---|
+| `GET /settings/business-calendar` | 구성원 | 요일별 영업시간(`default_hours` = 설정 전 기본값), 최근·다가오는 휴일, CS 응답기한 정책 |
+| `PUT /settings/business-calendar/hours {hours[{weekday 1~7, start "HH:mm", end}]}` | `calendar.manage` | 전체 교체, 영업일 1개 이상 |
+| `POST /settings/business-calendar/holidays {holidays[{day, name}]}` · `DELETE /settings/business-calendar/holidays/{id}` | 〃 | `HOLIDAY_DUPLICATE`, 지난 휴일 삭제 `HOLIDAY_IN_PAST` |
+| `PUT /settings/business-calendar/cs-sla {mode: CALENDAR_HOURS \| BUSINESS_HOURS, base_hours}` (+ If-Match) | 〃 | 이후 접수·재문의부터 |
+| `GET /settings/business-calendar/cs-sla/preview?from&priority` | 구성원 | 기한 미리보기 |

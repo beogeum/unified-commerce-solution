@@ -44,6 +44,7 @@ public final class Perm {
     public static final String PURCHASE_MANAGE = "purchase.manage";
     public static final String CUSTOMER_MANAGE = "customer.manage";
     public static final String RECEIVABLE_MANAGE = "receivable.manage";
+    public static final String CALENDAR_MANAGE = "calendar.manage";
     public static final String CLAIM_REFUND = "claim.refund";
 
     private Perm() {

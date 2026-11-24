@@ -27,7 +27,7 @@ public final class SystemRoles {
         t.put(SUPER_ADMIN, new Template(SUPER_ADMIN, "최고관리자", new TreeSet<>(allPermissions)));
         t.put("OPS_ADMIN", tpl("OPS_ADMIN", "운영관리자", "member.read", "business_entity.manage", "channel_account.manage",
                 "logistics_account.manage", "integration.manage", "integration.sync", "work_item.update", "audit.read",
-                "export.create", "file.upload", "file.read", "order.update", "catalog.manage", "approval.decide", "inventory.operate", "purchase.manage", "customer.manage"));
+                "export.create", "file.upload", "file.read", "order.update", "catalog.manage", "approval.decide", "inventory.operate", "purchase.manage", "customer.manage", "calendar.manage"));
         t.put("MD", tpl("MD", "상품/MD", "export.create", "file.upload", "file.read", "cost.read", "catalog.manage", "purchase.manage"));
         t.put("ORDER_MANAGER", tpl("ORDER_MANAGER", "주문담당", "order.update", "work_item.update", "file.upload", "file.read",
                 "export.create", "pii.read", "customer.manage"));

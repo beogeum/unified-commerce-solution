@@ -1253,6 +1253,30 @@ test.describe.serial("Foundation", () => {
     await expect(page.getByRole("table", { name: /^판매계정별 마지막 주문/ })).toBeVisible();
   });
 
+  test("관리: 영업일·CS 응답기한 — 영업시간 기준 정책 → 휴일 등록 (DLG-239~243)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    await page.getByRole("link", { name: "영업일·CS 응답기한" }).click();
+    await expect(page.getByRole("table", { name: /^영업시간/ })).toContainText("09:00 ~ 18:00");
+    await page.getByRole("button", { name: "응답기한 정책 변경" }).click();
+    let m = page.getByRole("alertdialog");
+    await m.getByLabel("응답기한 기준").selectOption("BUSINESS_HOURS");
+    await m.getByLabel("기본 응답 시간").fill("9");
+    await m.getByRole("button", { name: "저장", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("응답기한 정책을 저장했습니다.");
+    await expect(page.getByLabel("CS 응답기한 정책")).toContainText("영업시간 · 기본 9시간");
+    await page.getByRole("button", { name: "휴일 등록" }).click();
+    m = page.getByRole("alertdialog");
+    await m.getByLabel("휴일 날짜").fill("2099-01-02");
+    await m.getByLabel("휴일 이름").fill(`임시 휴무 ${RUN}`);
+    await m.getByRole("button", { name: "등록", exact: true }).click();
+    await expect(page.getByRole("table", { name: /^휴일/ })).toContainText(`임시 휴무 ${RUN}`);
+  });
+
   test("로그아웃하면 보호된 화면에 들어갈 수 없다", async ({ page }) => {
     await login(page, RESTRICTED.email, RESTRICTED.password);
     await expectOnHome(page, "한상품");
