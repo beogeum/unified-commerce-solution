@@ -3,7 +3,7 @@ package com.commerceos.order;
 import java.util.Set;
 
 /** 주문 개인정보 마스킹(DLG-117). 화면·API 기본값은 마스킹, 원문은 pii.read + 열람 감사로그. */
-final class Pii {
+public final class Pii {
     private static final Set<String> KEYS = Set.of("name", "phone", "email", "postal_code", "address1", "address2", "memo", "address", "tel", "mobile",
             "receiver_name", "receiver_phone", "buyer_name", "buyer_phone");
 
@@ -15,7 +15,7 @@ final class Pii {
     }
 
     /** 이름: 첫 글자와 마지막 글자만(2자는 첫 글자만). */
-    static String name(String v) {
+    public static String name(String v) {
         if (v == null || v.isBlank()) {
             return null;
         }
@@ -30,7 +30,7 @@ final class Pii {
     }
 
     /** 전화: 끝 4자리만. */
-    static String phone(String v) {
+    public static String phone(String v) {
         if (v == null || v.isBlank()) {
             return null;
         }

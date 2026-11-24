@@ -1,0 +1,17 @@
+export type Customer = { id: string; business_entity_id: string; business_entity_name: string; code: string; name: string; business_registration_no: string | null;
+  contact_name_masked: string | null; contact_phone_masked: string | null; payment_terms_days: number; credit_limit: string; status: string; hold_reason: string | null;
+  memo: string | null; price_count: number; updated_at: string; version: number };
+export type Price = { id: string; sku_id: string; sku_code: string; sku_name: string | null; unit_price: string; effective_from: string; current: boolean; created_by_name: string | null };
+export type ArEntry = { id: string; entry_type: string; amount: string; occurred_on: string; due_on: string | null; order_id: string | null; order_no: string | null;
+  claim_id: string | null; method: string | null; reference: string | null; memo: string | null; reverses_id: string | null; reversed: boolean; created_by_name: string | null;
+  created_at: string };
+export type Statement = { customer_id: string; customer_name: string; business_entity_id: string; credit_limit: string; payment_terms_days: number; status: string;
+  balance: string; overdue: string; unbilled_orders: string; exposure: string; available: string;
+  aging: { not_due: string; d1to30: string; d31to60: string; d61to90: string; over90: string };
+  open_charges: { entry_id: string; order_no: string | null; occurred_on: string; due_on: string; amount: string; outstanding: string; days_overdue: number }[];
+  entries: ArEntry[] };
+export type ArSummary = { customer_id: string; code: string; name: string; business_entity_id: string; business_entity_name: string; status: string; credit_limit: string;
+  balance: string; overdue: string; exposure: string; available: string; oldest_due_on: string | null };
+export const CUSTOMER_STATUS: Record<string, ["ok" | "warn" | "mute", string]> = { ACTIVE: ["ok", "거래"], ON_HOLD: ["warn", "거래 보류"], INACTIVE: ["mute", "중지"] };
+export const AR_TYPE: Record<string, string> = { CHARGE: "출고 청구", CREDIT_NOTE: "반품 차감", PAYMENT: "수금", PAYMENT_REVERSAL: "수금 취소", WRITE_OFF: "대손" };
+export const PAY_METHOD: Record<string, string> = { BANK_TRANSFER: "계좌이체", CASH: "현금", CARD: "카드", NOTE: "어음", OFFSET: "상계", OTHER: "기타" };

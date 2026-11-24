@@ -127,6 +127,9 @@ public class FileService {
     public Download download(UUID id) {
         Row r = authorize(id);
         CurrentActor a = guard.actor();
+        if (purged(a.workspaceId(), id)) {
+            throw Errors.unprocessable("FILE_PURGED", "개인정보 보호 정책에 따라 원본 파일 본문을 삭제했습니다(처리 기록은 남아 있습니다).");
+        }
         try (var in = storage.open(r.storageKey())) {
             byte[] content = in.readAllBytes();
             audit.recordIsolated(AuditEntry.builder(a.workspaceId(), "FILE_DOWNLOADED", "FILE", id)
@@ -136,6 +139,31 @@ public class FileService {
         } catch (java.io.IOException e) {
             throw new java.io.UncheckedIOException(e);
         }
+    }
+
+    public boolean purged(UUID ws, UUID fileId) {
+        return jdbc.sql("select count(*) from stored_file_purge where workspace_id = :ws and file_id = :id").param("ws", ws).param("id", fileId).query(Integer.class)
+                .single() > 0;
+    }
+
+    /**
+     * 원본 파일 본문 삭제(개인정보가 든 가져오기 파일, DLG-236). stored_file 행·해시·감사 기록은 남기고 저장소 본문만 지운다. 멱등.
+     * 호출한 쪽의 트랜잭션에서 기록하고, 저장소 삭제는 기록 후 시도(실패해도 다음 보관기간 정리에서 다시 시도할 수 있게 기록은 남긴다).
+     */
+    public boolean purgeContent(UUID ws, UUID fileId, String reason) {
+        int n = jdbc.sql("""
+                insert into stored_file_purge (file_id, workspace_id, reason) values (:id, :ws, :r) on conflict (file_id) do nothing
+                """).param("id", fileId).param("ws", ws).param("r", reason).update();
+        String key = jdbc.sql("select storage_key from stored_file where workspace_id = :ws and id = :id").param("ws", ws).param("id", fileId).query(String.class)
+                .optional().orElse(null);
+        if (key != null) {
+            storage.delete(key);
+        }
+        if (n > 0) {
+            audit.record(AuditEntry.builder(ws, "FILE_CONTENT_PURGED", "FILE", fileId).actor(ActorType.SYSTEM, null, "system").metadata(Map.of("reason", reason))
+                    .build());
+        }
+        return n > 0;
     }
 
     private Row authorize(UUID id) {

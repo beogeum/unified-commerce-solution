@@ -10,8 +10,8 @@ import { formatDateTime } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
-type Field = { key: string; label_ko: string; required: boolean };
-type Template = { import_type: string; label_ko: string; template_version: string; fields: Field[] };
+type Field = { key: string; label_ko: string; required: boolean; sensitive?: boolean };
+type Template = { import_type: string; label_ko: string; template_version: string; required_permission: string; fields: Field[] };
 type Batch = { id: string; import_type: string; template_version: string; file_name: string; file_sha256: string; sheet_name: string | null;
   column_mapping: Record<string, string>; status: string; total_rows: number; ok_rows: number; warning_rows: number; error_rows: number;
   applied_rows: number; failed_rows: number; created_by_name: string; created_at: string; error_message_ko: string | null; version: number };
@@ -29,6 +29,12 @@ export default function ImportsPage() {
   const templates = useApi<Template[]>("/imports/templates");
   const recent = useApi<Batch[]>("/imports");
   const [type, setType] = useState("PRODUCT_SKU");
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("type");
+    if (t) setType(t);
+  }, []);
+  const usable = (templates.data ?? []).filter((t) => can(t.required_permission));
+  const catalog = type === "PRODUCT_SKU" || type === "CHANNEL_LISTING";
   const [batchId, setBatchId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -56,12 +62,13 @@ export default function ImportsPage() {
     }
   };
 
-  if (!can("catalog.manage")) return <ErrorState error={new ApiError(403, "PERMISSION_DENIED", "권한 없음")} />;
+  if (!can("catalog.manage") && !can("order.update")) return <ErrorState error={new ApiError(403, "PERMISSION_DENIED", "권한 없음")} />;
   return (
     <>
       <div className="page-head"><div><h1>일괄 작업 — 엑셀·CSV 가져오기</h1>
         <p>파일을 바로 반영하지 않고, 미리보기에서 오류·경고를 확인한 뒤 실행합니다. 실행은 비동기 작업으로 처리되고 행마다 결과가 남습니다.</p></div></div>
-      <CatalogTabs active="imports" />
+      {catalog && <CatalogTabs active="imports" />}
+      {tpl?.fields.some((f) => f.sensitive) && <div className="note n-info">이 양식에는 개인정보(수령인 이름·연락처·주소)가 들어갑니다. 미리보기에서는 가려서 보여 주고, 실행·취소 후 원본 파일은 삭제됩니다(실행하지 않으면 7일 후 자동 취소).</div>}
       <ol aria-label="진행 단계" className="row-gap" style={{ listStyle: "none", margin: 0, padding: 0 }}>
         {steps.map((s, i) => <li key={s} className="chip c-mute" aria-current={(batchId ? 3 : 0) === i ? "step" : undefined}
           style={(batchId ? i <= 3 : i === 0) ? { background: "var(--primary-soft)", color: "var(--primary-strong)" } : undefined}>{i + 1}. {s}</li>)}
@@ -69,7 +76,7 @@ export default function ImportsPage() {
       <section className="card pad" aria-label="파일 올리기" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div className="row-gap">
           <label className="fld">가져오기 종류<select className="inp" value={type} onChange={(e) => { setType(e.target.value); setBatchId(null); }}>
-            {(templates.data ?? []).map((t) => <option key={t.import_type} value={t.import_type}>{t.label_ko} ({t.template_version})</option>)}</select></label>
+            {usable.map((t) => <option key={t.import_type} value={t.import_type}>{t.label_ko} ({t.template_version})</option>)}</select></label>
           <a className="btn" href={`/bff/api/imports/templates/${type}/file`}>양식 내려받기</a>
           <label className="btn" style={{ cursor: "pointer" }}>{busy ? "올리는 중…" : "파일 선택(.xlsx, .csv)"}
             <input type="file" accept=".xlsx,.csv" hidden aria-label="가져올 파일" disabled={busy} onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} /></label>

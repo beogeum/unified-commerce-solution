@@ -23,6 +23,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <ul>
  *   <li>만료 후 유예기간이 지난 내보내기 파일(본문·기록) 삭제 — 내보내기는 원본이 아닌 사본이며 다운로드는 이미 만료로 막혀 있다.</li>
  *   <li>만료된 멱등키 기록 삭제.</li>
+ *   <li>개인정보가 든 가져오기(수동 주문 파일)를 7일 넘게 실행하지 않으면 자동 취소하고 원본 본문·암호화 값을 지운다(DLG-236).</li>
  *   <li>원본 payload·감사로그·원장은 지우지 않는다(주문 개인정보 파기는 OrderPrivacyService).</li>
  * </ul>
  */
@@ -33,9 +34,12 @@ public class RetentionService {
     private final AuditService audit;
     private final TransactionTemplate tx;
     private final Duration exportGrace;
+    private final com.commerceos.operations.imports.ImportService imports;
 
     public RetentionService(JdbcClient jdbc, FileStorage storage, AuditService audit, PlatformTransactionManager tm,
-                            @Value("${commerce.retention.export-grace:PT24H}") Duration exportGrace) {
+                            @Value("${commerce.retention.export-grace:PT24H}") Duration exportGrace,
+                            @org.springframework.context.annotation.Lazy com.commerceos.operations.imports.ImportService imports) {
+        this.imports = imports;
         this.jdbc = jdbc;
         this.storage = storage;
         this.audit = audit;
@@ -43,7 +47,7 @@ public class RetentionService {
         this.exportGrace = exportGrace;
     }
 
-    public record Result(int exportFiles, int idempotencyRecords) {
+    public record Result(int exportFiles, int idempotencyRecords, int expiredSensitiveImports) {
     }
 
     @Scheduled(cron = "${commerce.retention.cron:0 47 3 * * *}", zone = "Asia/Seoul")
@@ -71,7 +75,8 @@ public class RetentionService {
             int idem = tx.execute(s -> jdbc.sql("delete from idempotency_record where expires_at < :now").param("now", com.commerceos.shared.db.Db.ts(now)).update());
             perWs.forEach((ws, n) -> tx.executeWithoutResult(s -> audit.record(AuditEntry.builder(ws, "RETENTION_PURGED", "STORED_FILE", null)
                     .actor(ActorType.SYSTEM, null, "retention").metadata(Map.of("export_files", n)).build())));
-            return new Result(deleted, idem);
+            int expired = tx.execute(s -> imports.expireSensitive(now.minus(Duration.ofDays(7))));
+            return new Result(deleted, idem, expired);
         });
     }
 }

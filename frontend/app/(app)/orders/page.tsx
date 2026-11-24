@@ -48,7 +48,8 @@ export default function OrdersPage() {
     <>
       <div className="page-head"><div><h1>주문</h1><p>판매계정에서 수집한 주문입니다. 같은 외부 주문번호라도 판매계정·판매단위가 다르면 다른 주문이고, 주문 사업자는 주문 시점의 판매계정 귀속으로 고정됩니다.
         상품이 연결되지 않았거나 금액이 맞지 않는 주문은 보류되어 출고로 넘어가지 않습니다. B2B·샘플·전화 주문은 '수동 주문 작성'으로 만듭니다.</p></div>
-        {can("order.update") && <button className="btn pri" type="button" onClick={() => setCreating(true)}>수동 주문 작성</button>}</div>
+        {can("order.update") && <span className="row-gap">{can("file.upload") && <a className="btn" href="/imports?type=MANUAL_ORDER">파일로 일괄 등록</a>}
+          <button className="btn pri" type="button" onClick={() => setCreating(true)}>수동 주문 작성</button></span>}</div>
       {notice && <div className="note n-info" role="status">{notice}</div>}
       <div className="row-gap">
         <label className="fld">검색<input className="inp" value={q} onChange={(e) => setQ(e.target.value)} placeholder="주문번호·외부 주문번호·상품명" /></label>

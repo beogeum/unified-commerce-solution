@@ -39,9 +39,13 @@ public class ImportJobHandler implements JobHandler {
     private final Json json;
     private final TransactionTemplate tx;
     private final Map<String, ImportTypeHandler> handlers;
+    private final com.commerceos.shared.crypto.SecretCipher cipher;
+    private final com.commerceos.platform.file.FileService files;
 
     public ImportJobHandler(JdbcClient jdbc, AccessGuard guard, ActorFactory actors, AuditService audit, Json json, PlatformTransactionManager tm,
-                            List<ImportTypeHandler> handlers) {
+                            List<ImportTypeHandler> handlers, com.commerceos.shared.crypto.SecretCipher cipher, com.commerceos.platform.file.FileService files) {
+        this.cipher = cipher;
+        this.files = files;
         this.jdbc = jdbc;
         this.guard = guard;
         this.actors = actors;
@@ -78,8 +82,10 @@ public class ImportJobHandler implements JobHandler {
     private JobOutcome run(Job job, Batch b, ImportTypeHandler h, CurrentActor actor) {
         record Row(int n, Map<String, String> normalized, String result) {
         }
-        List<Row> rows = jdbc.sql("select row_number, normalized, result from import_row where batch_id = :b and status <> 'ERROR' order by row_number")
-                .param("b", b.id()).query((rs, i) -> new Row(rs.getInt("row_number"), toMap(rs.getString("normalized")), rs.getString("result"))).list();
+        List<Row> rows = jdbc.sql("""
+                select row_number, normalized, result, secret_cipher, secret_key_id from import_row where batch_id = :b and status <> 'ERROR' order by row_number
+                """).param("b", b.id()).query((rs, i) -> new Row(rs.getInt("row_number"), withSecret(toMap(rs.getString("normalized")), rs.getBytes("secret_cipher"),
+                        rs.getString("secret_key_id")), rs.getString("result"))).list();
         ImportTypeHandler.BatchContext ctx = new ImportTypeHandler.BatchContext(b.id(), rows.stream().map(Row::normalized).toList());
         int done = (int) rows.stream().filter(r -> !"PENDING".equals(r.result())).count();
         progress(job.id(), rows.size(), done);
@@ -109,6 +115,12 @@ public class ImportJobHandler implements JobHandler {
         int failed = jdbc.sql("select count(*) from import_row where batch_id = :b and result = 'FAILED'").param("b", b.id()).query(Integer.class).single();
         jdbc.sql("update import_batch set applied_rows = :a, failed_rows = :f where id = :id").param("a", applied).param("f", failed).param("id", b.id()).update();
         finish(b, failed == 0 ? "COMPLETED" : "COMPLETED_WITH_ERRORS", null);
+        if (h.hasSensitiveFields()) {
+            // 개인정보가 든 원본 파일은 처리 후 본문 삭제(DLG-236)
+            UUID fileId = jdbc.sql("select file_id from import_batch where id = :id").param("id", b.id()).query(UUID.class).single();
+            files.purgeContent(b.workspaceId(), fileId, "SENSITIVE_IMPORT_PROCESSED");
+            jdbc.sql("update import_row set secret_cipher = null, secret_key_id = null where batch_id = :b").param("b", b.id()).update();
+        }
         audit.record(AuditEntry.builder(b.workspaceId(), "IMPORT_COMPLETED", "IMPORT_BATCH", b.id())
                 .actor(ActorType.USER, actor.memberId(), actor.displayName()).metadata(Map.of("applied", applied, "failed", failed, "job_id", job.id().toString()))
                 .build());
@@ -132,6 +144,16 @@ public class ImportJobHandler implements JobHandler {
 
     private void progress(UUID jobId, int total, int done) {
         jdbc.sql("update async_job set progress_total = :t, progress_done = :d where id = :id").param("t", total).param("d", done).param("id", jobId).update();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, String> withSecret(Map<String, String> normalized, byte[] secret, String keyId) {
+        if (secret == null) {
+            return normalized;
+        }
+        Map<String, String> m = new LinkedHashMap<>(normalized);
+        m.putAll(json.read(cipher.decrypt(secret, keyId), LinkedHashMap.class));
+        return m;
     }
 
     @SuppressWarnings("unchecked")

@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -45,9 +46,11 @@ public class ImportService {
     private final JobService jobs;
     private final Json json;
     private final Map<String, ImportTypeHandler> handlers;
+    private final com.commerceos.shared.crypto.SecretCipher cipher;
 
     public ImportService(JdbcClient jdbc, AccessGuard guard, AuditService audit, FileService files, JobService jobs, Json json,
-                         List<ImportTypeHandler> handlers) {
+                         List<ImportTypeHandler> handlers, com.commerceos.shared.crypto.SecretCipher cipher) {
+        this.cipher = cipher;
         this.jdbc = jdbc;
         this.guard = guard;
         this.audit = audit;
@@ -57,7 +60,7 @@ public class ImportService {
         this.handlers = handlers.stream().collect(Collectors.toMap(ImportTypeHandler::importType, Function.identity()));
     }
 
-    public record TemplateView(String importType, String labelKo, String templateVersion, List<ImportTypeHandler.Field> fields) {
+    public record TemplateView(String importType, String labelKo, String templateVersion, String requiredPermission, List<ImportTypeHandler.Field> fields) {
     }
 
     public record BatchView(UUID id, String importType, String templateVersion, UUID fileId, String fileName, String fileSha256, String sheetName,
@@ -75,7 +78,7 @@ public class ImportService {
     public List<TemplateView> templates() {
         guard.actor();
         return handlers.values().stream().sorted(java.util.Comparator.comparing(ImportTypeHandler::importType))
-                .map(h -> new TemplateView(h.importType(), h.labelKo(), h.templateVersion(), h.fields())).toList();
+                .map(h -> new TemplateView(h.importType(), h.labelKo(), h.templateVersion(), h.requiredPermission(), h.fields())).toList();
     }
 
     /** 양식 파일(CSV, 머리글 + 예시 1행). 엑셀에서 열어 그대로 채워 저장하면 된다. */
@@ -141,20 +144,46 @@ public class ImportService {
                 """).param("id", id).param("ws", a.workspaceId()).param("t", h.importType()).param("v", h.templateVersion())
                 .param("f", c.fileId()).param("sheet", table.sheetName()).param("map", json.write(mapping)).param("total", table.rows().size())
                 .param("ok", ok).param("warn", warn).param("err", err).param("by", a.memberId()).update();
+        Set<String> sensitive = h.fields().stream().filter(ImportTypeHandler.Field::sensitive).map(ImportTypeHandler.Field::key).collect(Collectors.toSet());
         for (int i = 0; i < checks.size(); i++) {
             ImportTypeHandler.RowCheck rc = checks.get(i);
+            Map<String, String> raw = new LinkedHashMap<>(table.rows().get(i).values());
+            Map<String, String> norm = rc.normalized() == null ? null : new LinkedHashMap<>(rc.normalized());
+            com.commerceos.shared.crypto.SecretCipher.Encrypted secret = null;
+            if (!sensitive.isEmpty()) {
+                // 미리보기 원문은 마스킹, 실행에 필요한 값은 암호화 묶음으로만 보관(DLG-235)
+                raw.replaceAll((header, value) -> sensitive.contains(mapping.get(header)) ? maskValue(value) : value);
+                if (norm != null) {
+                    Map<String, String> hidden = new LinkedHashMap<>();
+                    for (String k : sensitive) {
+                        if (norm.containsKey(k)) {
+                            hidden.put(k, norm.remove(k));
+                        }
+                    }
+                    secret = hidden.isEmpty() ? null : cipher.encrypt(json.write(hidden));
+                }
+            }
             jdbc.sql("""
-                    insert into import_row (workspace_id, batch_id, row_number, status, messages, raw, normalized)
-                    values (:ws, :b, :n, :st, cast(:msg as jsonb), cast(:raw as jsonb), cast(:norm as jsonb))
+                    insert into import_row (workspace_id, batch_id, row_number, status, messages, raw, normalized, secret_cipher, secret_key_id)
+                    values (:ws, :b, :n, :st, cast(:msg as jsonb), cast(:raw as jsonb), cast(:norm as jsonb), :sc, cast(:sk as text))
                     """).param("ws", a.workspaceId()).param("b", id).param("n", table.rows().get(i).rowNumber()).param("st", rc.status())
-                    .param("msg", json.write(rc.messages())).param("raw", json.write(table.rows().get(i).values()))
-                    .param("norm", rc.normalized() == null ? null : json.write(rc.normalized())).update();
+                    .param("msg", json.write(rc.messages())).param("raw", json.write(raw)).param("norm", norm == null ? null : json.write(norm))
+                    .param("sc", secret == null ? null : secret.cipherText()).param("sk", secret == null ? null : secret.keyId()).update();
         }
         audit.record(AuditEntry.builder(a.workspaceId(), "IMPORT_PREVIEWED", "IMPORT_BATCH", id).actor(ActorType.USER, a.memberId(), a.displayName())
                 .metadata(Map.of("import_type", h.importType(), "template_version", h.templateVersion(), "file_id", c.fileId().toString(),
                         "sha256", d.file().sha256(), "rows", table.rows().size(), "ok", ok, "warning", warn, "error", err, "encoding", table.encoding()))
                 .build());
         return get(id);
+    }
+
+    /** 미리보기용 마스킹: 앞 1글자 + 나머지 *(최대 8자). */
+    static String maskValue(String v) {
+        if (v == null || v.isBlank()) {
+            return v;
+        }
+        String t = v.trim();
+        return t.charAt(0) + "*".repeat(Math.min(8, Math.max(1, t.length() - 1)));
     }
 
     public BatchView get(UUID id) {
@@ -258,8 +287,34 @@ public class ImportService {
             throw Errors.conflict("IMPORT_NOT_PREVIEWED", "실행 전 가져오기만 취소할 수 있습니다.", Map.of("status", b.status()));
         }
         jdbc.sql("update import_batch set status = 'CANCELLED', completed_at = now(), version = version + 1 where id = :id").param("id", id).update();
+        if (handler(b.importType()).hasSensitiveFields()) {
+            files.purgeContent(a.workspaceId(), b.fileId(), "SENSITIVE_IMPORT_PROCESSED");
+            jdbc.sql("update import_row set secret_cipher = null, secret_key_id = null where batch_id = :b").param("b", id).update();
+        }
         audit.record(AuditEntry.builder(a.workspaceId(), "IMPORT_CANCELLED", "IMPORT_BATCH", id).actor(ActorType.USER, a.memberId(), a.displayName()).build());
         return find(id).orElseThrow();
+    }
+
+    /** 개인정보 유형 가져오기 중 미리보기 후 오래 실행하지 않은 배치: 취소하고 원본 본문·암호화 값을 지운다(DLG-236, 보관기간 정리에서 호출). */
+    public int expireSensitive(java.time.Instant olderThan) {
+        List<String> types = handlers.values().stream().filter(ImportTypeHandler::hasSensitiveFields).map(ImportTypeHandler::importType).toList();
+        if (types.isEmpty()) {
+            return 0;
+        }
+        int n = 0;
+        for (Map<String, Object> b : jdbc.sql("""
+                select id, workspace_id, file_id from import_batch where status = 'PREVIEWED' and import_type in (:t) and created_at < :at
+                """).param("t", types).param("at", com.commerceos.shared.db.Db.ts(olderThan)).query().listOfRows()) {
+            UUID id = (UUID) b.get("id");
+            UUID ws = (UUID) b.get("workspace_id");
+            jdbc.sql("update import_batch set status = 'CANCELLED', completed_at = now(), error_message_ko = :m, version = version + 1 where id = :id and status = 'PREVIEWED'")
+                    .param("m", "개인정보 보호를 위해 7일 동안 실행하지 않은 가져오기를 자동 취소했습니다.").param("id", id).update();
+            jdbc.sql("update import_row set secret_cipher = null, secret_key_id = null where batch_id = :b").param("b", id).update();
+            files.purgeContent(ws, (UUID) b.get("file_id"), "SENSITIVE_IMPORT_EXPIRED");
+            audit.record(AuditEntry.builder(ws, "IMPORT_EXPIRED", "IMPORT_BATCH", id).actor(ActorType.SYSTEM, null, "system").build());
+            n++;
+        }
+        return n;
     }
 
     ImportTypeHandler handler(String type) {

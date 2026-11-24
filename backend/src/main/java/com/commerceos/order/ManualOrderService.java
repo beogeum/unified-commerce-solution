@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -39,8 +40,13 @@ public class ManualOrderService {
     private final AccessGuard guard;
     private final OrderIngestService ingest;
     private final AuditService audit;
+    private final com.commerceos.b2b.B2bCustomerService customers;
+    private final com.commerceos.b2b.ReceivableService receivables;
 
-    public ManualOrderService(JdbcClient jdbc, AccessGuard guard, OrderIngestService ingest, AuditService audit) {
+    public ManualOrderService(JdbcClient jdbc, AccessGuard guard, OrderIngestService ingest, AuditService audit, com.commerceos.b2b.B2bCustomerService customers,
+                              com.commerceos.b2b.ReceivableService receivables) {
+        this.customers = customers;
+        this.receivables = receivables;
         this.jdbc = jdbc;
         this.guard = guard;
         this.ingest = ingest;
@@ -54,7 +60,7 @@ public class ManualOrderService {
     }
 
     public record NewManualOrder(UUID channelAccountId, UUID salesUnitId, String kind, String customerName, Recipient recipient, BigDecimal shippingFee,
-                                 List<Line> lines, String memo) {
+                                 List<Line> lines, String memo, UUID customerId, String paymentTerms) {
     }
 
     public record Created(UUID orderId, String orderNo, String externalOrderKey, String status, String kind) {
@@ -62,6 +68,21 @@ public class ManualOrderService {
 
     @Transactional
     public Created create(NewManualOrder in) {
+        return create(in, null);
+    }
+
+    /** 파일 일괄 등록의 주문 묶음 식별키(판매계정 + 묶음 키). 같은 키는 한 번만 주문이 된다(DLG-237). */
+    public static String importRef(UUID channelAccountId, String orderRef) {
+        return "REF:" + channelAccountId + ":" + orderRef;
+    }
+
+    public Optional<String> findByImportRef(UUID ws, String importRef) {
+        return jdbc.sql("select order_no from sales_order where workspace_id = :ws and import_ref = :r").param("ws", ws).param("r", importRef).query(String.class)
+                .optional();
+    }
+
+    @Transactional
+    public Created create(NewManualOrder in, String importRef) {
         guard.requirePermission(Perm.ORDER_UPDATE);
         CurrentActor a = guard.actor();
         if (in == null || in.channelAccountId() == null) {
@@ -79,6 +100,24 @@ public class ManualOrderService {
                 : jdbc.sql("select id, external_unit_key from sales_unit where channel_account_id = :ca and id = :id").param("ca", in.channelAccountId()).param("id", in.salesUnitId()))
                 .query().listOfRows().stream().findFirst().orElseThrow(() -> Errors.validation("sales_unit_id", "이 판매계정의 판매단위를 선택하세요."));
         String customer = in.customerName() == null || in.customerName().isBlank() ? null : in.customerName().trim();
+        // B2B 거래처 마스터(DLG-226~230): 거래처를 고르면 거래처명·단가표를 쓰고, 결제 조건(선결제/외상)이 필요하다
+        UUID customerId = in.customerId();
+        String terms = null;
+        if (customerId != null) {
+            if (!"B2B".equals(kind)) {
+                throw Errors.validation("customer_id", "거래처는 B2B 주문에서만 지정합니다.");
+            }
+            terms = in.paymentTerms();
+            if (!"PREPAID".equals(terms) && !"CREDIT".equals(terms)) {
+                throw Errors.validation("payment_terms", "결제 조건을 선결제(PREPAID) 또는 외상(CREDIT)으로 선택하세요.");
+            }
+            guard.checkRead("B2B_CUSTOMER", customerId, be, null);
+            customer = jdbc.sql("select name from b2b_customer where workspace_id = :ws and id = :id").param("ws", a.workspaceId()).param("id", customerId)
+                    .query(String.class).optional().orElseThrow(() -> Errors.notFound("B2B_CUSTOMER"));
+        } else if (in.paymentTerms() != null) {
+            throw Errors.validation("payment_terms", "결제 조건은 거래처를 지정한 B2B 주문에서만 씁니다.");
+        }
+        LocalDate orderDay = LocalDate.now(ZoneId.of("Asia/Seoul"));
         if ("B2B".equals(kind) && customer == null) {
             throw Errors.validation("customer_name", "B2B 주문은 거래처명을 입력하세요.");
         }
@@ -120,7 +159,12 @@ public class ManualOrderService {
             if (q < 1) {
                 throw Errors.validation("lines", no + "번째 상품의 수량은 1 이상입니다.");
             }
-            BigDecimal price = l.unitPrice() == null ? BigDecimal.ZERO : l.unitPrice();
+            BigDecimal price = l.unitPrice();
+            if (price == null && customerId != null) {
+                price = customers.priceOn(customerId, l.skuId(), orderDay).orElseThrow(() -> Errors.validation("lines",
+                        sku.get("sku_code") + " 는 거래처 단가표에 없습니다. 단가를 직접 입력하거나 단가표에 등록하세요."));
+            }
+            price = price == null ? BigDecimal.ZERO : price;
             BigDecimal disc = l.discount() == null ? BigDecimal.ZERO : l.discount();
             if (price.signum() < 0 || disc.signum() < 0 || price.stripTrailingZeros().scale() > 0 || disc.stripTrailingZeros().scale() > 0) {
                 throw Errors.validation("lines", no + "번째 상품의 단가·할인을 원 단위로 입력하세요.");
@@ -135,6 +179,10 @@ public class ManualOrderService {
             items.add(new OrderInput.Item(String.valueOf(no), SKU_PREFIX + sku.get("sku_code"), "", (String) sku.get("name"), null, q, 0, price, amount, disc,
                     BigDecimal.ZERO, null, false, null));
             total = total.add(amount).subtract(disc);
+        }
+        if (customerId != null) {
+            // 거래처 행 잠금 + 거래 상태·여신(외상 한도·연체) 검사 — 동시 주문도 한도를 넘지 않는다
+            receivables.checkOrder(customerId, be, terms, total);
         }
         String key = nextKey(a.workspaceId());
         Instant now = Instant.now();
@@ -153,11 +201,14 @@ public class ManualOrderService {
         if (res.orderId() == null) {
             throw Errors.unprocessable("MANUAL_ORDER_REJECTED", "주문을 만들지 못했습니다: " + res.detail());
         }
-        jdbc.sql("update sales_order set order_kind = :k, customer_name = cast(:c as text), created_by = :by where id = :id").param("k", kind).param("c", customer)
-                .param("by", a.memberId()).param("id", res.orderId()).update();
+        jdbc.sql("""
+                update sales_order set order_kind = :k, customer_name = cast(:c as text), created_by = :by, b2b_customer_id = cast(:cu as uuid),
+                       payment_terms = cast(:pt as text), import_ref = cast(:ir as text) where id = :id
+                """).param("ir", importRef).param("k", kind).param("c", customer).param("by", a.memberId()).param("cu", customerId).param("pt", terms).param("id", res.orderId()).update();
         Map<String, Object> o = jdbc.sql("select order_no, status from sales_order where id = :id").param("id", res.orderId()).query().listOfRows().get(0);
         audit.record(AuditEntry.builder(a.workspaceId(), "MANUAL_ORDER_CREATED", "SALES_ORDER", res.orderId()).actor(ActorType.USER, a.memberId(), a.displayName())
-                .scope(be, in.channelAccountId()).reason(in.memo()).after(Map.of("kind", kind, "lines", lines.size(), "total", total.toPlainString())).build());
+                .scope(be, in.channelAccountId()).reason(in.memo()).after(Map.of("kind", kind, "lines", lines.size(), "total", total.toPlainString(), "customer_id", String.valueOf(customerId),
+                        "payment_terms", String.valueOf(terms))).build());
         return new Created(res.orderId(), (String) o.get("order_no"), key, (String) o.get("status"), kind);
     }
 

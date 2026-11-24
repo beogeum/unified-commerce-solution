@@ -1139,6 +1139,43 @@ test.describe.serial("Foundation", () => {
     await m.getByRole("button", { name: "주문 만들기" }).click();
     await expect(page.getByRole("status").filter({ hasText: "만들었습니다" })).toBeVisible();
     await expect(page.getByRole("row", { name: new RegExp(`B2B · 올리브 ${RUN}`) })).toBeVisible();
+    // 파일 일괄 등록: 수동 주문 양식이 선택되고 개인정보 처리 안내가 보인다
+    await page.getByRole("link", { name: "파일로 일괄 등록" }).click();
+    await expect(page.getByLabel("가져오기 종류")).toHaveValue("MANUAL_ORDER");
+    await expect(page.getByText("원본 파일은 삭제됩니다")).toBeVisible();
+  });
+
+  test("B2B: 거래처 등록(외상 한도) → 단가 등록 → 외상 현황 (DLG-226~233)", async ({ page }) => {
+    await login(page, ADMIN.email, ADMIN.password);
+    const next = await nextTotp(secret, lastStep);
+    lastStep = next.step;
+    await page.getByLabel("인증 코드").fill(next.code);
+    await page.getByRole("button", { name: "확인" }).click();
+    await expectOnHome(page, "최고관리자");
+    await page.getByRole("link", { name: "B2B 거래처·외상" }).click();
+    await page.getByRole("button", { name: "거래처 등록" }).click();
+    let m = page.getByRole("alertdialog");
+    await m.getByLabel("거래처 사업자").selectOption({ label: NAMES.a });
+    await m.getByLabel("거래처 코드").fill(`C${RUN}`);
+    await m.getByLabel("거래처명", { exact: true }).fill(`납품처 ${RUN}`);
+    await m.getByLabel("담당자 연락처").fill("010-7777-8888");
+    await m.getByLabel("외상 한도(원)").fill("500000");
+    await m.getByRole("button", { name: "등록", exact: true }).click();
+    const d = page.getByRole("dialog", { name: `거래처 납품처 ${RUN}` });
+    await expect(d).toContainText("500,000원");
+    await expect(d).not.toContainText("7777-8888");
+    await expect(d.getByRole("table", { name: /^외상 원장/ }).or(d.getByText("외상 기록이 없습니다."))).toBeVisible();
+    await d.getByRole("button", { name: "단가 등록" }).click();
+    m = page.getByRole("alertdialog");
+    await m.getByLabel("SKU 검색").fill(`AMP-50-${RUN}`);
+    await m.getByRole("button", { name: new RegExp(`AMP-50-${RUN}`) }).click();
+    await m.getByLabel("단가(원, 부가세 포함)").fill("15000");
+    await m.getByRole("button", { name: "등록", exact: true }).click();
+    await expect(d.getByRole("status")).toContainText("단가를 등록했습니다.");
+    await expect(d.getByRole("row", { name: new RegExp(`AMP-50-${RUN}`) })).toContainText("15,000");
+    await d.getByRole("button", { name: "닫기", exact: true }).click();
+    await page.getByRole("button", { name: "외상 현황" }).click();
+    await expect(page.getByRole("row", { name: new RegExp(`납품처 ${RUN}`) })).toContainText("500,000");
   });
 
   test("CS: 답변 템플릿 → 전화 문의 접수(고객 마스킹) → 템플릿 답변 기록 → 채널 등록 완료 (FR-CS-01·05)", async ({ page }) => {

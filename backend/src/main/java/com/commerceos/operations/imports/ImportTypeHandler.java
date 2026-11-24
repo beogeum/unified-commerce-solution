@@ -25,7 +25,15 @@ public interface ImportTypeHandler {
     /** 행 하나 적용. 반환값은 적용 대상 참조(예: SKU 코드). 실패는 ApiException(한국어 메시지)으로. */
     String apply(Map<String, String> normalized, BatchContext context);
 
-    record Field(String key, String labelKo, boolean required, List<String> aliases, String exampleValue) {
+    /** sensitive = 개인정보(수령인 이름·연락처·주소 등): 가져오기 행에 평문으로 두지 않고 미리보기는 마스킹, 실행 값은 암호화(DLG-235). */
+    record Field(String key, String labelKo, boolean required, List<String> aliases, String exampleValue, boolean sensitive) {
+        public Field(String key, String labelKo, boolean required, List<String> aliases, String exampleValue) {
+            this(key, labelKo, required, aliases, exampleValue, false);
+        }
+    }
+
+    default boolean hasSensitiveFields() {
+        return fields().stream().anyMatch(Field::sensitive);
     }
 
     record Message(String level, String field, String text) {
