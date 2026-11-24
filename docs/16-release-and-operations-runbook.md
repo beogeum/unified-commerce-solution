@@ -28,6 +28,7 @@
 
 ## 백업·복구(M7, DLG-218)
 - 백업: `PGHOST=… PGUSER=… PGPASSWORD=… PGDATABASE=commerce_os BACKUP_DIR=/secure/backups scripts/db-backup.sh` — pg_dump 사용자 지정 형식 + SHA-256, `BACKUP_KEEP_DAYS`(기본 14) 지난 파일 정리. 백업에는 개인정보 암호문이 있으므로 접근 제한 저장소·암호화 볼륨에 둔다. 암호화 키(`CRYPTO_KEY_*`)는 백업과 **다른 곳**에 보관(키 없이는 개인정보 복호화 불가).
+- 클라이언트 버전: `pg_dump`·`pg_restore` 는 서버와 같은 주 버전을 쓴다. 더 새 버전의 덤프는 옛 서버에서 복구되지 않을 수 있다(예: 17+ 의 `SET transaction_timeout` 은 16 에서 오류). 호스트 도구 버전이 다르면 `PG_CLIENT_IMAGE=postgres:16-alpine` 를 주면 두 스크립트가 그 이미지 안의 도구를 쓴다(CI 복구 리허설 기본값). 데이터베이스 준비 대기는 초기화용 임시 서버가 아니라 TCP 접속 기준.
 - 복구 리허설: `scripts/db-restore-check.sh <백업 파일>` — 임시 PostgreSQL(도커)에 복구 후 체크섬·마이그레이션 이력·핵심 테이블 행 수·추가 전용 트리거·RLS 정책을 점검하고 지운다(운영 DB 를 건드리지 않음). CI 의 `restore-rehearsal` 작업이 매 빌드마다 새 스키마로 같은 절차를 돈다.
 - 첨부·업로드 파일(`FILES_ROOT` 또는 객체 저장소)은 DB 와 같은 시점으로 별도 백업한다.
 - RPO/RTO·백업 주기·보관 기간 수치는 운영계약 후 확정(docs/08 §6). 권장 초기값: 매일 전체 백업 + WAL 아카이브(시점 복구), 분기 1회 복구 리허설 기록.
