@@ -305,9 +305,17 @@ public class DepositService {
                 .listOfRows().stream().findFirst().orElseThrow(() -> Errors.notFound("BANK_DEPOSIT"));
     }
 
+    /** 입금에서 이미 쓴 금액 = 정산 연결 + B2B 수금 연결(취소된 수금 제외, DLG-245). */
     private BigDecimal matchedOfDeposit(UUID depositId) {
-        return jdbc.sql("select coalesce(sum(amount), 0) from deposit_match where deposit_id = :d and cancelled_at is null").param("d", depositId).query(BigDecimal.class)
-                .single();
+        return usedOfDeposit(jdbc, depositId);
+    }
+
+    public static BigDecimal usedOfDeposit(JdbcClient jdbc, UUID depositId) {
+        return jdbc.sql("""
+                select coalesce((select sum(amount) from deposit_match where deposit_id = :d and cancelled_at is null), 0)
+                     + coalesce((select sum(-e.amount) from receivable_entry e where e.bank_deposit_id = :d and e.entry_type = 'PAYMENT'
+                                   and not exists (select 1 from receivable_entry r where r.reverses_id = e.id)), 0)
+                """).param("d", depositId).query(BigDecimal.class).single();
     }
 
     private static String trim(String s, int max, String field) {

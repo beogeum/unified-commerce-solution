@@ -67,7 +67,9 @@ export function CustomerDrawer({ id, onClose, onChanged }: { id: string; onClose
   const [notice, setNotice] = useState<string | null>(null);
   const [edit, setEdit] = useState({ status: "ACTIVE", hold_reason: "", limit: 0, terms: 30 });
   const [price, setPrice] = useState({ sku_id: "", sku_code: "", unit_price: 0, effective_from: "" });
-  const [pay, setPay] = useState({ amount: 0, received_on: "", method: "BANK_TRANSFER", reference: "" });
+  const [pay, setPay] = useState({ amount: 0, received_on: "", method: "BANK_TRANSFER", reference: "", bank_deposit_id: "" });
+  type Dep = { id: string; deposited_on: string; amount: string; remaining: string; depositor: string | null };
+  const deps = useApi<Dep[]>(mode === "pay" && c.data ? `/finance/deposits?business_entity_id=${c.data.business_entity_id}&unmatched=true` : null);
   const [payKey, setPayKey] = useState(newIdempotencyKey);
   const [wo, setWo] = useState({ amount: 0, reason: "" });
   const [rev, setRev] = useState({ id: "", reason: "" });
@@ -91,7 +93,7 @@ export function CustomerDrawer({ id, onClose, onChanged }: { id: string; onClose
     <Drawer title={cu ? `거래처 ${cu.name}` : "거래처"} onClose={onClose} footer={cu ? <>
       {manage && <button className="btn" type="button" onClick={() => { setEdit({ status: cu.status, hold_reason: cu.hold_reason ?? "", limit: Number(cu.credit_limit), terms: cu.payment_terms_days }); setMode("edit"); }}>거래 상태·한도 변경</button>}
       {manage && <button className="btn" type="button" onClick={() => setMode("price")}>단가 등록</button>}
-      {finance && <button className="btn pri" type="button" onClick={() => { setPayKey(newIdempotencyKey()); setPay({ amount: 0, received_on: "", method: "BANK_TRANSFER", reference: "" }); setMode("pay"); }}>수금 기록</button>}
+      {finance && <button className="btn pri" type="button" onClick={() => { setPayKey(newIdempotencyKey()); setPay({ amount: 0, received_on: "", method: "BANK_TRANSFER", reference: "", bank_deposit_id: "" }); setMode("pay"); }}>수금 기록</button>}
       {finance && <button className="btn" type="button" onClick={() => setMode("writeoff")}>대손 요청</button>}
     </> : undefined}>
       {c.loading ? <Loading /> : c.error ? <ErrorState error={c.error} onRetry={c.reload} /> : cu && <>
@@ -148,8 +150,12 @@ export function CustomerDrawer({ id, onClose, onChanged }: { id: string; onClose
       </ConfirmModal>}
       {mode === "pay" && <ConfirmModal title="수금 기록" confirmLabel="기록" confirmDisabled={pay.amount < 1} onClose={() => setMode(null)}
         onConfirm={() => run(api(`/b2b-customers/${id}/payments`, { method: "POST", idempotencyKey: payKey, body: { amount: pay.amount, received_on: pay.received_on || undefined,
-          method: pay.method, reference: pay.reference || undefined } }), "수금을 기록했습니다.")}
-        impact={[["차감", "오래된 청구부터 차감합니다"], ["정정", "잘못 기록하면 '수금 취소'로 되돌립니다(원장은 지우지 않음)"]]}>
+          method: pay.method, reference: pay.reference || undefined, bank_deposit_id: pay.bank_deposit_id || undefined } }), "수금을 기록했습니다.")}
+        impact={[["차감", "오래된 청구부터 차감합니다"], ["입금 연결", "연결한 입금은 남은 금액만큼만 쓰고, 채널 정산 연결과 겹치지 않습니다"], ["정정", "잘못 기록하면 '수금 취소'로 되돌립니다(원장은 지우지 않음)"]]}>
+        <label className="fld">은행 입금 연결(선택)<select className="inp" value={pay.bank_deposit_id} aria-label="은행 입금 연결"
+          onChange={(e) => { const d = deps.data?.find((x) => x.id === e.target.value); setPay({ ...pay, bank_deposit_id: e.target.value, amount: d ? Math.min(Number(d.remaining), pay.amount || Number(d.remaining)) : pay.amount }); }}>
+          <option value="">연결 안 함(직접 기록)</option>
+          {(deps.data ?? []).map((d) => <option key={d.id} value={d.id}>{d.deposited_on} · {d.depositor ?? "입금"} · 남은 {won(d.remaining)}원</option>)}</select></label>
         <label className="fld">수금액(원)<input className="inp" type="number" min={1} value={pay.amount} onChange={(e) => setPay({ ...pay, amount: int(e.target.value) })} aria-label="수금액" /></label>
         <label className="fld">입금일(비우면 오늘)<input className="inp" type="date" value={pay.received_on} onChange={(e) => setPay({ ...pay, received_on: e.target.value })} /></label>
         <label className="fld">방법<select className="inp" value={pay.method} onChange={(e) => setPay({ ...pay, method: e.target.value })} aria-label="수금 방법">

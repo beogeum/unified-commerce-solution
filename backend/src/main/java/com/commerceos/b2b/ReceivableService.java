@@ -63,14 +63,15 @@ public class ReceivableService implements ApprovalHandler {
         this.tx = tx;
     }
 
-    public record PaymentInput(BigDecimal amount, LocalDate receivedOn, String method, String reference, String memo) {
+    public record PaymentInput(BigDecimal amount, LocalDate receivedOn, String method, String reference, String memo, UUID bankDepositId) {
     }
 
     public record WriteOffInput(BigDecimal amount, String reason) {
     }
 
     public record EntryView(UUID id, String entryType, BigDecimal amount, LocalDate occurredOn, LocalDate dueOn, UUID orderId, String orderNo, UUID claimId,
-                            String method, String reference, String memo, UUID reversesId, boolean reversed, String createdByName, java.time.Instant createdAt) {
+                            String method, String reference, String memo, UUID reversesId, boolean reversed, String createdByName, java.time.Instant createdAt,
+                            UUID bankDepositId) {
     }
 
     public record Aging(BigDecimal notDue, BigDecimal d1to30, BigDecimal d31to60, BigDecimal d61to90, BigDecimal over90) {
@@ -188,7 +189,7 @@ public class ReceivableService implements ApprovalHandler {
         if (in == null || in.amount() == null || in.amount().signum() <= 0 || in.amount().stripTrailingZeros().scale() > 0) {
             throw Errors.validation("amount", "수금액을 1원 이상 원 단위로 입력하세요.");
         }
-        String method = in.method() == null ? "BANK_TRANSFER" : in.method();
+        String method = in.method() == null || in.bankDepositId() != null ? "BANK_TRANSFER" : in.method();
         if (!METHODS.contains(method)) {
             throw Errors.validation("method", "수금 방법 값이 올바르지 않습니다.");
         }
@@ -196,8 +197,23 @@ public class ReceivableService implements ApprovalHandler {
         if (day.isAfter(LocalDate.now(B2bCustomerService.KST))) {
             throw Errors.validation("received_on", "미래 날짜로 수금을 기록할 수 없습니다.");
         }
+        if (in.bankDepositId() != null) {
+            // 은행 입금 연결: 입금 행을 잠그고(정산 연결과 같은 잠금) 남은 금액 안에서만, 같은 사업자만(DLG-245)
+            Map<String, Object> d = jdbc.sql("select * from bank_deposit where workspace_id = :ws and id = :id for update").param("ws", a.workspaceId())
+                    .param("id", in.bankDepositId()).query().listOfRows().stream().findFirst().orElseThrow(() -> Errors.notFound("BANK_DEPOSIT"));
+            if (!be.equals(d.get("business_entity_id"))) {
+                throw Errors.unprocessable("DEPOSIT_ENTITY_MISMATCH", "입금 사업자와 거래처 사업자가 다릅니다.");
+            }
+            BigDecimal left = ((BigDecimal) d.get("amount")).subtract(com.commerceos.finance.DepositService.usedOfDeposit(jdbc, in.bankDepositId()));
+            if (in.amount().compareTo(left) > 0) {
+                throw Errors.unprocessable("DEPOSIT_OVER_MATCHED", "입금의 남은 금액(" + left.toPlainString() + "원)보다 많이 연결할 수 없습니다.",
+                        Map.of("deposit_remaining", left.toPlainString()));
+            }
+            day = ((java.sql.Date) d.get("deposited_on")).toLocalDate();
+        }
         UUID id = insert(a.workspaceId(), be, customerId, "PAYMENT", in.amount().negate(), null, null, null, day, null, method,
-                B2bCustomerService.trim(in.reference(), 100, "reference"), B2bCustomerService.trim(in.memo(), 500, "memo"), null, null, key, a.memberId());
+                B2bCustomerService.trim(in.reference(), 100, "reference"), B2bCustomerService.trim(in.memo(), 500, "memo"), null, null, key, a.memberId(),
+                in.bankDepositId());
         audit.record(AuditEntry.builder(a.workspaceId(), "RECEIVABLE_PAYMENT_RECORDED", "B2B_CUSTOMER", customerId).actor(ActorType.USER, a.memberId(), a.displayName())
                 .scope(be, null).after(Map.of("entry_id", id.toString(), "amount", in.amount().toPlainString(), "method", method, "received_on", day.toString())).build());
         refreshOverdue(a.workspaceId(), customerId);
@@ -445,16 +461,21 @@ public class ReceivableService implements ApprovalHandler {
 
     private UUID insert(UUID ws, UUID be, UUID customer, String type, BigDecimal amount, UUID order, UUID fo, UUID claim, LocalDate day, LocalDate due, String method,
                         String reference, String memo, UUID reverses, UUID approval, String sourceKey, UUID by) {
+        return insert(ws, be, customer, type, amount, order, fo, claim, day, due, method, reference, memo, reverses, approval, sourceKey, by, null);
+    }
+
+    private UUID insert(UUID ws, UUID be, UUID customer, String type, BigDecimal amount, UUID order, UUID fo, UUID claim, LocalDate day, LocalDate due, String method,
+                        String reference, String memo, UUID reverses, UUID approval, String sourceKey, UUID by, UUID deposit) {
         UUID id = Ids.newId();
         int n = jdbc.sql("""
                 insert into receivable_entry (id, workspace_id, business_entity_id, customer_id, entry_type, amount, order_id, fo_id, claim_id, occurred_on, due_on, method,
-                                              reference, memo, reverses_id, approval_id, source_key, created_by)
+                                              reference, memo, reverses_id, approval_id, source_key, created_by, bank_deposit_id)
                 values (:id, :ws, :be, :c, :t, :a, cast(:o as uuid), cast(:f as uuid), cast(:cl as uuid), :d, cast(:due as date), cast(:m as text), cast(:ref as text),
-                        cast(:memo as text), cast(:rev as uuid), cast(:ap as uuid), :k, cast(:by as uuid))
+                        cast(:memo as text), cast(:rev as uuid), cast(:ap as uuid), :k, cast(:by as uuid), cast(:dep as uuid))
                 on conflict (workspace_id, source_key) do nothing
                 """).param("id", id).param("ws", ws).param("be", be).param("c", customer).param("t", type).param("a", amount).param("o", order).param("f", fo)
                 .param("cl", claim).param("d", day).param("due", due).param("m", method).param("ref", reference).param("memo", memo).param("rev", reverses)
-                .param("ap", approval).param("k", sourceKey).param("by", by).update();
+                .param("ap", approval).param("k", sourceKey).param("by", by).param("dep", deposit).update();
         return n == 1 ? id : jdbc.sql("select id from receivable_entry where workspace_id = :ws and source_key = :k").param("ws", ws).param("k", sourceKey)
                 .query(UUID.class).single();
     }
@@ -473,6 +494,6 @@ public class ReceivableService implements ApprovalHandler {
         return new EntryView(Db.uuid(rs, "id"), rs.getString("entry_type"), rs.getBigDecimal("amount"), rs.getObject("occurred_on", LocalDate.class),
                 rs.getObject("due_on", LocalDate.class), Db.uuid(rs, "order_id"), rs.getString("order_no"), Db.uuid(rs, "claim_id"), rs.getString("method"),
                 rs.getString("reference"), rs.getString("memo"), Db.uuid(rs, "reverses_id"), rs.getBoolean("is_reversed"), rs.getString("by_name"),
-                rs.getTimestamp("created_at").toInstant());
+                rs.getTimestamp("created_at").toInstant(), Db.uuid(rs, "bank_deposit_id"));
     }
 }

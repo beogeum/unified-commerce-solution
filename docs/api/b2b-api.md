@@ -19,7 +19,7 @@
 |---|---|---|
 | `GET /receivables?business_entity_id&overdue_only` | `settlement.read` | 거래처별 잔액·연체·사용 중·남은 한도·가장 오래된 기한 |
 | `GET /b2b-customers/{id}/receivables` | 〃 | 잔액·연체·미출고 외상 주문·연령·미결 청구·원장 |
-| `POST /b2b-customers/{id}/payments {amount, received_on?, method?, reference?, memo?}` + `Idempotency-Key` | `receivable.manage` | 같은 키 = 같은 기록 |
+| `POST /b2b-customers/{id}/payments {amount, received_on?, method?, reference?, memo?, bank_deposit_id?}` + `Idempotency-Key` | `receivable.manage` | 같은 키 = 같은 기록. 입금 연결 시 입금 남은 금액 이내(`DEPOSIT_OVER_MATCHED`), 수금일 = 입금일 |
 | `POST /receivable-entries/{id}/reverse {reason}` | 〃 | 수금만, 한 번만(`ENTRY_ALREADY_REVERSED`) |
 | `POST /b2b-customers/{id}/write-offs {amount, reason}` | 〃 | 202 승인 요청 `RECEIVABLE_WRITE_OFF`, 승인자도 `receivable.manage` |
 

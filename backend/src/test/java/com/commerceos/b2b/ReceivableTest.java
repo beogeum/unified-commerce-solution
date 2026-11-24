@@ -119,7 +119,17 @@ class ReceivableTest extends FinanceTestBase {
         assertThat(fin.post("/api/v1/receivable-entries/" + p1 + "/reverse", Map.of("reason", "다른 거래처 입금")).status()).isEqualTo(201);
         assertThat(fin.post("/api/v1/receivable-entries/" + p1 + "/reverse", Map.of("reason", "다시")).errorCode()).isEqualTo("ENTRY_ALREADY_REVERSED");
         assertThat(n(st(c, cu).get("balance"))).isEqualTo(36000);
-        fin.postWithKey("/api/v1/b2b-customers/" + cu + "/payments", Map.of("amount", 6000), "ar-pay-0002");
+        // 은행 입금 연결(DLG-245): 남은 금액 안에서만, 정산 연결과 같은 입금 잔액을 공유
+        String dep = c.o().postWithKey("/api/v1/finance/deposits", Map.of("business_entity_id", c.be().toString(), "deposited_on", TODAY.toString(), "amount", 10000,
+                "depositor", "올리브유통"), "ar-dep-0001").data().get("id").asString();
+        assertThat(fin.postWithKey("/api/v1/b2b-customers/" + cu + "/payments", Map.of("amount", 10001, "bank_deposit_id", dep), "ar-pay-dep0").errorCode())
+                .isEqualTo("DEPOSIT_OVER_MATCHED");
+        Api.Res pd = fin.postWithKey("/api/v1/b2b-customers/" + cu + "/payments", Map.of("amount", 6000, "bank_deposit_id", dep), "ar-pay-0002");
+        assertThat(pd.status()).as(pd.body().toString()).isEqualTo(201);
+        assertThat(pd.data().get("bank_deposit_id").asString()).isEqualTo(dep);
+        assertThat(n(c.o().get("/api/v1/finance/deposits/" + dep).data().get("remaining"))).isEqualTo(4000);
+        assertThat(fin.postWithKey("/api/v1/b2b-customers/" + cu + "/payments", Map.of("amount", 4001, "bank_deposit_id", dep), "ar-pay-dep1").errorCode())
+                .isEqualTo("DEPOSIT_OVER_MATCHED");
 
         // 반품 1개 → 클레임 완료 → 반품 차감(매출 원장 반품과 같은 금액)
         String item = c.o().get("/api/v1/orders/" + order1).data().get("items").get(0).get("id").asString();
