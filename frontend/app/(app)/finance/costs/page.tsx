@@ -20,8 +20,9 @@ export default function CostsPage() {
   const url = useMemo(() => `/finance/entries${qs({ business_entity_id: selected, category, limit: "300" })}`, [selected, category]);
   const entriesApi = useApi<Entry[]>(can("cost.read") && tab === "entries" ? url : null);
   const rulesApi = useApi<CostRule[]>(can("cost.read") && tab === "rules" ? "/finance/cost-rules" : null);
-  const entries = entriesApi.loading ? null : entriesApi.data;
-  const rules = rulesApi.loading ? null : rulesApi.data;
+  // 다시 불러오는 동안에는 직전 목록을 그대로 보여 준다(처음에는 null → 로딩 표시)
+  const entries = entriesApi.data;
+  const rules = rulesApi.data;
   const error = tab === "entries" ? entriesApi.error : tab === "rules" ? rulesApi.error : null;
   const reload = () => { entriesApi.reload(); rulesApi.reload(); };
   if (!can("cost.read")) return <Forbidden />;
