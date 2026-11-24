@@ -120,8 +120,21 @@ public class OrderService {
             p.put("hr", f.holdReason());
         }
         if (f.q() != null && !f.q().isBlank()) {
-            sql.append(" and (o.order_no ilike :q or o.external_order_key ilike :q or exists (select 1 from order_item i where i.order_id = o.id and i.product_name ilike :q))");
-            p.put("q", "%" + f.q().trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%");
+            // 검색어에 맞는 주문 ID 를 먼저 찾고(각 조건이 trigram 색인 사용) 목록은 그 ID 안에서만 — OR + EXISTS 를 목록 정렬과 섞으면 전체를 훑는다(DLG-251)
+            String like = "%" + f.q().trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+            // RLS 아래에서는 ilike 가 색인을 못 써 전체를 훑으므로, ID 찾기만 소유자 권한 함수로(운영그룹은 세션 문맥에서만, V39)
+            List<UUID> hits = jdbc.sql("select app_search_order_ids(:q, 5001)").param("q", like).query(UUID.class).list();
+            if (hits.isEmpty()) {
+                return ApiResponse.page(List.of(), null);
+            }
+            if (hits.size() > 5000) {
+                // 넓은 검색어(짧은 문자열 등)는 ID 목록 대신 원래 조건으로 — 결과 순서·페이지는 같다
+                sql.append(" and (o.order_no ilike :q or o.external_order_key ilike :q or exists (select 1 from order_item i where i.order_id = o.id and i.product_name ilike :q))");
+                p.put("q", like);
+            } else {
+                sql.append(" and o.id in (:qids)");
+                p.put("qids", hits);
+            }
         }
         if (f.from() != null) {
             sql.append(" and o.ordered_at >= :from");

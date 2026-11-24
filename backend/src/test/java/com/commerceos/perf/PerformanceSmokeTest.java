@@ -20,6 +20,8 @@ import org.junit.jupiter.api.Test;
  */
 @Tag("perf")
 class PerformanceSmokeTest extends FinanceTestBase {
+    @org.springframework.beans.factory.annotation.Autowired
+    javax.sql.DataSource dataSource;
     static final int ORDERS = Integer.getInteger("perf.orders", 200_000);
     static final int ENTRIES = Integer.getInteger("perf.entries", 500_000);
     static final int TXNS = Integer.getInteger("perf.txns", 500_000);
@@ -67,7 +69,7 @@ class PerformanceSmokeTest extends FinanceTestBase {
         long t0 = System.nanoTime();
         int so = clone("sales_order", "src.id = :id", Map.of("id", oid), ORDERS, Map.of(
                 "id", "gen_random_uuid()", "order_no", "src.order_no || '-' || g", "external_order_key", "src.external_order_key || '-' || g",
-                "ordered_at", "src.ordered_at - make_interval(mins => g)", "created_at", "src.created_at - make_interval(mins => g)"));
+                "created_at", "src.created_at - make_interval(mins => g)"));
         int fe = clone("financial_entry", "src.order_id = :id", Map.of("id", oid), ENTRIES / Math.max(1, countOf("financial_entry", oid)), Map.of(
                 "id", "gen_random_uuid()", "source_key", "src.source_key || ':' || g", "period_date", "src.period_date - (g % 360)",
                 "reverses_id", "null", "scope_key", "null"));
@@ -104,6 +106,45 @@ class PerformanceSmokeTest extends FinanceTestBase {
         sb.append("데이터: 주문 ").append(so + 1).append(" · 손익 원장 +").append(fe).append(" · 재고 원장 +").append(tx).append(" · 외상 거래처 ").append(CUSTOMERS)
                 .append(" × 10 (적재 ").append(seedMs / 1000).append("초)\n");
         t.forEach((k, v) -> sb.append(String.format("%-28s %6d ms%n", k, v)));
+        if (Boolean.getBoolean("perf.explain")) {
+            for (int i = 0; i < 12; i++) {
+                long a = System.nanoTime();
+                jdbc.sql("""
+                        select x.id from sales_order x where x.workspace_id = :ws and x.order_no ilike :q
+                        union select x.id from sales_order x where x.workspace_id = :ws and x.external_order_key ilike :q
+                        union select i.order_id from order_item i where i.workspace_id = :ws and i.product_name ilike :q limit 5001
+                        """).param("ws", c.ws().id()).param("q", "%77777%").query(UUID.class).list();
+                long b = System.nanoTime();
+                jdbc.sql("select o.id from sales_order o where o.workspace_id = :ws and o.business_entity_id in (:bes) and o.id in (:ids) order by o.id desc limit 51")
+                        .param("ws", c.ws().id()).param("bes", List.of(c.be())).param("ids", List.of(oid, UUID.randomUUID())).query(UUID.class).list();
+                long d = System.nanoTime();
+                sb.append("검색 ID ").append((b - a) / 1_000_000).append("ms · 목록 ").append((d - b) / 1_000_000).append("ms\n");
+            }
+            for (String q : List.of("""
+                    select x.id from sales_order x where x.workspace_id = :ws and x.order_no ilike '%77777%'
+                    union select x.id from sales_order x where x.workspace_id = :ws and x.external_order_key ilike '%77777%'
+                    union select i.order_id from order_item i where i.workspace_id = :ws and i.product_name ilike '%77777%' limit 5001""",
+                    "select i.order_id from order_item i where i.workspace_id = :ws and i.product_name ilike '%77777%'",
+                    "select count(*) from sales_order o where o.workspace_id = :ws")) {
+                sb.append("\n").append(q).append("\n");
+                jdbc.sql("explain (analyze, buffers off) " + q).param("ws", c.ws().id()).query(String.class).list().forEach(l -> sb.append("  ").append(l).append("\n"));
+            }
+        }
+        if (Boolean.getBoolean("perf.explain")) {
+            try (java.sql.Connection con = dataSource.getConnection(); java.sql.Statement st = con.createStatement()) {
+                con.setAutoCommit(false);
+                st.execute("set local role commerce_app");
+                st.execute("set local app.workspace_id = '" + c.ws().id() + "'");
+                sb.append("\n[앱 역할 + RLS] 검색 ID 계획\n");
+                try (java.sql.ResultSet rs = st.executeQuery("explain analyze select x.id from sales_order x where x.workspace_id = '" + c.ws().id()
+                        + "' and x.order_no ilike '%77777%'")) {
+                    while (rs.next()) {
+                        sb.append("  ").append(rs.getString(1)).append("\n");
+                    }
+                }
+                con.rollback();
+            }
+        }
         Files.writeString(Path.of("target/perf-report.txt"), sb.toString());
         System.out.println(sb);
     }
