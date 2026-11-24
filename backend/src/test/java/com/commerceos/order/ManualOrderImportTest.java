@@ -58,6 +58,12 @@ class ManualOrderImportTest extends FinanceTestBase {
         assertThat(jdbc.sql("select count(*) from import_row where batch_id = cast(:b as uuid) and status <> 'ERROR' and secret_cipher is not null").param("b", id)
                 .query(Integer.class).single()).isEqualTo(3);
 
+        // 범위 데이터 유형: 같은 권한(주문 수정)이어도 만든 사람만 보고 실행·취소(DLG-250)
+        Api other = fx.member(c.ws(), "ORDER_MANAGER");
+        assertThat(other.get("/api/v1/imports/" + id).status()).isEqualTo(404);
+        assertThat(other.get("/api/v1/imports/" + id + "/rows").status()).isEqualTo(404);
+        assertThat(other.postIfMatch("/api/v1/imports/" + id + "/cancel", Map.of(), 1).status()).isEqualTo(404);
+        assertThat(other.get("/api/v1/imports").data().toString()).doesNotContain(id);
         int v = o.get("/api/v1/imports/" + id).data().get("version").asInt();
         Api.Res ex = o.postIfMatch("/api/v1/imports/" + id + "/execute", Map.of("confirm_rows", 3), v);
         assertThat(ex.status()).as(ex.body().toString()).isIn(200, 202);

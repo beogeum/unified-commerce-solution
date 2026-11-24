@@ -18,6 +18,7 @@
   <description>모듈형 모놀리스 백엔드 (Foundation)</description>
 
   <properties>
+    <perf.exclude>perf</perf.exclude>
     <java.version>21</java.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -123,6 +124,8 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <trimStackTrace>false</trimStackTrace>
+          <!-- 대량 데이터 성능 점검(@Tag("perf"))은 기본 실행에서 뺀다. 실행: mvn test -Dtest=PerformanceSmokeTest -Dperf.exclude=none -->
+          <excludedGroups>${perf.exclude}</excludedGroups>
         </configuration>
       </plugin>
     </plugins>

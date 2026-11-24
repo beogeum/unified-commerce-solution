@@ -32,6 +32,14 @@ public interface ImportTypeHandler {
         }
     }
 
+    /**
+     * 사업자·판매계정 범위가 있는 데이터(예: 주문)를 다루는 유형은 배치를 만든 사용자만 보고 실행·취소한다(DLG-250).
+     * 같은 권한이라도 범위가 다른 사용자에게 다른 사업자의 행(마스킹된 수령인·판매계정·금액)이 보이지 않게 한다.
+     */
+    default boolean creatorOnly() {
+        return hasSensitiveFields();
+    }
+
     default boolean hasSensitiveFields() {
         return fields().stream().anyMatch(Field::sensitive);
     }

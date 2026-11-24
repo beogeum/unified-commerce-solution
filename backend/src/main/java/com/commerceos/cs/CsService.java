@@ -372,10 +372,13 @@ public class CsService {
 
     public List<TemplateView> templates(UUID businessEntityId) {
         guard.requirePermission(Perm.ORDER_READ);
+        // 사업자 전용 템플릿은 조회 범위 안 사업자 것만(공통 템플릿은 모두)
+        java.util.Set<UUID> bes = guard.businessEntityFilter(com.commerceos.identity.access.AccessKind.READ,
+                businessEntityId == null ? null : List.of(businessEntityId.toString()));
         return jdbc.sql("""
-                select * from cs_template where workspace_id = :ws and (business_entity_id is null or cast(:be as uuid) is null or business_entity_id = :be)
+                select * from cs_template where workspace_id = :ws and (business_entity_id is null or business_entity_id in (:bes))
                  order by status, name
-                """).param("ws", guard.actor().workspaceId()).param("be", businessEntityId).query((rs, i) -> new TemplateView(Db.uuid(rs, "id"),
+                """).param("ws", guard.actor().workspaceId()).param("bes", bes.isEmpty() ? java.util.Set.of(new UUID(0, 0)) : bes).query((rs, i) -> new TemplateView(Db.uuid(rs, "id"),
                 Db.uuid(rs, "business_entity_id"), rs.getString("name"), rs.getString("inquiry_type"), rs.getString("body"), rs.getString("status"), rs.getInt("version")))
                 .list();
     }

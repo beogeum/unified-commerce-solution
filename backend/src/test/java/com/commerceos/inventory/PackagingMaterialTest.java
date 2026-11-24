@@ -53,6 +53,7 @@ class PackagingMaterialTest extends FinanceTestBase {
         String fo = shipOrder(c, order);
         JsonNode m = o.get("/api/v1/fulfillment-orders/" + fo + "/materials").data();
         assertThat(m).hasSize(2);
+        assertThat(fx.workspace().owner().get("/api/v1/fulfillment-orders/" + fo + "/materials").status()).isEqualTo(404);
         assertThat(onHand(c, box)).isEqualTo(9);
         assertThat(onHand(c, tape)).isZero();
         JsonNode t = null;

@@ -190,7 +190,8 @@ public class ImportService {
         CurrentActor a = guard.actor();
         BatchView b = find(id).orElseThrow(() -> Errors.notFound("IMPORT_BATCH"));
         boolean own = jdbc.sql("select created_by from import_batch where id = :id").param("id", id).query(UUID.class).single().equals(a.memberId());
-        if (!own && !a.has(handler(b.importType()).requiredPermission())) {
+        ImportTypeHandler h = handler(b.importType());
+        if (!own && (h.creatorOnly() || !a.has(h.requiredPermission()))) {
             throw Errors.notFound("IMPORT_BATCH");
         }
         return b;
@@ -198,8 +199,10 @@ public class ImportService {
 
     public List<BatchView> list() {
         CurrentActor a = guard.actor();
-        return jdbc.sql(SELECT + " where b.workspace_id = :ws order by b.created_at desc limit 50").param("ws", a.workspaceId()).query(this::map).list()
-                .stream().filter(b -> handlers.containsKey(b.importType()) && a.has(handlers.get(b.importType()).requiredPermission())).toList();
+        return jdbc.sql(SELECT + " where b.workspace_id = :ws order by b.created_at desc limit 50")
+                .param("ws", a.workspaceId()).query(this::map).list().stream()
+                .filter(b -> handlers.containsKey(b.importType()) && a.has(handlers.get(b.importType()).requiredPermission())
+                        && (!handlers.get(b.importType()).creatorOnly() || createdBy(b.id()).equals(a.memberId()))).toList();
     }
 
     public List<RowView> rows(UUID id, String status, int offset, int limit) {
@@ -374,6 +377,10 @@ public class ImportService {
               join workspace_member m on m.workspace_id = b.workspace_id and m.id = b.created_by
               join user_account u on u.id = m.user_id
             """;
+
+    private UUID createdBy(UUID batchId) {
+        return jdbc.sql("select created_by from import_batch where id = :id").param("id", batchId).query(UUID.class).single();
+    }
 
     Optional<BatchView> find(UUID id) {
         return jdbc.sql(SELECT + " where b.workspace_id = :ws and b.id = :id").param("ws", guard.actor().workspaceId()).param("id", id)

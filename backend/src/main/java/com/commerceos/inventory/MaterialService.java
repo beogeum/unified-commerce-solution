@@ -153,6 +153,11 @@ public class MaterialService {
 
     public List<ConsumptionView> consumption(UUID foId) {
         guard.requirePermission(Perm.INVENTORY_READ);
+        Map<String, Object> fo = jdbc.sql("select business_entity_id, channel_account_id, node_id from fulfillment_order where workspace_id = :ws and id = :id")
+                .param("ws", guard.actor().workspaceId()).param("id", foId).query().listOfRows().stream().findFirst()
+                .orElseThrow(() -> Errors.notFound("FULFILLMENT_ORDER"));
+        guard.checkRead("FULFILLMENT_ORDER", foId, (UUID) fo.get("business_entity_id"), (UUID) fo.get("channel_account_id"));
+        guard.checkNode(AccessKind.READ, "FULFILLMENT_ORDER", foId, (UUID) fo.get("node_id"));
         return jdbc.sql("""
                 select m.*, k.sku_code from fo_material_consumption m join sku k on k.id = m.sku_id where m.workspace_id = :ws and m.fo_id = :f order by k.sku_code
                 """).param("ws", guard.actor().workspaceId()).param("f", foId).query((rs, i) -> new ConsumptionView(Db.uuid(rs, "sku_id"), rs.getString("sku_code"),

@@ -81,6 +81,52 @@ Feature: 반품 손익 중복 방지
     And 물류비는 3,200원으로 계산된다
 ```
 
+## 테스트 추적표(2026-11-24 점검)
+자동 테스트에서 시나리오 ID 를 찾아 대응시킨 표(백엔드 `backend/src/test/java/**`, E2E `frontend/e2e/foundation.spec.ts`). 40개 모두 1개 이상의 자동 테스트가 있다. T17·T23 은 ID 표기 없이 검증하던 것을 확인해 넣었다.
+
+| ID | 시나리오 | 테스트 |
+|---|---|---|
+| T01 | 사업자 A/B가 네이버에 각각 입점 | OrderTest.java, OrganizationStructureTest.java |
+| T02 | 사업자 A가 네이버 3개 계정 운영 | OrganizationStructureTest.java |
+| T03 | 카페24 한 계정 내 멀티쇼핑몰 2개 | ChannelListingTest.java, OrganizationStructureTest.java |
+| T04 | 두 사업자가 동일 SKU 판매 | BusinessSkuPolicyTest.java |
+| T05 | 동일 3PL 센터에서 A/B의 재고 보관 | InventoryTest.java, OrganizationStructureTest.java |
+| T06 | 주문 1개 2수량에 예약→할당→피킹 | InventoryTest.java, foundation.spec.ts |
+| T07 | ATP 10, 두 주문이 동시 8개씩 확보 시도 | InventoryTest.java |
+| T08 | 외부 3PL 가용수량에 내부 주문 이미 반영 | ExternalInventoryTest.java |
+| T09 | 외부 3PL 반영 여부 불명확 | ExternalInventoryTest.java, foundation.spec.ts |
+| T10 | 동일 수집 이벤트 반복/역순 | OrderTest.java |
+| T11 | 외부 출고 요청 타임아웃 | FulfillmentTest.java |
+| T12 | 가상묶음 부품 부족/다중거점 | BundleAvailabilityTest.java, OrderCompositionTest.java |
+| T13 | 채널 GWP + 내부 GWP 동일 캠페인 | GwpEvaluatorTest.java, GwpTest.java, OrderCompositionTest.java, foundation.spec.ts |
+| T14 | 일부 상품 취소 후 일부 출고 | ClaimTest.java |
+| T15 | 2개 중 1개 정상 반품 | ClaimTest.java, FinanceTest.java, foundation.spec.ts |
+| T16 | 반품 품질 미확정 | ClaimTest.java, foundation.spec.ts |
+| T17 | 불량 반품 평가손실 후 폐기 | ClaimTest.java, FinanceTest.java |
+| T18 | 동일상품 무상교환 | ClaimTest.java, FinanceTest.java |
+| T19 | 다른 SKU 교환·차액 5,000원 | ClaimTest.java, FinanceTest.java |
+| T20 | 3PL API 미지원 반품검수 | ClaimTest.java |
+| T21 | 한 판매계정 인증 만료 | IntegrationIsolationTest.java |
+| T22 | 사업자 A 담당자가 B 주문번호 검색 | AccessScopeTest.java |
+| T23 | 사용자 A에게 B 사업자 조회 제한 | AccessScopeTest.java, foundation.spec.ts |
+| T24 | 주문 조회는 가능, PII 권한 없음 | SensitiveDataTest.java |
+| T25 | 다른 워크스페이스 주문 ID 직접 입력 | AccessScopeTest.java |
+| T26 | 채널 비용 예상 3,000원 → 실제 3,200원 | FinanceTest.java |
+| T27 | 주문 할인+플랫폼 부담 할인 중복 | FinanceTest.java |
+| T28 | 정상반품 후 최종손익(부록 계산예제) | FinanceTest.java |
+| T29 | 동일 정산파일/행 재업로드 | SettlementTest.java, foundation.spec.ts |
+| T30 | 한 정산이 두 번 분할입금 | SettlementTest.java, foundation.spec.ts |
+| T31 | 여러 정산이 한 번 합산입금 | SettlementTest.java |
+| T32 | 전월 마감 후 환불·3PL 청구 | SettlementTest.java, foundation.spec.ts |
+| T33 | 매입원가에 입고운임 포함 | CostTransferTest.java, foundation.spec.ts |
+| T34 | 사업자 A/B 공동 광고비 | CostTransferTest.java, foundation.spec.ts |
+| T35 | 사업자간 재고 이전 | CostTransferTest.java, foundation.spec.ts |
+| T36 | 운영그룹 사업자 A/B 손익률 합산 | FinanceTest.java |
+| T37 | 반품 원주문이 없음·SKU 다름 | ClaimTest.java |
+| T38 | 3PL 원본 비가용3→2, 내부세부분류3 | ExternalInventoryTest.java |
+| T39 | 물류사가 지원하지 않는 기능 실행 시도 | IntegrationIsolationTest.java, ShipmentTest.java |
+| T40 | 재고 실사 차이 승인 없는 조정 | StockCountTest.java, foundation.spec.ts |
+
 ## 테스트 실행 필수 조건
 - PostgreSQL 실제 DB를 사용한 동시성/트랜잭션 통합 테스트(Testcontainers 등).
 - 외부 API 계약(Mock/recorded sanitized fixtures)과 실제 판매자 테스트 계정 검증 구분.
