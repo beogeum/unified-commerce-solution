@@ -1,4 +1,5 @@
 "use client";
+import { useApi } from "@/lib/useApi";
 import { useEffect, useMemo, useState } from "react";
 import { Chip } from "@/components/Chip";
 import { DataTable } from "@/components/DataTable";
@@ -19,35 +20,20 @@ export default function OrdersPage() {
   const [hold, setHold] = useState("");
   const base = useMemo(() => `/orders${qs({ business_entity_id: selected, q, status, on_hold: hold ? "true" : undefined, hold_reason: hold && hold !== "ANY" ? hold : undefined, limit: "50" })}`,
     [selected, q, status, hold]);
-  const [rows, setRows] = useState<OrderRow[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [tick, setTick] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  useEffect(() => {
-    if (!can("order.read")) return;
-    let alive = true;
-    setLoading(true);
-    setError(null);
-    api<OrderRow[]>(base).then((r) => { if (alive) { setRows(r.data); setCursor(r.nextCursor); } })
-      .catch((e: unknown) => alive && setError(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "요청을 처리하지 못했습니다.")))
-      .finally(() => alive && setLoading(false));
-    return () => { alive = false; };
-  }, [base, tick, can]);
+  const list = useApi<OrderRow[]>(can("order.read") ? base : null);
+  const rows = list.data ?? [];
+  const loading = list.loading;
+  const error = list.error;
   if (!can("order.read")) return <Forbidden />;
-  const more = async () => {
-    if (!cursor) return;
-    const r = await api<OrderRow[]>(`${base}&cursor=${encodeURIComponent(cursor)}`);
-    setRows([...rows, ...r.data]);
-    setCursor(r.nextCursor);
-  };
+  const cursor = list.nextCursor;
+  const more = list.more;
   return (
     <>
       <div className="page-head"><div><h1>주문</h1><p>판매계정에서 수집한 주문입니다. 같은 외부 주문번호라도 판매계정·판매단위가 다르면 다른 주문이고, 주문 사업자는 주문 시점의 판매계정 귀속으로 고정됩니다.
-        상품이 연결되지 않았거나 금액이 맞지 않는 주문은 보류되어 출고로 넘어가지 않습니다. B2B·샘플·전화 주문은 '수동 주문 작성'으로 만듭니다.</p></div>
+        상품이 연결되지 않았거나 금액이 맞지 않는 주문은 보류되어 출고로 넘어가지 않습니다. B2B·샘플·전화 주문은 &apos;수동 주문 작성&apos;으로 만듭니다.</p></div>
         {can("order.update") && <span className="row-gap">{can("file.upload") && <a className="btn" href="/imports?type=MANUAL_ORDER">파일로 일괄 등록</a>}
           <button className="btn pri" type="button" onClick={() => setCreating(true)}>수동 주문 작성</button></span>}</div>
       {notice && <div className="note n-info" role="status">{notice}</div>}
@@ -58,7 +44,7 @@ export default function OrdersPage() {
         <label className="fld">보류<select className="inp" value={hold} onChange={(e) => setHold(e.target.value)}><option value="">전체</option><option value="ANY">보류 중 전체</option>
           {Object.entries(HOLD_KO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
       </div>
-      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => setTick(tick + 1)} /> : (
+      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => list.reload()} /> : (
         <>
           <DataTable caption="주문" rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setOpen(r.id)}
             empty={<Empty title="주문이 없습니다." hint="연동 관리에서 주문 수집을 실행하면 여기에 표시됩니다." />}
@@ -75,8 +61,8 @@ export default function OrdersPage() {
           {cursor && <button className="btn" type="button" onClick={more}>더 보기</button>}
         </>
       )}
-      {open && <OrderDrawer id={open} onClose={() => setOpen(null)} onChanged={() => setTick(tick + 1)} />}
-      {creating && <ManualOrderModal selected={selected} onClose={() => setCreating(false)} onDone={(no) => { setCreating(false); setNotice(`주문 ${no} 을(를) 만들었습니다.`); setTick(tick + 1); }} />}
+      {open && <OrderDrawer id={open} onClose={() => setOpen(null)} onChanged={() => list.reload()} />}
+      {creating && <ManualOrderModal selected={selected} onClose={() => setCreating(false)} onDone={(no) => { setCreating(false); setNotice(`주문 ${no} 을(를) 만들었습니다.`); list.reload(); }} />}
     </>
   );
 }

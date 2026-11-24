@@ -14,7 +14,9 @@ PORT="${RESTORE_CHECK_PORT:-55499}"
 cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 docker run -d --rm --name "$NAME" -e POSTGRES_DB=restore_check -e POSTGRES_USER=restore -e POSTGRES_PASSWORD=restore -p "$PORT:5432" postgres:16-alpine >/dev/null
-for i in $(seq 1 60); do docker exec "$NAME" pg_isready -U restore >/dev/null 2>&1 && break; sleep 1; done
+# 초기화 중 임시 서버(유닉스 소켓만)가 아니라 실제 서버가 TCP 로 받을 때까지 기다린다
+ready=0; for i in $(seq 1 90); do docker exec "$NAME" pg_isready -h 127.0.0.1 -U restore >/dev/null 2>&1 && { ready=1; break; }; sleep 1; done
+[[ $ready -eq 1 ]] || { echo "PostgreSQL 이 준비되지 않았습니다"; docker logs "$NAME" 2>&1 | tail -20; exit 1; }
 export PGHOST=localhost PGPORT="$PORT" PGUSER=restore PGPASSWORD=restore PGDATABASE=restore_check
 # 원본의 역할(소유자·비소유 애플리케이션 역할)을 먼저 만들어 권한 설정까지 복구한다. 역할 이름: RESTORE_ROLES(공백 구분)
 for r in ${RESTORE_ROLES:-commerce_os commerce_app}; do

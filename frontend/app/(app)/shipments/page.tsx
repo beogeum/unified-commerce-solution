@@ -1,4 +1,5 @@
 "use client";
+import { useApi } from "@/lib/useApi";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Chip } from "@/components/Chip";
 import { DataTable } from "@/components/DataTable";
@@ -19,22 +20,12 @@ export default function ShipmentsPage() {
   const [status, setStatus] = useState("");
   const [dispatch, setDispatch] = useState("");
   const base = useMemo(() => `/shipments${qs({ business_entity_id: selected, q, status, channel_dispatch_status: dispatch })}`, [selected, q, status, dispatch]);
-  const [rows, setRows] = useState<Shipment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [tick, setTick] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  useEffect(() => {
-    if (!can("order.read")) return;
-    let alive = true;
-    setLoading(true);
-    setError(null);
-    api<Shipment[]>(base).then((r) => alive && setRows(r.data))
-      .catch((e: unknown) => alive && setError(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "요청을 처리하지 못했습니다.")))
-      .finally(() => alive && setLoading(false));
-    return () => { alive = false; };
-  }, [base, tick, can]);
+  const list = useApi<Shipment[]>(can("order.read") ? base : null);
+  const rows = list.data ?? [];
+  const loading = list.loading;
+  const error = list.error;
   if (!can("order.read")) return <Forbidden />;
   return (
     <>
@@ -48,7 +39,7 @@ export default function ShipmentsPage() {
         <label className="fld">채널 발송처리<select className="inp" value={dispatch} onChange={(e) => setDispatch(e.target.value)}><option value="">전체</option>
           {Object.entries(CHANNEL_DISPATCH).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select></label>
       </div>
-      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => setTick(tick + 1)} /> : (
+      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => list.reload()} /> : (
         <DataTable caption="송장" rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setOpen(r.id)}
           empty={<Empty title="송장이 없습니다." hint="출고 화면에서 출고 확정하거나 송장 파일을 올리면 여기에 표시됩니다." />}
           columns={[
@@ -60,8 +51,8 @@ export default function ShipmentsPage() {
             { key: "c", header: "채널 발송처리", render: (r) => <Chip kind={CHANNEL_DISPATCH[r.channel_dispatch_status][0]}>{CHANNEL_DISPATCH[r.channel_dispatch_status][1]}</Chip> },
           ]} />
       )}
-      {open && <ShipmentDrawer id={open} onClose={() => setOpen(null)} onChanged={() => setTick(tick + 1)} />}
-      {uploading && <UploadDrawer onClose={() => setUploading(false)} onDone={() => setTick(tick + 1)} />}
+      {open && <ShipmentDrawer id={open} onClose={() => setOpen(null)} onChanged={() => list.reload()} />}
+      {uploading && <UploadDrawer onClose={() => setUploading(false)} onDone={() => list.reload()} />}
     </>
   );
 }

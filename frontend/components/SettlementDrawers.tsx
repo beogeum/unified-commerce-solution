@@ -6,7 +6,7 @@ import { ConfirmModal, Drawer } from "@/components/Overlay";
 import { Empty, ErrorState, Loading } from "@/components/States";
 import { api, ApiError, newIdempotencyKey, qs } from "@/lib/api";
 import { APPLIED_KO, Deposit, DepositMatch, LINE_TYPE_KO, MATCH_KO, RUN_STATUS_KO, SettlementRun, won } from "@/lib/finance";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, kstToday } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
@@ -218,7 +218,7 @@ export function NewDepositModal({ onClose, onDone }: { onClose: () => void; onDo
   const { entities } = useSession();
   const [beSel, setBe] = useState("");
   const be = beSel || entities[0]?.id || "";
-  const [date, setDate] = useState(new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10));
+  const [date, setDate] = useState(kstToday);
   const [amount, setAmount] = useState("");
   const [depositor, setDepositor] = useState("");
   const [ref, setRef] = useState("");

@@ -48,7 +48,7 @@ export function totpAt(secret: string, step: number): string {
 export function fakeBrn(): string {
   const d = Array.from({ length: 9 }, (_, i) => (i === 0 ? 9 : Math.floor(Math.random() * 10)));
   const w = [1, 3, 7, 1, 3, 7, 1, 3, 5];
-  let sum = d.reduce((a, x, i) => a + x * w[i], 0) + Math.floor((d[8] * 5) / 10);
+  const sum = d.reduce((a, x, i) => a + x * w[i], 0) + Math.floor((d[8] * 5) / 10);
   const check = (10 - (sum % 10)) % 10;
   const s = [...d, check].join("");
   return `${s.slice(0, 3)}-${s.slice(3, 5)}-${s.slice(5)}`;

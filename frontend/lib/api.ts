@@ -42,9 +42,11 @@ export async function api<T>(path: string, opts: Options = {}): Promise<ApiResul
     const err = new ApiError(res.status, e?.code ?? "UNKNOWN", e?.message ?? "요청을 처리하지 못했습니다. 잠시 후 다시 시도하세요.",
       json?.request_id, e?.details);
     if (res.status === 401 && typeof window !== "undefined") {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- 로그아웃·세션 만료·2단계 인증은 클라이언트 상태(캐시된 개인정보 포함)를 모두 버리도록 전체 새로고침한다
       window.location.assign("/login?expired=1");
     }
     if (res.status === 403 && (err.code === "MFA_ENROLLMENT_REQUIRED" || err.code === "MFA_VERIFICATION_REQUIRED") && typeof window !== "undefined") {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- 로그아웃·세션 만료·2단계 인증은 클라이언트 상태(캐시된 개인정보 포함)를 모두 버리도록 전체 새로고침한다
       window.location.assign("/login?mfa=1");
     }
     throw err;

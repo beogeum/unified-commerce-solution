@@ -69,7 +69,7 @@ function CreateCount({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const [blind, setBlind] = useState(true);
   const [counters, setCounters] = useState<string[]>([]);
   const [note, setNote] = useState("");
-  const [preview, setPreview] = useState<Record<string, unknown> | null>(null);
+  const [fetchedPreview, setPreview] = useState<Record<string, unknown> | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [key] = useState(newIdempotencyKey);
   const nodeId = node || internal[0]?.id || "";
@@ -78,13 +78,15 @@ function CreateCount({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const body = { business_entity_id: be, node_id: nodeId, scope, zone: scope === "ZONE" ? zone : undefined, sku_ids: scope === "SKU" ? skus.map((s) => s.id) : undefined,
     blind, counter_member_ids: counters, note: note || undefined };
   const bodyKey = JSON.stringify(body);
+  const previewable = Boolean(be && nodeId && !(scope === "ZONE" && !zone) && !(scope === "SKU" && skus.length === 0));
+  const preview = previewable ? fetchedPreview : null;
   useEffect(() => {
-    if (!be || !nodeId || (scope === "ZONE" && !zone) || (scope === "SKU" && skus.length === 0)) { setPreview(null); return; }
+    if (!previewable) return;
     let alive = true;
     api<Record<string, unknown>>("/inventory/stock-counts/preview", { method: "POST", body: JSON.parse(bodyKey) })
       .then((r) => alive && setPreview(r.data)).catch(() => alive && setPreview(null));
     return () => { alive = false; };
-  }, [bodyKey, be, nodeId, scope, zone, skus.length]);
+  }, [bodyKey, previewable]);
   const submit = async () => {
     setErr(null);
     try {

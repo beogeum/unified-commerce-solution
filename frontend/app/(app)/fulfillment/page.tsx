@@ -1,10 +1,11 @@
 "use client";
+import { useApi } from "@/lib/useApi";
 import { useEffect, useMemo, useState } from "react";
 import { Chip } from "@/components/Chip";
 import { DataTable } from "@/components/DataTable";
 import { FulfillmentDrawer } from "@/components/FulfillmentDrawer";
 import { Empty, ErrorState, Forbidden, Loading } from "@/components/States";
-import { api, ApiError, qs } from "@/lib/api";
+import { qs } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { DISPATCH_MODE_KO, FO_STATUS, FulfillmentOrder } from "@/lib/fulfillment";
 import { useSession } from "@/lib/session";
@@ -13,22 +14,16 @@ export default function FulfillmentPage() {
   const { can, selected } = useSession();
   const [status, setStatus] = useState("");
   const base = useMemo(() => `/fulfillment-orders${qs({ business_entity_id: selected, status })}`, [selected, status]);
-  const [rows, setRows] = useState<FulfillmentOrder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [tick, setTick] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
-  useEffect(() => { const o = new URLSearchParams(window.location.search).get("open"); if (o) setOpen(o); }, []);
   useEffect(() => {
-    if (!can("order.read")) return;
-    let alive = true;
-    setLoading(true);
-    setError(null);
-    api<FulfillmentOrder[]>(base).then((r) => alive && setRows(r.data))
-      .catch((e: unknown) => alive && setError(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "요청을 처리하지 못했습니다.")))
-      .finally(() => alive && setLoading(false));
-    return () => { alive = false; };
-  }, [base, tick, can]);
+    const o = new URLSearchParams(window.location.search).get("open");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 서버 렌더와 첫 화면을 같게 두고, 하이드레이션 후 브라우저 값(주소창·로컬 저장소)을 한 번 읽는다
+    if (o) setOpen(o);
+  }, []);
+  const list = useApi<FulfillmentOrder[]>(can("order.read") ? base : null);
+  const rows = list.data ?? [];
+  const loading = list.loading;
+  const error = list.error;
   if (!can("order.read")) return <Forbidden />;
   return (
     <>
@@ -38,7 +33,7 @@ export default function FulfillmentPage() {
         <label className="fld">상태<select className="inp" value={status} onChange={(e) => setStatus(e.target.value)}><option value="">전체</option>
           {Object.entries(FO_STATUS).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select></label>
       </div>
-      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => setTick(tick + 1)} /> : (
+      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => list.reload()} /> : (
         <DataTable caption="출고지시" rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setOpen(r.id)}
           empty={<Empty title="출고지시가 없습니다." hint="결제 확인·출고 구성이 확정된 주문은 자동으로 출고 배정됩니다." />}
           columns={[
@@ -51,7 +46,7 @@ export default function FulfillmentPage() {
             { key: "s", header: "상태", render: (r) => <Chip kind={FO_STATUS[r.status][0]}>{FO_STATUS[r.status][1]}</Chip> },
           ]} />
       )}
-      {open && <FulfillmentDrawer id={open} onClose={() => setOpen(null)} onChanged={() => setTick(tick + 1)} />}
+      {open && <FulfillmentDrawer id={open} onClose={() => setOpen(null)} onChanged={() => list.reload()} />}
     </>
   );
 }

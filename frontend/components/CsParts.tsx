@@ -96,7 +96,7 @@ export function CsDrawer({ id, onClose, onChanged }: { id: string; onClose: () =
             <button className="btn" type="button" disabled={!text.trim()} onClick={() => send("NOTE")}>내부 메모</button>
             <button className="btn" type="button" disabled={!text.trim()} onClick={() => send("INBOUND")}>고객 추가 문의 기록</button>
           </div>
-          <p className="ctx" style={{ margin: 0 }}>채널 문의 연동 전이라 답변은 자동으로 보내지지 않습니다. 기록한 답변을 채널 관리자 화면에 등록한 뒤 '채널 등록 완료'를 누르세요.</p>
+          <p className="ctx" style={{ margin: 0 }}>채널 문의 연동 전이라 답변은 자동으로 보내지지 않습니다. 기록한 답변을 채널 관리자 화면에 등록한 뒤 &apos;채널 등록 완료&apos;를 누르세요.</p>
         </>}
         {manage && q.status === "CLOSED" && <>
           <label className="fld">고객 재문의<textarea className="inp" rows={3} value={text} onChange={(e) => setText(e.target.value)} aria-label="문의 메시지 내용" /></label>

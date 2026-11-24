@@ -135,7 +135,7 @@ function IssueDrawer({ issue, onClose, onChanged }: { issue: Issue; onClose: () 
           { key: "r", header: "참조", render: (l) => <span className="ctx">{l.reference ?? "—"}</span> },
         ]} />
       </>}
-      <p className="ctx">확인 처리는 '원인을 알고 조치 중'이라는 기록일 뿐 이상을 없애지 않습니다. 원인이 사라지면 다음 검사에서 자동으로 해결됩니다.</p>
+      <p className="ctx">확인 처리는 &apos;원인을 알고 조치 중&apos;이라는 기록일 뿐 이상을 없애지 않습니다. 원인이 사라지면 다음 검사에서 자동으로 해결됩니다.</p>
       {ack && <ConfirmModal title="이슈 확인 처리" confirmLabel="확인 처리" onClose={() => setAck(false)} confirmDisabled={!reason.trim()}
         impact={[["이슈", cur.check_name_ko], ["효과", "열림 목록·업무함 집계에서 제외(원인이 사라지면 자동 해결)"]]}
         onConfirm={() => { setAck(false); run(`/inventory/checks/issues/${cur.id}/acknowledge`, { reason }); }}>

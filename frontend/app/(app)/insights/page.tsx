@@ -41,7 +41,7 @@ export default function InsightsPage() {
   return (
     <>
       <div className="page-head"><div><h1>인사이트</h1><p>규칙 기반으로 이상을 찾아 원인 후보와 근거를 보여 줍니다. 추천만 하며 아무것도 자동 실행하지 않습니다 — 필요하면 검토 업무로 만들어 담당자가 판단합니다.
-          원인은 비용 비중 변화 같은 '후보'이며 인과로 단정하지 않고, 확정되지 않은 근거는 '미확인'으로 표시합니다.</p></div>
+          원인은 비용 비중 변화 같은 &apos;후보&apos;이며 인과로 단정하지 않고, 확정되지 않은 근거는 &apos;미확인&apos;으로 표시합니다.</p></div>
         <span className="row-gap"><span className="ctx">{last.data?.finished_at ? `마지막 분석 ${formatDateTime(last.data.finished_at)}` : "아직 분석 전"}</span>
           <button className="btn pri" type="button" disabled={busy} onClick={refresh}>{busy ? "분석 중…" : "지금 다시 분석"}</button></span></div>
       {notice && <div className="note n-info" role="status">{notice}</div>}

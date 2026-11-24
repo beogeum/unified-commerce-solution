@@ -21,3 +21,8 @@ export const STATUS_KO: Record<string, string> = {
   ACTIVE: "운영", INACTIVE: "비활성", SUSPENDED: "중지", PENDING_SETUP: "설정 중", ERROR: "오류", AUTH_EXPIRED: "인증 만료",
   PAUSED: "일시중지", DELAYED: "지연", OPEN: "열림", IN_PROGRESS: "처리 중", ON_HOLD: "보류", DONE: "완료", IGNORED: "무시",
 };
+
+/** 오늘 날짜(한국 시간, YYYY-MM-DD). 렌더 중 시각을 직접 읽지 않도록 상태 초기화 함수에서 쓴다. */
+export function kstToday(): string {
+  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+}

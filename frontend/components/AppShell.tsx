@@ -50,6 +50,7 @@ function TopBar() {
   const { me, entities, selected, setSelected } = useSession();
   const logout = async () => {
     await fetch("/bff/session", { method: "DELETE", headers: { "x-cos-csrf": "1" } }).catch(() => undefined);
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- 로그아웃·세션 만료·2단계 인증은 클라이언트 상태(캐시된 개인정보 포함)를 모두 버리도록 전체 새로고침한다
     window.location.assign("/login");
   };
   return (

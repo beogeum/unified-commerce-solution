@@ -98,8 +98,8 @@ export function ShipmentDrawer({ id, onClose, onChanged }: { id: string; onClose
         <div className="kv"><span>운송사 · 송장</span><span>{s.carrier ?? "—"} · {s.tracking_no ?? "—"}</span></div>
         <div className="kv"><span>수량(예정 · 도착 · 정상 · 적치)</span><span>{s.expected_qty} · {s.arrived_qty} · {s.good_qty} · {s.putaway_qty}</span></div>
         {s.receipt_no && <div className="kv"><span>입고 확인 번호</span><span className="mono">{s.receipt_no}</span></div>}
-        {s.has_discrepancy && <div className="note n-warn">예정과 도착 수량이 다르거나 초과 도착이 있습니다. 업무함의 '입고 수량 차이'에서 공급처와 정리하세요.</div>}
-        {st === "PUTAWAY" && <div className="note n-info">검수된 정상 수량은 재고에 '검수 대기(적치 대기)'로 들어가 있고, 적치를 마친 수량부터 판매가능이 됩니다.</div>}
+        {s.has_discrepancy && <div className="note n-warn">예정과 도착 수량이 다르거나 초과 도착이 있습니다. 업무함의 &apos;입고 수량 차이&apos;에서 공급처와 정리하세요.</div>}
+        {st === "PUTAWAY" && <div className="note n-info">검수된 정상 수량은 재고에 &apos;검수 대기(적치 대기)&apos;로 들어가 있고, 적치를 마친 수량부터 판매가능이 됩니다.</div>}
         <h3>품목</h3>
         <DataTable caption="입고 품목" rows={s.lines} rowKey={(l) => l.id} empty={<Empty title="품목이 없습니다." />} columns={[
           { key: "k", header: "SKU", render: (l) => <span className="mono">{l.sku_code}</span> },

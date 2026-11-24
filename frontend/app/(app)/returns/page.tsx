@@ -1,4 +1,5 @@
 "use client";
+import { useApi } from "@/lib/useApi";
 import { useEffect, useMemo, useState } from "react";
 import { Chip } from "@/components/Chip";
 import { DataTable } from "@/components/DataTable";
@@ -16,22 +17,12 @@ export default function ReturnsPage() {
   const [status, setStatus] = useState("");
   const [ident, setIdent] = useState("");
   const base = useMemo(() => `/returns/receipts${qs({ business_entity_id: selected, status, identification: ident })}`, [selected, status, ident]);
-  const [rows, setRows] = useState<Receipt[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [tick, setTick] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
   const [receiving, setReceiving] = useState(false);
-  useEffect(() => {
-    if (!can("inventory.read")) return;
-    let alive = true;
-    setLoading(true);
-    setError(null);
-    api<Receipt[]>(base).then((r) => alive && setRows(r.data))
-      .catch((e: unknown) => alive && setError(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "요청을 처리하지 못했습니다.")))
-      .finally(() => alive && setLoading(false));
-    return () => { alive = false; };
-  }, [base, tick, can]);
+  const list = useApi<Receipt[]>(can("inventory.read") ? base : null);
+  const rows = list.data ?? [];
+  const loading = list.loading;
+  const error = list.error;
   if (!can("inventory.read")) return <Forbidden />;
   return (
     <>
@@ -44,7 +35,7 @@ export default function ReturnsPage() {
         <label className="fld">식별<select className="inp" value={ident} onChange={(e) => setIdent(e.target.value)}><option value="">전체</option>
           {Object.entries(IDENT).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select></label>
       </div>
-      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => setTick(tick + 1)} /> : (
+      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => list.reload()} /> : (
         <DataTable caption="반품 입고" rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setOpen(r.id)}
           empty={<Empty title="반품 입고가 없습니다." hint="회수품이 도착하면 반품 입고로 받습니다." />}
           columns={[
@@ -59,8 +50,8 @@ export default function ReturnsPage() {
               : <Chip kind={RECEIPT_STATUS[r.status][0]}>{RECEIPT_STATUS[r.status][1]}</Chip>}</> },
           ]} />
       )}
-      {open && <ReceiptDrawer id={open} onClose={() => setOpen(null)} onChanged={() => setTick(tick + 1)} />}
-      {receiving && <ReceiveDrawer onClose={() => setReceiving(false)} onDone={(id) => { setReceiving(false); setTick(tick + 1); setOpen(id); }} />}
+      {open && <ReceiptDrawer id={open} onClose={() => setOpen(null)} onChanged={() => list.reload()} />}
+      {receiving && <ReceiveDrawer onClose={() => setReceiving(false)} onDone={(id) => { setReceiving(false); list.reload(); setOpen(id); }} />}
     </>
   );
 }
@@ -73,7 +64,9 @@ function ReceiveDrawer({ onClose, onDone }: { onClose: () => void; onDone: (id: 
   const [nodeSel, setNode] = useState("");
   const node = nodeSel || nodes[0]?.id || "";
   const [claimQ, setClaimQ] = useState("");
-  const [found, setFound] = useState<Claim[]>([]);
+  const [foundRaw, setFound] = useState<Claim[]>([]);
+  const searching = claimQ.trim().length >= 3;
+  const found = searching ? foundRaw : [];
   const [claim, setClaim] = useState<Claim | null>(null);
   const [beSel, setBe] = useState("");
   const be = beSel || entities[0]?.id || "";
@@ -83,11 +76,11 @@ function ReceiveDrawer({ onClose, onDone }: { onClose: () => void; onDone: (id: 
   const [busy, setBusy] = useState(false);
   useEffect(() => { api<Node[]>("/fulfillment-nodes").then((r) => setNodes(r.data.filter((n) => n.status === "ACTIVE"))).catch(() => setNodes([])); }, []);
   useEffect(() => {
-    if (claimQ.trim().length < 3) { setFound([]); return; }
+    if (!searching) return;
     let alive = true;
     api<Claim[]>(`/claims${qs({ q: claimQ, status: "OPEN" })}`).then((r) => alive && setFound(r.data.filter((c) => c.claim_type !== "CANCEL"))).catch(() => alive && setFound([]));
     return () => { alive = false; };
-  }, [claimQ]);
+  }, [claimQ, searching]);
   const pick = (c: Claim) => {
     setClaim(c);
     setFound([]);
@@ -169,7 +162,7 @@ function ReceiptDrawer({ id, onClose, onChanged }: { id: string; onClose: () => 
     <Drawer title={`반품 입고 ${r.receipt_no}`} onClose={onClose} footer={can("inventory.operate") && pending.length > 0 ? <button className="btn pri" type="button" onClick={start}>검수</button> : undefined}>
       {err && <div className="note n-err" role="alert">{err}</div>}
       {r.identification !== "MATCHED" && <div className="note n-err">{r.identification === "UNIDENTIFIED" ? "원주문을 알 수 없는 반품입니다." : "클레임과 맞지 않는 줄이 있습니다."} 미확정 재고로 보관했습니다. 원주문을 확인한 뒤 재고 화면에서 품질을 바꾸세요.</div>}
-      {r.external_inventory && <div className="note n-warn">물류사(3PL) 재고 기준 거점입니다. 물류사 반품검수 결과 연동이 확인되지 않아 '미확정'이며, 검수 결과는 보완정보로만 기록합니다(재고는 물류사 재고 동기화로 반영).</div>}
+      {r.external_inventory && <div className="note n-warn">물류사(3PL) 재고 기준 거점입니다. 물류사 반품검수 결과 연동이 확인되지 않아 &apos;미확정&apos;이며, 검수 결과는 보완정보로만 기록합니다(재고는 물류사 재고 동기화로 반영).</div>}
       <div className="kv"><span>클레임 · 주문</span><span className="mono">{r.claim_no ?? "—"} · {r.order_no ?? "—"}</span></div>
       <div className="kv"><span>사업자 · 거점</span><span>{r.business_entity_name} · {r.node_name}</span></div>
       <div className="kv"><span>식별 · 검수</span><span><Chip kind={IDENT[r.identification][0]}>{IDENT[r.identification][1]}</Chip> <Chip kind={RECEIPT_STATUS[r.status][0]}>{RECEIPT_STATUS[r.status][1]}</Chip></span></div>

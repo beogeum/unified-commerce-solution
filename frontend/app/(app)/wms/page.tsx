@@ -1,4 +1,5 @@
 "use client";
+import { useApi } from "@/lib/useApi";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Chip } from "@/components/Chip";
 import { DataTable } from "@/components/DataTable";
@@ -16,34 +17,26 @@ export default function WmsPage() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [nodeSel, setNode] = useState("");
   const node = nodeSel || nodes[0]?.id || "";
-  const [waves, setWaves] = useState<Wave[]>([]);
-  const [count, setCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [tick, setTick] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
   useEffect(() => {
     api<Node[]>("/fulfillment-nodes").then((r) => setNodes(r.data.filter((n) => n.provider_kind === "SELF_WMS" && n.inventory_source === "INTERNAL" && n.status === "ACTIVE")))
       .catch(() => setNodes([]));
   }, []);
-  useEffect(() => {
-    if (!can("inventory.read") || !node) { setLoading(false); return; }
-    let alive = true;
-    setLoading(true);
-    setError(null);
-    Promise.all([api<Wave[]>(`/wms/waves${qs({ node_id: node })}`), api<{ count: number }>(`/wms/candidates?node_id=${node}`)])
-      .then(([w, c]) => { if (alive) { setWaves(w.data); setCount(c.data.count); } })
-      .catch((e: unknown) => alive && setError(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "요청을 처리하지 못했습니다.")))
-      .finally(() => alive && setLoading(false));
-    return () => { alive = false; };
-  }, [node, tick, can]);
+  const ok = can("inventory.read") && Boolean(node);
+  const wavesApi = useApi<Wave[]>(ok ? `/wms/waves${qs({ node_id: node })}` : null);
+  const candApi = useApi<{ count: number }>(ok ? `/wms/candidates?node_id=${node}` : null);
+  const waves = wavesApi.data ?? [];
+  const count = candApi.data?.count ?? null;
+  const loading = wavesApi.loading || candApi.loading;
+  const error = wavesApi.error ?? candApi.error;
+  const reload = () => { wavesApi.reload(); candApi.reload(); };
   if (!can("inventory.read")) return <Forbidden />;
   const create = async () => {
     setErr(null);
     try {
       const r = await api<Wave>("/wms/waves", { method: "POST", body: { node_id: node } });
-      setTick(tick + 1);
+      reload();
       setOpen(r.data.id);
       if (r.data.skipped.length > 0) setErr(`피킹 계획을 못 한 출고지시: ${r.data.skipped.map((x) => x.fo_no).join(", ")} (업무함 확인)`);
     } catch (x) {
@@ -61,7 +54,7 @@ export default function WmsPage() {
           {nodes.map((n) => <option key={n.id} value={n.id}>{n.name} ({n.code})</option>)}</select></label>
       </div>
       {nodes.length === 0 ? <Empty title="자체 WMS 거점이 없습니다." hint="물류·3PL 화면에서 자체 WMS 거점과 로케이션을 등록하세요." />
-        : loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => setTick(tick + 1)} /> : (
+        : loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => reload()} /> : (
           <DataTable caption="웨이브" rows={waves} rowKey={(w) => w.id} onRowClick={(w) => setOpen(w.id)}
             empty={<Empty title="웨이브가 없습니다." hint="물류 접수된 출고지시가 있으면 웨이브를 만드세요." />}
             columns={[
@@ -72,7 +65,7 @@ export default function WmsPage() {
               { key: "s", header: "상태", render: (w) => <Chip kind={WAVE_STATUS[w.status][0]}>{WAVE_STATUS[w.status][1]}</Chip> },
             ]} />
         )}
-      {open && <WaveDrawer id={open} onClose={() => setOpen(null)} onChanged={() => setTick(tick + 1)} />}
+      {open && <WaveDrawer id={open} onClose={() => setOpen(null)} onChanged={() => reload()} />}
     </>
   );
 }

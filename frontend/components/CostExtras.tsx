@@ -6,7 +6,7 @@ import { ConfirmModal } from "@/components/Overlay";
 import { Empty, ErrorState, Loading } from "@/components/States";
 import { api, ApiError, newIdempotencyKey, qs } from "@/lib/api";
 import { ALLOC_METHOD_KO, Allocation, CATEGORY_KO, LANDED_METHOD_KO, LANDED_TYPE_KO, LandedCost, MANUAL_COST_CATEGORIES, won } from "@/lib/finance";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, kstToday } from "@/lib/format";
 import { Txn } from "@/lib/inventory";
 import { useSession } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
@@ -124,7 +124,7 @@ function AllocationModal({ re, onClose, onDone }: { re?: Allocation; onClose: ()
   const [amount, setAmount] = useState(re ? Number(re.supply_amount) : 0);
   const [vat, setVat] = useState(re ? Number(re.vat_amount) : 0);
   const [method, setMethod] = useState(re?.method ?? "NET_SALES");
-  const [period, setPeriod] = useState(re?.period_date ?? new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10));
+  const [period, setPeriod] = useState(() => re?.period_date ?? kstToday());
   const [ref, setRef] = useState(re?.source_ref ?? "");
   const [targets, setTargets] = useState<Record<string, string>>(() => Object.fromEntries((re?.lines ?? []).map((l) => [l.business_entity_id, "1"])));
   const [err, setErr] = useState<string | null>(null);

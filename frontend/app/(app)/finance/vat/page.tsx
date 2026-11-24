@@ -1,4 +1,5 @@
 "use client";
+import { kstToday } from "@/lib/format";
 import { useMemo, useState } from "react";
 import { Chip } from "@/components/Chip";
 import { DataTable } from "@/components/DataTable";
@@ -14,7 +15,7 @@ type Account = { id: string; display_name: string; business_entity_name: string 
 export default function VatPage() {
   const { can, selected, entities } = useSession();
   const allowed = can("settlement.read");
-  const y = new Date(Date.now() + 9 * 3600_000).getUTCFullYear();
+  const [y] = useState(() => Number(kstToday().slice(0, 4)));
   const [tab, setTab] = useState<"batches" | "report">("batches");
   const [from, setFrom] = useState(`${y}-01-01`);
   const [to, setTo] = useState(`${y}-12-31`);

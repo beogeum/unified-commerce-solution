@@ -45,7 +45,7 @@ export default function ReportsPage() {
   const invRows = (inv.data?.rows ?? []).filter((r) => !onlyRisk || r.stockout_risk || r.slow_moving || r.expiry_risk);
   return (
     <>
-      <div className="page-head"><div><h1>운영 리포트</h1><p>재고·판매·물류 지표를 사업자·판매계정·거점 접근 범위 안에서 계산합니다. 분모를 함께 표시하고, 계산할 수 없는 값은 '계산불가'로 둡니다.</p></div></div>
+      <div className="page-head"><div><h1>운영 리포트</h1><p>재고·판매·물류 지표를 사업자·판매계정·거점 접근 범위 안에서 계산합니다. 분모를 함께 표시하고, 계산할 수 없는 값은 &apos;계산불가&apos;로 둡니다.</p></div></div>
       <nav className="row-gap" aria-label="리포트 메뉴">
         {can("inventory.read") && <button className="btn" type="button" aria-current={tab === "inventory" ? "page" : undefined} onClick={() => setTab("inventory")}>재고</button>}
         {can("order.read") && <button className="btn" type="button" aria-current={tab === "sales" ? "page" : undefined} onClick={() => setTab("sales")}>판매</button>}

@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { InventoryTabs } from "@/components/InventoryTabs";
 import { ErrorState, Forbidden, Loading } from "@/components/States";
-import { api, ApiError, qs } from "@/lib/api";
+import { qs } from "@/lib/api";
 import { Node, Txn, TXN_KO } from "@/lib/inventory";
 import { useSession } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
@@ -15,27 +15,12 @@ export default function LedgerPage() {
   const [q, setQ] = useState("");
   const nodes = useApi<Node[]>(can("logistics_account.read") ? "/fulfillment-nodes" : null);
   const base = useMemo(() => `/inventory/transactions${qs({ business_entity_id: selected, node_id: node, txn_type: type, q, limit: "50" })}`, [selected, node, type, q]);
-  const [rows, setRows] = useState<Txn[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (!can("inventory.read")) return;
-    let alive = true;
-    setLoading(true);
-    setError(null);
-    api<Txn[]>(base).then((r) => { if (alive) { setRows(r.data); setCursor(r.nextCursor); } })
-      .catch((e: unknown) => alive && setError(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "요청을 처리하지 못했습니다.")))
-      .finally(() => alive && setLoading(false));
-    return () => { alive = false; };
-  }, [base, tick, can]);
-  const more = async () => {
-    if (!cursor) return;
-    const r = await api<Txn[]>(`${base}&cursor=${encodeURIComponent(cursor)}`);
-    setRows([...rows, ...r.data]);
-    setCursor(r.nextCursor);
-  };
+  const list = useApi<Txn[]>(can("inventory.read") ? base : null);
+  const rows = list.data ?? [];
+  const loading = list.loading;
+  const error = list.error;
+  const cursor = list.nextCursor;
+  const more = list.more;
   if (!can("inventory.read")) return <Forbidden />;
   return (
     <>
@@ -48,7 +33,7 @@ export default function LedgerPage() {
         <label className="fld">구분<select className="inp" value={type} onChange={(e) => setType(e.target.value)}><option value="">전체</option>
           {Object.entries(TXN_KO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
       </div>
-      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => setTick(tick + 1)} /> : (
+      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => list.reload()} /> : (
         <>
           <TxnList rows={rows} />
           {cursor && <button className="btn" type="button" onClick={more}>더 보기</button>}

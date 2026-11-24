@@ -6,7 +6,7 @@ import { ConfirmModal, Drawer } from "@/components/Overlay";
 import { Empty, ErrorState, Loading } from "@/components/States";
 import { api, ApiError } from "@/lib/api";
 import { VAT_CLASS_KO, VAT_ISSUE_KO, VatBatch, VatClassTotal, VatRow, won } from "@/lib/finance";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, kstToday } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
@@ -134,7 +134,7 @@ export function VatBatchDrawer({ id, onClose, onChanged }: { id: string; onClose
 type Account = { id: string; display_name: string; business_entity_name: string };
 
 export function NewVatBatchModal({ accounts, onClose, onDone }: { accounts: Account[]; onClose: () => void; onDone: (id: string) => void }) {
-  const y = new Date(Date.now() + 9 * 3600_000).getUTCFullYear();
+  const [y] = useState(() => Number(kstToday().slice(0, 4)));
   const [accSel, setAcc] = useState("");
   const acc = accSel || accounts[0]?.id || "";
   const [from, setFrom] = useState(`${y}-07-01`);

@@ -1,4 +1,5 @@
 "use client";
+import { useApi } from "@/lib/useApi";
 import { useEffect, useMemo, useState } from "react";
 import { AllocationTab, LandedCostTab } from "@/components/CostExtras";
 import { DataTable } from "@/components/DataTable";
@@ -14,20 +15,15 @@ export default function CostsPage() {
   const { can, selected, entities } = useSession();
   const [tab, setTab] = useState<"entries" | "rules" | "landed" | "alloc">("entries");
   const [category, setCategory] = useState("");
-  const [tick, setTick] = useState(0);
-  const [entries, setEntries] = useState<Entry[] | null>(null);
-  const [rules, setRules] = useState<CostRule[] | null>(null);
-  const [error, setError] = useState<ApiError | null>(null);
   const [adding, setAdding] = useState<null | "rule" | "cost">(null);
   const [notice, setNotice] = useState<string | null>(null);
   const url = useMemo(() => `/finance/entries${qs({ business_entity_id: selected, category, limit: "300" })}`, [selected, category]);
-  useEffect(() => {
-    if (!can("cost.read")) return;
-    setError(null);
-    if (tab === "landed" || tab === "alloc") return;
-    const p = tab === "entries" ? api<Entry[]>(url).then((r) => setEntries(r.data)) : api<CostRule[]>("/finance/cost-rules").then((r) => setRules(r.data));
-    p.catch((e: unknown) => setError(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "불러오지 못했습니다.")));
-  }, [tab, url, tick, can]);
+  const entriesApi = useApi<Entry[]>(can("cost.read") && tab === "entries" ? url : null);
+  const rulesApi = useApi<CostRule[]>(can("cost.read") && tab === "rules" ? "/finance/cost-rules" : null);
+  const entries = entriesApi.loading ? null : entriesApi.data;
+  const rules = rulesApi.loading ? null : rulesApi.data;
+  const error = tab === "entries" ? entriesApi.error : tab === "rules" ? rulesApi.error : null;
+  const reload = () => { entriesApi.reload(); rulesApi.reload(); };
   if (!can("cost.read")) return <Forbidden />;
   const beName = (id: string | null) => (id ? entities.find((e) => e.id === id)?.display_name ?? "—" : "공통");
   return (
@@ -45,7 +41,7 @@ export default function CostsPage() {
       </nav>
       {tab === "entries" && <div className="row-gap"><label className="fld">항목<select className="inp" value={category} onChange={(e) => setCategory(e.target.value)}>
         <option value="">전체</option>{Object.entries(CATEGORY_KO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label></div>}
-      {tab === "landed" ? <LandedCostTab /> : tab === "alloc" ? <AllocationTab /> : error ? <ErrorState error={error} onRetry={() => setTick(tick + 1)} /> : tab === "entries" ? (entries === null ? <Loading /> : (
+      {tab === "landed" ? <LandedCostTab /> : tab === "alloc" ? <AllocationTab /> : error ? <ErrorState error={error} onRetry={() => reload()} /> : tab === "entries" ? (entries === null ? <Loading /> : (
         <DataTable caption="원장" rows={entries} rowKey={(e) => e.id} empty={<Empty title="원장이 없습니다." />} columns={[
           { key: "d", header: "귀속일", render: (e) => <span className="ctx">{e.period_date}</span> },
           { key: "b", header: "사업자", render: (e) => e.business_entity_name },
@@ -62,8 +58,8 @@ export default function CostsPage() {
           { key: "f", header: "반품 시 환급", render: (r) => (r.refundable_on_return ? "환급" : "환급 없음") },
           { key: "p", header: "적용 기간", render: (r) => <span className="ctx">{formatDateTime(r.effective_from)} ~ {r.effective_to ? formatDateTime(r.effective_to) : ""}</span> },
         ]} />))}
-      {adding === "rule" && <RuleModal onClose={() => setAdding(null)} onDone={() => { setAdding(null); setTab("rules"); setTick(tick + 1); }} />}
-      {adding === "cost" && <CostModal onClose={() => setAdding(null)} onDone={(msg) => { setAdding(null); setNotice(msg); setTab("entries"); setTick(tick + 1); }} />}
+      {adding === "rule" && <RuleModal onClose={() => setAdding(null)} onDone={() => { setAdding(null); setTab("rules"); reload(); }} />}
+      {adding === "cost" && <CostModal onClose={() => setAdding(null)} onDone={(msg) => { setAdding(null); setNotice(msg); setTab("entries"); reload(); }} />}
     </>
   );
 }

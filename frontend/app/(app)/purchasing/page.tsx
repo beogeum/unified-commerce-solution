@@ -78,7 +78,7 @@ export default function PurchasingPage() {
           { key: "e", header: "가장 빠른 예정일", render: (r) => r.earliest_expected_on ?? "—" },
         ]} />))}
       {tab === "receiving" && <>
-        <p className="ctx">입고예정 등록 → 센터 도착 → 검수 → 적치 순서로 처리합니다. 검수된 정상 수량은 적치를 마쳐야 판매가능이 되고, 불량·초과 도착은 재고에 넣지 않고 반송 업무로 남깁니다. 소량은 발주 상세의 '즉시 입고'로도 처리할 수 있습니다.</p>
+        <p className="ctx">입고예정 등록 → 센터 도착 → 검수 → 적치 순서로 처리합니다. 검수된 정상 수량은 적치를 마쳐야 판매가능이 되고, 불량·초과 도착은 재고에 넣지 않고 반송 업무로 남깁니다. 소량은 발주 상세의 &apos;즉시 입고&apos;로도 처리할 수 있습니다.</p>
         <div className="row-gap"><label className="fld">상태<select className="inp" value={shipStatus} onChange={(e) => setShipStatus(e.target.value)} aria-label="입고 건 상태">
           <option value="OPEN">진행 중</option><option value="">전체</option>
           {Object.entries(SHIPMENT_STATUS).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select></label></div>

@@ -31,6 +31,7 @@ export default function ImportsPage() {
   const [type, setType] = useState("PRODUCT_SKU");
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get("type");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 서버 렌더와 첫 화면을 같게 두고, 하이드레이션 후 브라우저 값(주소창·로컬 저장소)을 한 번 읽는다
     if (t) setType(t);
   }, []);
   const usable = (templates.data ?? []).filter((t) => can(t.required_permission));

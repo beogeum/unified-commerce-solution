@@ -32,7 +32,7 @@ export default function CsPage() {
   return (
     <>
       <div className="page-head"><div><h1>CS 통합함</h1><p>채널·전화·메일 문의를 한곳에서 기록하고 응답기한 안에 처리합니다. 채널 문의 연동 전이라 채널 문의는 문의번호와 함께 옮겨 적고,
-        답변은 기록한 뒤 채널에 직접 등록하고 '채널 등록 완료'로 표시합니다. 자동으로 고객에게 보내는 기능은 없습니다.</p></div>
+        답변은 기록한 뒤 채널에 직접 등록하고 &apos;채널 등록 완료&apos;로 표시합니다. 자동으로 고객에게 보내는 기능은 없습니다.</p></div>
         {can("order.update") && <span className="row-gap">
           {tab === "templates" ? <button className="btn pri" type="button" onClick={() => setModal({})}>템플릿 추가</button>
             : <button className="btn pri" type="button" onClick={() => setModal("inquiry")}>문의 접수</button>}</span>}</div>

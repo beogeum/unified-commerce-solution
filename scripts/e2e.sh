@@ -22,7 +22,9 @@ trap cleanup EXIT
 
 docker run -d --rm --name "$PG_NAME" -e POSTGRES_DB=commerce_os -e POSTGRES_USER=commerce_os -e POSTGRES_PASSWORD=commerce_os \
   -p "$PG_PORT:5432" postgres:16-alpine >/dev/null
-for i in $(seq 1 60); do docker exec "$PG_NAME" pg_isready -U commerce_os >/dev/null 2>&1 && break; sleep 1; done
+# 초기화 중 임시 서버(유닉스 소켓만)가 아니라 실제 서버가 TCP 로 받을 때까지 기다린다
+ready=0; for i in $(seq 1 90); do docker exec "$PG_NAME" pg_isready -h 127.0.0.1 -U commerce_os >/dev/null 2>&1 && { ready=1; break; }; sleep 1; done
+[[ $ready -eq 1 ]] || { echo "PostgreSQL 이 준비되지 않았습니다"; docker logs "$PG_NAME" 2>&1 | tail -20; exit 1; }
 
 (cd "$ROOT/backend" && mvn -q -B -DskipTests package)
 JAR="$(ls "$ROOT"/backend/target/*.jar | grep -v plain | head -1)"

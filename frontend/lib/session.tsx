@@ -30,6 +30,7 @@ export function SessionProvider({ me, children }: { me: Me; children: React.Reac
   useEffect(() => {
     try {
       const saved = JSON.parse(window.localStorage.getItem(`${KEY}.${me.member_id}`) ?? "[]");
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 서버 렌더와 첫 화면을 같게 두고, 하이드레이션 후 브라우저 값(주소창·로컬 저장소)을 한 번 읽는다
       if (Array.isArray(saved)) setSelectedState(saved.filter((x) => typeof x === "string"));
     } catch { /* 저장소를 못 쓰면 전체 사업자 */ }
   }, [me.member_id]);

@@ -1,4 +1,5 @@
 "use client";
+import { useApi } from "@/lib/useApi";
 import { useEffect, useMemo, useState } from "react";
 import { Chip } from "@/components/Chip";
 import { DataTable } from "@/components/DataTable";
@@ -17,22 +18,16 @@ export default function ClaimsPage() {
   const [type, setType] = useState("");
   const [status, setStatus] = useState("OPEN");
   const base = useMemo(() => `/claims${qs({ business_entity_id: selected, q, type, status })}`, [selected, q, type, status]);
-  const [rows, setRows] = useState<Claim[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [tick, setTick] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
-  useEffect(() => { const o = new URLSearchParams(window.location.search).get("open"); if (o) setOpen(o); }, []);
   useEffect(() => {
-    if (!can("order.read")) return;
-    let alive = true;
-    setLoading(true);
-    setError(null);
-    api<Claim[]>(base).then((r) => alive && setRows(r.data))
-      .catch((e: unknown) => alive && setError(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "요청을 처리하지 못했습니다.")))
-      .finally(() => alive && setLoading(false));
-    return () => { alive = false; };
-  }, [base, tick, can]);
+    const o = new URLSearchParams(window.location.search).get("open");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 서버 렌더와 첫 화면을 같게 두고, 하이드레이션 후 브라우저 값(주소창·로컬 저장소)을 한 번 읽는다
+    if (o) setOpen(o);
+  }, []);
+  const list = useApi<Claim[]>(can("order.read") ? base : null);
+  const rows = list.data ?? [];
+  const loading = list.loading;
+  const error = list.error;
   if (!can("order.read")) return <Forbidden />;
   return (
     <>
@@ -45,7 +40,7 @@ export default function ClaimsPage() {
         <label className="fld">상태<select className="inp" value={status} onChange={(e) => setStatus(e.target.value)}><option value="">전체</option><option value="OPEN">진행 중</option>
           {Object.entries(CLAIM_STATUS).map(([k, v]) => <option key={k} value={k}>{v[1]}</option>)}</select></label>
       </div>
-      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => setTick(tick + 1)} /> : (
+      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => list.reload()} /> : (
         <DataTable caption="클레임" rows={rows} rowKey={(r) => r.id} onRowClick={(r) => setOpen(r.id)}
           empty={<Empty title="클레임이 없습니다." hint="주문 상세에서 취소·반품·교환을 접수하거나 판매채널 클레임 수집을 실행하세요." />}
           columns={[
@@ -60,7 +55,7 @@ export default function ClaimsPage() {
               {r.refund_status !== "NOT_REQUIRED" && <Chip kind={REFUND_STATUS[r.refund_status][0]}>{REFUND_STATUS[r.refund_status][1]}</Chip>}</span> },
           ]} />
       )}
-      {open && <ClaimDrawer id={open} onClose={() => setOpen(null)} onChanged={() => setTick(tick + 1)} />}
+      {open && <ClaimDrawer id={open} onClose={() => setOpen(null)} onChanged={() => list.reload()} />}
     </>
   );
 }

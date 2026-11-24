@@ -148,7 +148,7 @@ function ListingDrawer({ id, onClose, onChanged, onOpen }: { id: string; onClose
         <b className="mono">{l.current_mapping.sku_code}{l.current_mapping.quantity > 1 ? ` ×${l.current_mapping.quantity}` : ""}</b>
         <span className="ctx">{BASIS_KO[l.current_mapping.match_basis]} · {formatDateTime(l.current_mapping.valid_from)}부터</span>
         {manage && <button className="btn" type="button" onClick={() => setUnmapping(true)}>연결 해제</button>}
-      </div> : <p className="ctx" style={{ margin: 0 }}>연결된 SKU 가 없습니다. 이 상품의 주문은 '상품 미연결'로 보류됩니다.</p>}
+      </div> : <p className="ctx" style={{ margin: 0 }}>연결된 SKU 가 없습니다. 이 상품의 주문은 &apos;상품 미연결&apos;로 보류됩니다.</p>}
 
       {manage && <>
         <h3 style={{ margin: "8px 0 0", fontSize: 14 }}>연결할 SKU</h3>
@@ -231,7 +231,7 @@ function CreateListing({ accounts, onClose, onCreated }: { accounts: Account[]; 
         <label className="fld">외부 SKU 코드(판매자 관리코드)<input className="inp mono" name="external_sku_code" maxLength={100} /></label>
         <label className="fld">채널가(원)<input className="inp" name="price" inputMode="numeric" /></label>
         <label className="fld">채널 재고<input className="inp" name="stock" type="number" min={0} /></label>
-        <p className="ctx" style={{ margin: 0 }}>채널 API 로 상품을 가져오는 기능은 판매계정의 '상품 조회' 지원 기능이 확인된 뒤 켜집니다. 지금은 직접 등록하거나 일괄 파일(C6)로 등록합니다.</p>
+        <p className="ctx" style={{ margin: 0 }}>채널 API 로 상품을 가져오는 기능은 판매계정의 &apos;상품 조회&apos; 지원 기능이 확인된 뒤 켜집니다. 지금은 직접 등록하거나 일괄 파일(C6)로 등록합니다.</p>
       </form>
     </Drawer>
   );

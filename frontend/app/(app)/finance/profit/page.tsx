@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useApi } from "@/lib/useApi";
+import { useMemo, useState } from "react";
 import { DataTable } from "@/components/DataTable";
 import { EntriesDrawer } from "@/components/FinanceEntries";
 import { Empty, ErrorState, Forbidden, Loading } from "@/components/States";
-import { api, ApiError, qs } from "@/lib/api";
+import { qs } from "@/lib/api";
 import { CATEGORY_KO, COST_ORDER, GROUP_KO, Profit, ProfitRow, won } from "@/lib/finance";
 import { useSession } from "@/lib/session";
 
@@ -16,20 +17,11 @@ export default function ProfitPage() {
   const [to, setTo] = useState(today());
   const [group, setGroup] = useState("business_entity");
   const url = useMemo(() => `/finance/profit${qs({ business_entity_id: selected, from, to, group_by: group })}`, [selected, from, to, group]);
-  const [data, setData] = useState<Profit | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [tick, setTick] = useState(0);
   const [drill, setDrill] = useState<ProfitRow | null>(null);
-  useEffect(() => {
-    if (!can("profit.read")) return;
-    let alive = true;
-    setLoading(true);
-    setError(null);
-    api<Profit>(url).then((r) => alive && setData(r.data)).catch((e: unknown) => alive && setError(e instanceof ApiError ? e : new ApiError(0, "UNKNOWN", "불러오지 못했습니다.")))
-      .finally(() => alive && setLoading(false));
-    return () => { alive = false; };
-  }, [url, tick, can]);
+  const list = useApi<Profit>(can("profit.read") ? url : null);
+  const data = list.data;
+  const loading = list.loading;
+  const error = list.error;
   if (!can("profit.read")) return <Forbidden />;
   const rows = data ? [...data.rows, data.total] : [];
   const usedCosts = COST_ORDER.filter((c) => rows.some((r) => Number(r.costs[c] ?? 0) !== 0));
@@ -44,7 +36,7 @@ export default function ProfitPage() {
         <label className="fld">묶음<select className="inp" value={group} onChange={(e) => setGroup(e.target.value)}>
           {Object.entries(GROUP_KO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
       </div>
-      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => setTick(tick + 1)} /> : (
+      {loading ? <Loading /> : error ? <ErrorState error={error} onRetry={() => list.reload()} /> : (
         <DataTable caption="손익" rows={rows} rowKey={(r) => r.key} onRowClick={(r) => r.key !== "TOTAL" && setDrill(r)}
           empty={<Empty title="기간 안의 손익 원장이 없습니다." hint="출고 확정되면 매출·원가가 자동으로 기록됩니다." />}
           columns={[
