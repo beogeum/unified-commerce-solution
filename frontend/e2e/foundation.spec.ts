@@ -1267,7 +1267,7 @@ test.describe.serial("Foundation", () => {
     await m.getByLabel("응답기한 기준").selectOption("BUSINESS_HOURS");
     await m.getByLabel("기본 응답 시간").fill("9");
     await m.getByRole("button", { name: "저장", exact: true }).click();
-    await expect(page.getByRole("status")).toContainText("응답기한 정책을 저장했습니다.");
+    await expect(page.getByRole("status").filter({ hasText: "응답기한 정책을 저장했습니다." })).toBeVisible();
     await expect(page.getByLabel("CS 응답기한 정책")).toContainText("영업시간 · 기본 9시간");
     await page.getByRole("button", { name: "휴일 등록" }).click();
     m = page.getByRole("alertdialog");
